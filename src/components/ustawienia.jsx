@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import {
   Box,
@@ -20,6 +20,9 @@ import { settings } from "../js/settings"; // Import settings z osobnego pliku
 export default function Ustawienia() {
   const [excludedTags, setExcludedTags] = useState(settings.excludedTags);
   const [specialDishes, setSpecialDishes] = useState(settings.specialDishes);
+  const firstLoadRef = useRef(true);
+  const saveTimeoutRef = useRef(null);
+  const dirtyRef = useRef(false);
 
   const initialUi = settings.ui ||
     JSON.parse(localStorage.getItem("uiSettings")) || {
@@ -35,6 +38,48 @@ export default function Ustawienia() {
   );
   const [editedTags, setEditedTags] = useState({});
   const [editedSpecialDishes, setEditedSpecialDishes] = useState({});
+
+  // persist current settings (merge editedTags/editedSpecialDishes) to settings + localStorage
+  const persistAll = (showToast = false) => {
+    // merge editedTags into excludedTags
+    const updatedTags = { ...excludedTags };
+    Object.keys(editedTags).forEach((day) => {
+      if (typeof updatedTags[day] !== "object") updatedTags[day] = {};
+      Object.keys(editedTags[day] || {}).forEach((meal) => {
+        const newTags = editedTags[day][meal]
+          ? editedTags[day][meal].split(",").map((tag) => tag.trim())
+          : [];
+        updatedTags[day][meal] = newTags;
+      });
+    });
+    setExcludedTags(updatedTags);
+    settings.excludedTags = updatedTags;
+    localStorage.setItem("excludedTags", JSON.stringify(updatedTags));
+
+    // merge editedSpecialDishes into specialDishes
+    const updatedSpecial = { ...specialDishes };
+    Object.keys(editedSpecialDishes).forEach((day) => {
+      if (typeof updatedSpecial[day] !== "object") updatedSpecial[day] = {};
+      Object.keys(editedSpecialDishes[day] || {}).forEach((meal) => {
+        updatedSpecial[day][meal] = editedSpecialDishes[day][meal] || "";
+      });
+    });
+    setSpecialDishes(updatedSpecial);
+    settings.specialDishes = updatedSpecial;
+    localStorage.setItem("specialDishes", JSON.stringify(updatedSpecial));
+
+    // UI settings + noDishText
+    settings.ui = uiSettings;
+    localStorage.setItem("uiSettings", JSON.stringify(uiSettings));
+    settings.noDishText = noDishText;
+    localStorage.setItem("noDishText", noDishText);
+
+    // clear staged edits
+    setEditedTags({});
+    setEditedSpecialDishes({});
+
+    //console.info("settings saved!");
+  };
 
   const handleEditTagChange = (day, meal, value) => {
     setEditedTags((prev) => ({
@@ -61,57 +106,33 @@ export default function Ustawienia() {
   };
 
   const handleSaveAll = () => {
-    // Zapisz wykluczone tagi
-    const updatedTags = { ...excludedTags };
-    Object.keys(editedTags).forEach((day) => {
-      if (typeof updatedTags[day] !== "object") {
-        updatedTags[day] = {};
-      }
-      Object.keys(editedTags[day] || {}).forEach((meal) => {
-        const newTags = editedTags[day][meal]
-          ? editedTags[day][meal].split(",").map((tag) => tag.trim())
-          : [];
-        updatedTags[day][meal] = newTags;
-      });
-    });
-    setExcludedTags(updatedTags);
-    settings.excludedTags = updatedTags;
-    localStorage.setItem("excludedTags", JSON.stringify(updatedTags));
-
-    // Zapisz potrawy specjalne
-    const updatedSpecialDishes = { ...specialDishes };
-    Object.keys(editedSpecialDishes).forEach((day) => {
-      if (typeof updatedSpecialDishes[day] !== "object") {
-        updatedSpecialDishes[day] = {};
-      }
-      Object.keys(editedSpecialDishes[day] || {}).forEach((meal) => {
-        updatedSpecialDishes[day][meal] = editedSpecialDishes[day][meal] || "";
-      });
-    });
-    setSpecialDishes(updatedSpecialDishes);
-    settings.specialDishes = updatedSpecialDishes;
-    localStorage.setItem("specialDishes", JSON.stringify(updatedSpecialDishes));
-
-    // Zapisz ustawienia UI
-    settings.ui = uiSettings;
-    localStorage.setItem("uiSettings", JSON.stringify(uiSettings));
-
-    // Zapisz tekst gdy brak potrawy
-    settings.noDishText = noDishText;
-    localStorage.setItem("noDishText", noDishText);
-
-    // Wyświetl komunikat o zapisaniu
-    Swal.fire({
-      title: "Zapisano wszystkie ustawienia!",
-      text: "Wszystkie zmiany zostały zapisane pomyślnie.",
-      icon: "success",
-      confirmButtonText: "OK",
-    });
-
-    // Wyczyść edytowane dane
-    setEditedTags({});
-    setEditedSpecialDishes({});
+    persistAll(true);
   };
+
+  // autosave: debounce changes to avoid spam; don't run on first load
+  useEffect(() => {
+    if (firstLoadRef.current) {
+      firstLoadRef.current = false;
+      return;
+    }
+    dirtyRef.current = true;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      persistAll(true);
+      dirtyRef.current = false;
+      saveTimeoutRef.current = null;
+    }, 1000);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [
+    editedTags,
+    editedSpecialDishes,
+    uiSettings,
+    noDishText,
+    excludedTags,
+    specialDishes,
+  ]);
 
   // Sekcja ustawień wyglądu (dodano showRating/showTags)
   return (
@@ -276,15 +297,6 @@ export default function Ustawienia() {
           ))}
         </TableBody>
       </Table>
-
-      {/* Przycisk zapisu na samym dole */}
-      <Box
-        sx={{ width: "100%", display: "flex", justifyContent: "center", mt: 4 }}
-      >
-        <Button variant="contained" color="primary" onClick={handleSaveAll}>
-          Zapisz wszystkie ustawienia
-        </Button>
-      </Box>
     </Box>
   );
 }
