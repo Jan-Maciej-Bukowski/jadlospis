@@ -35,6 +35,16 @@ export default function DodajPotrawe() {
   };
 
   function newDish() {
+    // walidacja: nazwa potrawy jest wymagana
+    if (!name || !name.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Brak nazwy potrawy",
+        text: "Musisz podać nazwę potrawy, aby dodać ją do listy.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
     const data = {
       name: name,
       tags: tags,

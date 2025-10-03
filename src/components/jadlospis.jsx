@@ -337,6 +337,63 @@ export default function Jadlospis() {
     reader.readAsText(file);
   };
 
+  // Drag & drop handlers (support single-week and multi-week menus)
+  const handleDragStart = (e, src) => {
+    // src = { week: number|null, dayIndex: number, meal: "śniadanie"|"obiad"|"kolacja" }
+    e.dataTransfer.setData("application/json", JSON.stringify(src));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // allow drop
+  };
+
+  const handleDrop = (e, dest) => {
+    e.preventDefault();
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const src = JSON.parse(raw);
+      moveDish(src, dest);
+    } catch (err) {
+      // ignore bad payload
+    }
+  };
+
+  const moveDish = (src, dest) => {
+    const current = JSON.parse(
+      JSON.stringify(menu || JSON.parse(localStorage.getItem("lastMenu")) || [])
+    );
+    if (!Array.isArray(current) || current.length === 0) return;
+
+    const isMulti = Array.isArray(current[0]);
+    const sWeek = isMulti ? src.week ?? 0 : 0;
+    const dWeek = isMulti ? dest.week ?? 0 : 0;
+
+    // normalize indices
+    const sDay = src.dayIndex;
+    const dDay = dest.dayIndex;
+    const sMeal = src.meal;
+    const dMeal = dest.meal;
+
+    // same slot -> noop
+    if (sWeek === dWeek && sDay === dDay && sMeal === dMeal) return;
+
+    // swap values
+    if (isMulti) {
+      const temp = current[dWeek][dDay][dMeal];
+      current[dWeek][dDay][dMeal] = current[sWeek][sDay][sMeal];
+      current[sWeek][sDay][sMeal] = temp;
+    } else {
+      const temp = current[dDay][dMeal];
+      current[dDay][dMeal] = current[sDay][sMeal];
+      current[sDay][sMeal] = temp;
+    }
+
+    setMenu(current);
+    localStorage.setItem("lastMenu", JSON.stringify(current));
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
@@ -437,6 +494,14 @@ export default function Jadlospis() {
                             <TableCell
                               key={meal}
                               sx={{ p: cellPadding, ...cellStyle }}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) =>
+                                handleDrop(e, {
+                                  week: wi,
+                                  dayIndex: index,
+                                  meal,
+                                })
+                              }
                             >
                               <Box
                                 sx={{
@@ -453,7 +518,20 @@ export default function Jadlospis() {
                                     gap: 1,
                                   }}
                                 >
-                                  <span>{name}</span>
+                                  {/* draggable handle */}
+                                  <span
+                                    draggable
+                                    onDragStart={(e) =>
+                                      handleDragStart(e, {
+                                        week: wi,
+                                        dayIndex: index,
+                                        meal,
+                                      })
+                                    }
+                                    style={{ cursor: "grab" }}
+                                  >
+                                    {name}
+                                  </span>
                                   {favorite && ui.showFavoriteStar && (
                                     <FavoriteIcon
                                       color="error"
