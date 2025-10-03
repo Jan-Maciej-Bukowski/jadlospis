@@ -1,44 +1,119 @@
 import React, { useState } from "react";
-export let settings = [];
+import Swal from "sweetalert2";
 import {
   Box,
   Typography,
-  TextField,
   Button,
-  Checkbox,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Switch,
   FormControlLabel,
-  FormGroup,
+  Divider,
+  Stack,
 } from "@mui/material";
+import { settings } from "../js/settings"; // Import settings z osobnego pliku
 
 export default function Ustawienia() {
-  const [tag, setTag] = useState("");
-  const [days, setDays] = useState({
-    Monday: false,
-    Tuesday: false,
-    Wednesday: false,
-    Thursday: false,
-    Friday: false,
-    Saturday: false,
-    Sunday: false,
-  });
-  const [maxRepeats, setMaxRepeats] = useState(1);
+  const [excludedTags, setExcludedTags] = useState(settings.excludedTags);
+  const [specialDishes, setSpecialDishes] = useState(settings.specialDishes);
 
-  const handleDayChange = (day) => {
-    setDays((prevDays) => ({
-      ...prevDays,
-      [day]: !prevDays[day],
+  const initialUi = settings.ui ||
+    JSON.parse(localStorage.getItem("uiSettings")) || {
+      showFavoriteStar: true,
+      compactTable: false,
+      highlightFavorites: false,
+    };
+  const [uiSettings, setUiSettings] = useState(initialUi);
+
+  // custom text shown when there's no dish (stored as plain string)
+  const [noDishText, setNoDishText] = useState(
+    settings.noDishText || localStorage.getItem("noDishText") || "Brak potraw"
+  );
+  const [editedTags, setEditedTags] = useState({});
+  const [editedSpecialDishes, setEditedSpecialDishes] = useState({});
+
+  const handleEditTagChange = (day, meal, value) => {
+    setEditedTags((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: value,
+      },
     }));
   };
 
-  const handleSaveSettings = () => {
-    settings = {
-      tag,
-      allowedDays: Object.keys(days).filter((day) => days[day]),
-      maxRepeats,
-    };
-    console.log("nowe ustawienia: ",settings);
+  const handleEditSpecialDishChange = (day, meal, value) => {
+    setEditedSpecialDishes((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: value,
+      },
+    }));
   };
 
+  const toggleUi = (key) => {
+    setUiSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveAll = () => {
+    // Zapisz wykluczone tagi
+    const updatedTags = { ...excludedTags };
+    Object.keys(editedTags).forEach((day) => {
+      if (typeof updatedTags[day] !== "object") {
+        updatedTags[day] = {};
+      }
+      Object.keys(editedTags[day] || {}).forEach((meal) => {
+        const newTags = editedTags[day][meal]
+          ? editedTags[day][meal].split(",").map((tag) => tag.trim())
+          : [];
+        updatedTags[day][meal] = newTags;
+      });
+    });
+    setExcludedTags(updatedTags);
+    settings.excludedTags = updatedTags;
+    localStorage.setItem("excludedTags", JSON.stringify(updatedTags));
+
+    // Zapisz potrawy specjalne
+    const updatedSpecialDishes = { ...specialDishes };
+    Object.keys(editedSpecialDishes).forEach((day) => {
+      if (typeof updatedSpecialDishes[day] !== "object") {
+        updatedSpecialDishes[day] = {};
+      }
+      Object.keys(editedSpecialDishes[day] || {}).forEach((meal) => {
+        updatedSpecialDishes[day][meal] = editedSpecialDishes[day][meal] || "";
+      });
+    });
+    setSpecialDishes(updatedSpecialDishes);
+    settings.specialDishes = updatedSpecialDishes;
+    localStorage.setItem("specialDishes", JSON.stringify(updatedSpecialDishes));
+
+    // Zapisz ustawienia UI
+    settings.ui = uiSettings;
+    localStorage.setItem("uiSettings", JSON.stringify(uiSettings));
+
+    // Zapisz tekst gdy brak potrawy
+    settings.noDishText = noDishText;
+    localStorage.setItem("noDishText", noDishText);
+
+    // Wyświetl komunikat o zapisaniu
+    Swal.fire({
+      title: "Zapisano wszystkie ustawienia!",
+      text: "Wszystkie zmiany zostały zapisane pomyślnie.",
+      icon: "success",
+      confirmButtonText: "OK",
+    });
+
+    // Wyczyść edytowane dane
+    setEditedTags({});
+    setEditedSpecialDishes({});
+  };
+
+  // Sekcja ustawień wyglądu (dodano showRating/showTags)
   return (
     <Box
       id="container"
@@ -47,69 +122,167 @@ export default function Ustawienia() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100vh",
         padding: 2,
       }}
     >
-      <Typography variant="h4" sx={{ mb: 3 }}>
+      <Typography variant="h4" sx={{ mb: 2 }}>
         Ustawienia
       </Typography>
 
-      <Box
-        component="form"
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          width: "100%",
-          maxWidth: 400,
-        }}
-      >
-        {/* Pole do wprowadzenia tagu */}
-        <TextField
-          label="Tag potrawy"
-          variant="outlined"
-          fullWidth
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
-        />
+      {/* Sekcja ustawień stylistycznych */}
+      <Box sx={{ width: "100%", mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Ustawienia wyglądu
+        </Typography>
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.showFavoriteStar}
+                onChange={() => toggleUi("showFavoriteStar")}
+              />
+            }
+            label="Pokaż gwiazdkę obok ulubionych"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.compactTable}
+                onChange={() => toggleUi("compactTable")}
+              />
+            }
+            label="Kompaktowy widok tabeli"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.highlightFavorites}
+                onChange={() => toggleUi("highlightFavorites")}
+              />
+            }
+            label="Podświetl ulubione w jadłospisie"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.showRating}
+                onChange={() => toggleUi("showRating")}
+              />
+            }
+            label="Pokaż ocenę w jadłospisie"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.showTags}
+                onChange={() => toggleUi("showTags")}
+              />
+            }
+            label="Pokaż tagi w jadłospisie"
+          />
+        </Stack>
 
-        {/* Wybór dni tygodnia */}
-        <Typography variant="subtitle1">Wybierz dni tygodnia:</Typography>
-        <FormGroup>
-          {Object.keys(days).map((day) => (
-            <FormControlLabel
-              key={day}
-              control={
-                <Checkbox
-                  checked={days[day]}
-                  onChange={() => handleDayChange(day)}
-                />
-              }
-              label={day}
-            />
+        {/* custom no-dish text */}
+        <Box sx={{ mt: 2, width: "100%", maxWidth: 520 }}>
+          <TextField
+            label="Tekst gdy brak potrawy"
+            fullWidth
+            size="small"
+            value={noDishText}
+            onChange={(e) => setNoDishText(e.target.value)}
+            helperText='Wyświetlany tekst gdy w komórce jadłospisu nie ma potrawy (np. "Brak potraw").'
+          />
+        </Box>
+      </Box>
+
+      <Divider sx={{ width: "100%", mb: 2 }} />
+
+      {/* Dodany nagłówek sekcji generowania */}
+      <Typography variant="h6" sx={{ mb: 1, alignSelf: "flex-start" }}>
+        Ustawienia generowania jadłospisu
+      </Typography>
+
+      <Table size={uiSettings.compactTable ? "small" : "medium"}>
+        <TableHead>
+          <TableRow>
+            <TableCell>
+              <strong>Dzień tygodnia</strong>
+            </TableCell>
+            <TableCell>
+              <strong>Śniadanie</strong>
+            </TableCell>
+            <TableCell>
+              <strong>Obiad</strong>
+            </TableCell>
+            <TableCell>
+              <strong>Kolacja</strong>
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Object.keys(excludedTags).map((day) => (
+            <TableRow key={day}>
+              <TableCell>
+                <strong>{day}</strong>
+              </TableCell>
+              {["śniadanie", "obiad", "kolacja"].map((meal) => (
+                <TableCell
+                  key={meal}
+                  sx={{
+                    ...(uiSettings.highlightFavorites
+                      ? { backgroundColor: "transparent" }
+                      : {}),
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Wykluczone tagi:
+                  </Typography>
+                  <TextField
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={
+                      editedTags[day]?.[meal] !== undefined
+                        ? editedTags[day][meal]
+                        : (excludedTags[day]?.[meal] || []).join(", ")
+                    }
+                    onChange={(e) =>
+                      handleEditTagChange(day, meal, e.target.value)
+                    }
+                    placeholder="np. mięso, szybkie, gluten"
+                    sx={{ mb: 2 }}
+                  />
+
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Potrawa specjalna:
+                  </Typography>
+                  <TextField
+                    variant="outlined"
+                    fullWidth
+                    value={
+                      editedSpecialDishes[day]?.[meal] !== undefined
+                        ? editedSpecialDishes[day][meal]
+                        : specialDishes[day][meal]
+                    }
+                    onChange={(e) =>
+                      handleEditSpecialDishChange(day, meal, e.target.value)
+                    }
+                    placeholder="np. gulasz"
+                  />
+                </TableCell>
+              ))}
+            </TableRow>
           ))}
-        </FormGroup>
+        </TableBody>
+      </Table>
 
-        {/* Maksymalna liczba powtórzeń */}
-        <TextField
-          label="Maksymalna liczba powtórzeń w tygodniu"
-          type="number"
-          variant="outlined"
-          fullWidth
-          value={maxRepeats}
-          onChange={(e) => setMaxRepeats(Number(e.target.value))}
-          inputProps={{ min: 1 }}
-        />
-
-        {/* Przycisk zapisu */}
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          onClick={handleSaveSettings}
-        >
-          Zapisz ustawienia
+      {/* Przycisk zapisu na samym dole */}
+      <Box
+        sx={{ width: "100%", display: "flex", justifyContent: "center", mt: 4 }}
+      >
+        <Button variant="contained" color="primary" onClick={handleSaveAll}>
+          Zapisz wszystkie ustawienia
         </Button>
       </Box>
     </Box>

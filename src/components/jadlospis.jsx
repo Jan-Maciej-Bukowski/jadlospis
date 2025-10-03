@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { settings } from "./ustawienia";
-
+import React, { useState, useRef } from "react";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { Rating, Chip } from "@mui/material";
+import Swal from "sweetalert2";
 import {
   Box,
   Button,
@@ -10,26 +11,330 @@ import {
   TableHead,
   TableRow,
   Typography,
+  TextField,
 } from "@mui/material";
-import dishes from "../js/potrawy"; // Importuj potrawy
-import { generateMenu } from "../js/generateMenu"; // Importuj funkcję generującą jadłospis
+import dishes, { addDish } from "../js/potrawy";
+import { generateMenu } from "../js/generateMenu";
+import { settings } from "../js/settings.js";
 
 export default function Jadlospis() {
-  const [menu, setMenu] = useState(null);
+  // menu może być:
+  // - null
+  // - legacy: single week array [{day, śniadanie, obiad, kolacja}, ...]
+  // - multiweek: array of weeks: [ week0Array, week1Array, ... ]
+  const [menu, setMenu] = useState(
+    JSON.parse(localStorage.getItem("lastMenu")) || null
+  );
+  const [weeksToGenerate, setWeeksToGenerate] = useState(1);
+
+  const fileInputRef = useRef(null);
+
+  const ui = settings.ui || {};
+  const tableSize = ui.compactTable ? "small" : "medium";
+  const cellPadding = ui.compactTable ? "6px 8px" : undefined;
 
   const daysOfWeek = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
+    "Poniedziałek",
+    "Wtorek",
+    "Środa",
+    "Czwartek",
+    "Piątek",
+    "Sobota",
+    "Niedziela",
   ];
 
   const handleGenerateMenu = () => {
-    const generatedMenu = generateMenu(dishes, settings, daysOfWeek);
-    setMenu(generatedMenu);
+    const generated = generateMenu(
+      dishes,
+      settings,
+      daysOfWeek,
+      weeksToGenerate
+    );
+    // generated is array of weeks
+    setMenu(generated);
+    localStorage.setItem("lastMenu", JSON.stringify(generated));
+    Swal.fire({
+      title: "Jadłospis gotowy!",
+      text: "Twój nowy jadłospis został wygenerowany pomyślnie.",
+      icon: "success",
+      confirmButtonText: "Super!",
+      confirmButtonColor: "#4CAF50",
+      background: "#fefefe",
+      color: "#333",
+    });
+  };
+
+  const handleExport = () => {
+    const toExportMenu =
+      menu || JSON.parse(localStorage.getItem("lastMenu")) || [];
+    // collect unique full dish objects used in menu
+    const usedNames = new Set();
+    // placeholder used for "no dish" should NOT be exported as a dish
+    const placeholder = settings.noDishText || "Brak potraw";
+
+    // support multi-week (array of weeks) and single-week (array of days)
+    const flatDays = Array.isArray(toExportMenu[0])
+      ? toExportMenu.flat()
+      : toExportMenu;
+    flatDays.forEach((entry) =>
+      ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+        const d = entry?.[m];
+        const name = d?.name ?? d;
+        if (!name) return;
+        // ignore placeholder/no-dish text
+        if (name === placeholder) return;
+        if (name) usedNames.add(name);
+      })
+    );
+    const exportDishes = Array.from(usedNames).map((name) => {
+      const d = dishes.find((x) => x.name === name);
+      return d
+        ? {
+            name: d.name,
+            tags: d.tags || [],
+            params: d.params || "",
+            probability: d.probability ?? 100,
+            maxRepeats: d.maxRepeats ?? 1,
+            allowedMeals: d.allowedMeals || ["śniadanie", "obiad", "kolacja"],
+            rating: d.rating ?? 0,
+            favorite: !!d.favorite,
+            ingredients: d.ingredients || [],
+            color: d.color || "",
+            maxAcrossWeeks: d.maxAcrossWeeks ?? null,
+          }
+        : { name };
+    });
+
+    // include full settings so import restores UI and generation settings
+    const exportSettings = {
+      excludedTags: settings.excludedTags,
+      specialDishes: settings.specialDishes,
+      ui: settings.ui,
+      noDishText: settings.noDishText, // <-- include custom placeholder
+    };
+
+    const exportData = {
+      meta: {
+        exportedAt: new Date().toISOString(),
+        source: "jadlospis",
+      },
+      settings: exportSettings,
+      menu: toExportMenu,
+      dishes: exportDishes,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jadlospis_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    Swal.fire({
+      title: "Wyeksportowano",
+      text: "Jadłospis został pobrany w formacie JSON.",
+      icon: "success",
+      confirmButtonText: "OK",
+    });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+
+        // expected new format: { settings: {...}, menu: [...], dishes: [...] }
+        // support legacy: array -> menu only
+        let importedMenu = null;
+        let importedDishes = [];
+        let importedSettings = null;
+
+        if (Array.isArray(parsed)) {
+          // legacy: either single-week array (days) or multi-week array (weeks)
+          // detect: if first element is an array -> multi-week
+          if (Array.isArray(parsed[0])) {
+            importedMenu = parsed; // multi-week
+          } else {
+            importedMenu = parsed; // single-week
+          }
+        } else if (parsed && parsed.menu) {
+          importedMenu = parsed.menu;
+          if (Array.isArray(parsed.dishes)) importedDishes = parsed.dishes;
+          if (parsed.settings) importedSettings = parsed.settings;
+        } else {
+          throw new Error("Nieprawidłowy format pliku");
+        }
+
+        // Validate minimal menu structure:
+        // - single-week: array of day objects with day property
+        // - multi-week: array of weeks, each week is array of day objects
+        const isMultiWeek = Array.isArray(importedMenu[0]);
+        const valid =
+          Array.isArray(importedMenu) &&
+          (isMultiWeek
+            ? importedMenu.every(
+                (week) =>
+                  Array.isArray(week) &&
+                  week.every((row) => row && typeof row.day === "string")
+              )
+            : importedMenu.every((row) => row && typeof row.day === "string"));
+        if (!valid) throw new Error("Nieprawidłowa struktura menu");
+
+        // If settings present in file, apply them now (and persist to localStorage)
+        if (importedSettings) {
+          if (importedSettings.excludedTags) {
+            settings.excludedTags = importedSettings.excludedTags;
+            localStorage.setItem(
+              "excludedTags",
+              JSON.stringify(importedSettings.excludedTags)
+            );
+          }
+          if (importedSettings.specialDishes) {
+            settings.specialDishes = importedSettings.specialDishes;
+            localStorage.setItem(
+              "specialDishes",
+              JSON.stringify(importedSettings.specialDishes)
+            );
+          }
+          if (importedSettings.ui) {
+            settings.ui = importedSettings.ui;
+            localStorage.setItem(
+              "uiSettings",
+              JSON.stringify(importedSettings.ui)
+            );
+          }
+          // apply custom no-dish text from file (important to do before extracting dishes)
+          if (importedSettings.noDishText != null) {
+            settings.noDishText = importedSettings.noDishText;
+            localStorage.setItem("noDishText", importedSettings.noDishText);
+          }
+        }
+
+        // If no explicit parsed.dishes provided, also try to extract dish objects embedded in menu
+        if ((!importedDishes || importedDishes.length === 0) && importedMenu) {
+          const extracted = [];
+          const currentPlaceholder = settings.noDishText || "Brak potraw";
+          if (Array.isArray(importedMenu[0])) {
+            // multi-week
+            importedMenu.forEach((week) =>
+              week.forEach((day) =>
+                ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+                  const d = day?.[m];
+                  if (
+                    d &&
+                    typeof d === "object" &&
+                    d.name &&
+                    d.name !== currentPlaceholder
+                  )
+                    extracted.push(d);
+                })
+              )
+            );
+          } else {
+            // single-week
+            importedMenu.forEach((day) =>
+              ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+                const d = day?.[m];
+                if (
+                  d &&
+                  typeof d === "object" &&
+                  d.name &&
+                  d.name !== currentPlaceholder
+                )
+                  extracted.push(d);
+              })
+            );
+          }
+          if (extracted.length) importedDishes = extracted;
+        }
+
+        // Add imported dish metadata to local dishes if missing; also merge rating/favorite/color
+        importedDishes.forEach((imp) => {
+          if (!imp || !imp.name) return;
+          // don't add the placeholder as a dish
+          if (imp.name === (settings.noDishText || "Brak potraw")) return;
+          const exists = dishes.find((d) => d.name === imp.name);
+          if (!exists) {
+            const data = {
+              name: imp.name,
+              tags:
+                imp.tags ||
+                (Array.isArray(imp.tags) ? imp.tags.join(", ") : "") ||
+                "",
+              params: imp.params || "",
+              probability: imp.probability ?? 100,
+              maxRepeats: imp.maxRepeats ?? 1,
+              allowedMeals: imp.allowedMeals || [
+                "śniadanie",
+                "obiad",
+                "kolacja",
+              ],
+              rating: imp.rating ?? 0,
+              favorite: !!imp.favorite,
+              ingredients: imp.ingredients || [],
+              color: imp.color || "",
+              maxAcrossWeeks: imp.maxAcrossWeeks ?? null,
+            };
+            try {
+              addDish(data);
+            } catch (err) {
+              console.warn(
+                "Import: nie udało się dodać potrawy",
+                imp.name,
+                err
+              );
+            }
+          } else {
+            // merge provided meta
+            if (imp.rating != null) exists.rating = imp.rating;
+            if (imp.favorite != null) exists.favorite = !!imp.favorite;
+            if (imp.color != null) exists.color = imp.color;
+            if (imp.maxRepeats != null) exists.maxRepeats = imp.maxRepeats;
+            if (imp.maxAcrossWeeks != null)
+              exists.maxAcrossWeeks = imp.maxAcrossWeeks;
+            if (imp.tags)
+              exists.tags = Array.isArray(imp.tags)
+                ? imp.tags
+                : ("" + imp.tags)
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean);
+          }
+        });
+
+        // set menu and persist lastMenu
+        setMenu(importedMenu);
+        localStorage.setItem("lastMenu", JSON.stringify(importedMenu));
+
+        Swal.fire({
+          title: "Zaimportowano",
+          text: "Jadłospis, potrawy i ustawienia zostały zaimportowane pomyślnie.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+      } catch (err) {
+        Swal.fire({
+          title: "Błąd importu",
+          text: "Plik JSON ma niewłaściwy format.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } finally {
+        e.target.value = "";
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -38,37 +343,269 @@ export default function Jadlospis() {
         Jadłospis
       </Typography>
 
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleGenerateMenu}
-        sx={{ mb: 3 }}
-      >
-        Generuj jadłospis
-      </Button>
+      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <TextField
+            label="Ile tygodni?"
+            type="number"
+            size="small"
+            value={weeksToGenerate}
+            onChange={(e) =>
+              setWeeksToGenerate(Math.max(1, Number(e.target.value) || 1))
+            }
+            sx={{ width: 120 }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleGenerateMenu}
+          >
+            Generuj jadłospis
+          </Button>
+        </Box>
 
-      {menu && (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <strong>Dzień tygodnia</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Proponowana potrawa</strong>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {menu.map((entry, index) => (
-              <TableRow key={index}>
-                <TableCell>{entry.day}</TableCell>
-                <TableCell>{entry.dish}</TableCell>
-              </TableRow>
+        <Button variant="outlined" color="primary" onClick={handleExport}>
+          Eksportuj JSON
+        </Button>
+
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={handleImportClick}
+        >
+          Importuj JSON
+        </Button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportFile}
+          style={{ display: "none" }}
+        />
+      </Box>
+
+      {menu &&
+        Array.isArray(menu) &&
+        menu.length > 0 &&
+        // detect multi-week: if first element is an array -> multiweek
+        (Array.isArray(menu[0]) ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {menu.map((week, wi) => (
+              <Box key={wi}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Tydzień {wi + 1}
+                </Typography>
+                <Table size={tableSize}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ p: cellPadding }}>
+                        <strong>Dzień tygodnia</strong>
+                      </TableCell>
+                      <TableCell sx={{ p: cellPadding }}>
+                        <strong>Śniadanie</strong>
+                      </TableCell>
+                      <TableCell sx={{ p: cellPadding }}>
+                        <strong>Obiad</strong>
+                      </TableCell>
+                      <TableCell sx={{ p: cellPadding }}>
+                        <strong>Kolacja</strong>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {week.map((entry, index) => (
+                      <TableRow key={index}>
+                        <TableCell sx={{ p: cellPadding }}>
+                          {entry.day}
+                        </TableCell>
+                        {["śniadanie", "obiad", "kolacja"].map((meal) => {
+                          const dish = entry[meal];
+                          const name =
+                            dish?.name ??
+                            dish ??
+                            settings.noDishText ??
+                            "Brak potraw";
+                          const favorite = !!dish?.favorite;
+                          const dishObj = dishes.find((d) => d.name === name);
+                          // safe: don't access dishObj.tags when dishObj is undefined
+                          const dishColor = dishObj?.color || dish?.color || "";
+                          const cellStyle = dishColor
+                            ? { backgroundColor: dishColor }
+                            : {};
+                          return (
+                            <TableCell
+                              key={meal}
+                              sx={{ p: cellPadding, ...cellStyle }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 1,
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                  }}
+                                >
+                                  <span>{name}</span>
+                                  {favorite && ui.showFavoriteStar && (
+                                    <FavoriteIcon
+                                      color="error"
+                                      fontSize="small"
+                                    />
+                                  )}
+                                  {ui.showRating && dishObj?.rating != null && (
+                                    <Rating
+                                      value={dishObj.rating}
+                                      size="small"
+                                      readOnly
+                                      precision={0.5}
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
+                                </Box>
+                                {ui.showTags &&
+                                  Array.isArray(dishObj?.tags) &&
+                                  dishObj.tags.length > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        gap: 0.5,
+                                        flexWrap: "wrap",
+                                        mt: 0.5,
+                                      }}
+                                    >
+                                      {dishObj.tags.map((t, i) => (
+                                        <Chip
+                                          key={i}
+                                          label={t}
+                                          size={
+                                            ui.compactTable ? "small" : "medium"
+                                          }
+                                        />
+                                      ))}
+                                    </Box>
+                                  )}
+                              </Box>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
             ))}
-          </TableBody>
-        </Table>
-      )}
+          </Box>
+        ) : (
+          // legacy single-week array
+          <Table size={tableSize}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ p: cellPadding }}>
+                  <strong>Dzień tygodnia</strong>
+                </TableCell>
+                <TableCell sx={{ p: cellPadding }}>
+                  <strong>Śniadanie</strong>
+                </TableCell>
+                <TableCell sx={{ p: cellPadding }}>
+                  <strong>Obiad</strong>
+                </TableCell>
+                <TableCell sx={{ p: cellPadding }}>
+                  <strong>Kolacja</strong>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {menu.map((entry, index) => {
+                return (
+                  <TableRow key={index}>
+                    <TableCell sx={{ p: cellPadding }}>{entry.day}</TableCell>
+                    {["śniadanie", "obiad", "kolacja"].map((meal) => {
+                      const dish = entry[meal];
+                      const name =
+                        dish?.name ??
+                        dish ??
+                        settings.noDishText ??
+                        "Braak potraw";
+                      const favorite = !!dish?.favorite;
+                      const dishObj = dishes.find((d) => d.name === name);
+                      const dishColor = dishObj?.color || dish?.color || "";
+                      const cellStyle = dishColor
+                        ? { backgroundColor: dishColor }
+                        : {};
+                      return (
+                        <TableCell
+                          key={meal}
+                          sx={{ p: cellPadding, ...cellStyle }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <span>{name}</span>
+                              {favorite && ui.showFavoriteStar && (
+                                <FavoriteIcon color="error" fontSize="small" />
+                              )}
+                              {ui.showRating && dishObj?.rating != null && (
+                                <Rating
+                                  value={dishObj.rating}
+                                  size="small"
+                                  readOnly
+                                  precision={0.5}
+                                  sx={{ ml: 1 }}
+                                />
+                              )}
+                            </Box>
+                            {ui.showTags &&
+                              Array.isArray(dishObj?.tags) &&
+                              dishObj.tags.length > 0 && (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 0.5,
+                                    flexWrap: "wrap",
+                                    mt: 0.5,
+                                  }}
+                                >
+                                  {dishObj.tags.map((t, i) => (
+                                    <Chip
+                                      key={i}
+                                      label={t}
+                                      size={
+                                        ui.compactTable ? "small" : "medium"
+                                      }
+                                    />
+                                  ))}
+                                </Box>
+                              )}
+                          </Box>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ))}
     </Box>
   );
 }

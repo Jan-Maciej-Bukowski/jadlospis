@@ -1,20 +1,76 @@
 import React, { useState } from "react";
-import { Box, TextField, Button, Typography } from "@mui/material";
-import { addDish }from "../js/potrawy";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Slider,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Rating,
+} from "@mui/material";
+import { addDish } from "../js/potrawy";
+import Swal from "sweetalert2";
 
 export default function DodajPotrawe() {
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
-  const [otherParams, setOtherParams] = useState("");
+  const [params, setOtherParams] = useState(""); // przepis / opis
+  const [ingredients, setIngredients] = useState(""); // składniki: jedna linia = jeden składnik
+  const [probability, setProbability] = useState(100);
+  const [maxRepeats, setMaxRepeats] = useState(21);
+  const [allowedMeals, setAllowedMeals] = useState({
+    śniadanie: true,
+    obiad: true,
+    kolacja: true,
+  });
+  const [rating, setRating] = useState(0);
+  const [favorite, setFavorite] = useState(false);
+  const [color, setColor] = useState(""); // kolor tła w jadlospisie
+  const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
+
+  const handleMealChange = (meal) => {
+    setAllowedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
+  };
 
   function newDish() {
     const data = {
       name: name,
       tags: tags,
-      otherParams: otherParams,
+      params: params,
+      ingredients: ingredients,
+      probability: probability,
+      maxRepeats: maxRepeats,
+      allowedMeals: Object.keys(allowedMeals).filter(
+        (meal) => allowedMeals[meal]
+      ),
+      rating: rating,
+      favorite: favorite,
+      color: color,
+      maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
     };
-    console.log("dodao potrawę: ", data);
+    console.log("dodano potrawę: ", data);
     addDish(data);
+
+    Swal.fire({
+      title: "Dodano!",
+      text: `Potrawa "${name}" została dodana.`,
+      icon: "success",
+      confirmButtonText: "OK",
+    });
+
+    setName("");
+    setTags("");
+    setOtherParams("");
+    setIngredients("");
+    setProbability(100);
+    setMaxRepeats(21);
+    setAllowedMeals({ śniadanie: true, obiad: true, kolacja: true });
+    setRating(0);
+    setFavorite(false);
+    setColor("");
+    setMaxAcrossWeeks("");
   }
 
   return (
@@ -25,7 +81,12 @@ export default function DodajPotrawe() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100vh",
+        // renderuj pod navbarem (użyj CSS variable --navbar-height jeśli ustawiona, fallback 64px)
+        marginTop: "var(--navbar-height, 0px)",
+        // ogranicz wysokość względem widocznej przestrzeni pod navbarem i pozwól przewijać zawartość
+        // maxHeight: "calc(100vh - var(--navbar-height, 64px) - 16px)", // to nie działa
+        overflowY: "auto",
+        boxSizing: "border-box",
         padding: 2,
       }}
     >
@@ -49,25 +110,166 @@ export default function DodajPotrawe() {
           fullWidth
           required
           value={name}
-          onChange={(e) => setName(e.target.value)} // Aktualizacja stanu
+          onChange={(e) => setName(e.target.value)}
         />
         <TextField
           label="Tagi (np. wegańskie, szybkie)"
           variant="outlined"
           fullWidth
-          id="tags"
           value={tags}
-          onChange={(e) => setTags(e.target.value)} // Aktualizacja stanu
+          onChange={(e) => setTags(e.target.value)}
         />
         <TextField
-          label="Inne Parametry"
+          label="Składniki (jedna linia = jeden składnik)"
           variant="outlined"
           fullWidth
           multiline
           rows={4}
-          value={otherParams}
-          onChange={(e) => setOtherParams(e.target.value)} // Aktualizacja stanu
+          value={ingredients}
+          onChange={(e) => setIngredients(e.target.value)}
+          //helperText="Wpisz każdy składnik w nowej linii"
         />
+
+        <TextField
+          label="Przepis"
+          variant="outlined"
+          fullWidth
+          multiline
+          rows={4}
+          value={params}
+          onChange={(e) => setOtherParams(e.target.value)}
+        />
+        <Typography gutterBottom>
+          Współczynnik występowania: {probability}%
+        </Typography>
+        <Slider
+          value={probability}
+          onChange={(e, newValue) => setProbability(newValue)}
+          min={0}
+          max={100}
+          valueLabelDisplay="auto"
+        />
+        <TextField
+          label="Maksymalna liczba powtórzeń w tygodniu"
+          variant="outlined"
+          type="number"
+          fullWidth
+          value={maxRepeats}
+          onChange={(e) => setMaxRepeats(Number(e.target.value))}
+          slotProps={{
+            htmlInput: {
+              min: 0,
+            },
+          }}
+        />
+        <TextField
+          label="Maks wystąpień w wygenerowanym przedziale (opcjonalnie)"
+          variant="outlined"
+          type="number"
+          size="small"
+          value={maxAcrossWeeks}
+          onChange={(e) => setMaxAcrossWeeks(e.target.value)}
+          placeholder="np. 3"
+          sx={{ width: 260, mb: 1 }}
+        />
+        <Typography gutterBottom>Dozwolone pory dnia:</Typography>
+        <FormGroup>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={allowedMeals.śniadanie}
+                onChange={() => handleMealChange("śniadanie")}
+              />
+            }
+            label="Śniadanie"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={allowedMeals.obiad}
+                onChange={() => handleMealChange("obiad")}
+              />
+            }
+            label="Obiad"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={allowedMeals.kolacja}
+                onChange={() => handleMealChange("kolacja")}
+              />
+            }
+            label="Kolacja"
+          />
+        </FormGroup>
+        <Typography gutterBottom>Ocena początkowa:</Typography>
+        <Rating value={rating} onChange={(e, val) => setRating(val || 0)} />
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={favorite}
+              onChange={() => setFavorite((s) => !s)}
+            />
+          }
+          label="Ulubione"
+        />
+
+        <Typography gutterBottom sx={{ mt: 1 }}>
+          Kolor tła w jadłospisie:
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1, mb: 2, alignItems: "center" }}>
+          {[
+            { id: "", label: "Brak", color: "" },
+            { id: "#ccffd0", label: "Jasna zieleń", color: "#ccffd0" },
+            { id: "#c0deff", label: "Jasny niebieski", color: "#c0deff" },
+            { id: "#ffc7c7", label: "Jasny czerwony", color: "#ffc7c7" },
+            { id: "#fff6bc", label: "Jasny żółty", color: "#fff6bc" },
+            { id: "#ddc0ff", label: "Jasny fiolet", color: "#ddc0ff" },
+          ].map((opt) => (
+            <Button
+              key={opt.id || "none"}
+              variant={color === opt.id ? "contained" : "outlined"}
+              onClick={() => setColor(opt.id)}
+              sx={{
+                minWidth: 36,
+                padding: 0.5,
+                bgcolor: opt.color || "transparent",
+                borderColor: color === opt.id ? "primary.main" : undefined,
+              }}
+              title={opt.label}
+            >
+              {opt.id === "" ? "Brak" : ""}
+            </Button>
+          ))}
+
+          {/* custom color picker */}
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center", ml: 1 }}>
+            <input
+              type="color"
+              value={color || "#ffffff"}
+              onChange={(e) => setColor(e.target.value)}
+              style={{
+                width: 36,
+                height: 36,
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+              title="Wybierz własny kolor"
+            />
+            <TextField
+              size="small"
+              label="HEX"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              placeholder="#rrggbb"
+              sx={{ width: 120 }}
+            />
+          </Box>
+        </Box>
+
         <Button onClick={newDish} variant="contained" color="primary" fullWidth>
           Dodaj
         </Button>
