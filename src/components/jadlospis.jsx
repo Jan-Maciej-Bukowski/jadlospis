@@ -147,6 +147,9 @@ export default function Jadlospis() {
       noDishText: settings.noDishText, // <-- include custom placeholder
     };
 
+    // include saved lists of dishes (if any)
+    const storedLists = JSON.parse(localStorage.getItem("dishLists") || "[]");
+
     const exportData = {
       meta: {
         exportedAt: new Date().toISOString(),
@@ -155,6 +158,7 @@ export default function Jadlospis() {
       settings: exportSettings,
       menu: toExportMenu,
       dishes: exportDishes,
+      lists: storedLists, // <-- exported lists of dishes
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -206,6 +210,12 @@ export default function Jadlospis() {
           importedMenu = parsed.menu;
           if (Array.isArray(parsed.dishes)) importedDishes = parsed.dishes;
           if (parsed.settings) importedSettings = parsed.settings;
+          // also support lists exported as `lists` or `dishLists`
+          if (Array.isArray(parsed.lists) || Array.isArray(parsed.dishLists)) {
+            const importedLists = parsed.lists || parsed.dishLists;
+            localStorage.setItem("dishLists", JSON.stringify(importedLists));
+            setAvailableLists(importedLists);
+          }
         } else {
           throw new Error("Nieprawidłowy format pliku");
         }
@@ -253,6 +263,17 @@ export default function Jadlospis() {
             settings.noDishText = importedSettings.noDishText;
             localStorage.setItem("noDishText", importedSettings.noDishText);
           }
+        }
+
+        // also accept lists placed under top-level `lists` or `dishLists` inside parsed.settings
+        if (
+          importedSettings &&
+          (importedSettings.lists || importedSettings.dishLists)
+        ) {
+          const importedLists =
+            importedSettings.lists || importedSettings.dishLists;
+          localStorage.setItem("dishLists", JSON.stringify(importedLists));
+          setAvailableLists(importedLists);
         }
 
         // If no explicit parsed.dishes provided, also try to extract dish objects embedded in menu

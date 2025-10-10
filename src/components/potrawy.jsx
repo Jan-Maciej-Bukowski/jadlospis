@@ -35,6 +35,8 @@ export default function Potrawy() {
   const [version, setVersion] = useState(0); // wymusza rerender po zmianach bez edycji
   const [filterRating, setFilterRating] = useState(0);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [filterTagsInput, setFilterTagsInput] = useState(""); // nowe pole: tagi oddzielone przecinkami
+
   // bulk edit by tag
   const [tagToEdit, setTagToEdit] = useState("");
   const [bulkEdited, setBulkEdited] = useState({
@@ -201,8 +203,7 @@ export default function Potrawy() {
         Lista Potraw
       </Typography>
 
-      {/* Filtry */}
-      {/* Masowa edycja po tagu */}
+      {/*
       <Box
         sx={{
           mb: 2,
@@ -478,7 +479,7 @@ export default function Potrawy() {
             Wyczyść
           </Button>
         </Box>
-      </Box>
+      </Box>*/}
       <Box
         sx={{
           mb: 2,
@@ -519,13 +520,54 @@ export default function Potrawy() {
         </Button>
       </Box>
 
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          gap: 2,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <TextField
+          label="tagi"
+          size="small"
+          value={filterTagsInput}
+          onChange={(e) => setFilterTagsInput(e.target.value)}
+          sx={{ minWidth: 220 }}
+        />
+      </Box>
+
       <List>
         {dishes
-          .filter(
-            (dish) =>
-              (dish.rating || 0) >= filterRating &&
-              (!onlyFavorites || dish.favorite === true)
-          )
+          .filter((dish) => {
+            if ((dish.rating || 0) < filterRating) return false;
+            if (onlyFavorites && dish.favorite !== true) return false;
+            if (
+              !(Array.isArray(dish.tags) && dish.tags.length > 0)
+            )
+              return false;
+            // filtrowanie po wpisanych tagach (AND, case-insensitive)
+            const raw = (filterTagsInput || "").trim();
+            if (raw !== "") {
+              const wanted = raw
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+              if (wanted.length > 0) {
+                const dishTags = (
+                  Array.isArray(dish.tags)
+                    ? dish.tags
+                    : dish.tags
+                    ? [dish.tags]
+                    : []
+                ).map((t) => ("" + t).toLowerCase());
+                // wymagaj, by potrawa miała wszystkie wpisane tagi
+                if (!wanted.every((t) => dishTags.includes(t))) return false;
+              }
+            }
+            return true;
+          })
           .map((dish, index) => (
             <React.Fragment key={index}>
               <ListItem
