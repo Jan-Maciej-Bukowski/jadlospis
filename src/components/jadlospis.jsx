@@ -45,6 +45,24 @@ export default function Jadlospis() {
     "Niedziela",
   ];
 
+  const daysOfWeek_mobile = [
+    "Pon",
+    "Wt",
+    "Śr",
+    "Czw",
+    "Pt",
+    "Sob",
+    "Niedz",
+  ];
+
+  // Zwraca tekst widoczny w pierwszej kolumnie (możesz ustawić daysOfWeek_mobile)
+  const getVisualDay = (dayIndex, fallback) => {
+    if (Array.isArray(daysOfWeek_mobile) && daysOfWeek_mobile[dayIndex] && isNarrow ) {
+      return daysOfWeek_mobile[dayIndex];
+    }
+    return fallback ?? daysOfWeek[dayIndex] ?? "";
+  };
+
   useEffect(() => {
     const raw = localStorage.getItem("dishLists");
     try {
@@ -162,303 +180,6 @@ export default function Jadlospis() {
       title: "Zapisano",
       text: `Jadłospis "${name}" zapisany.`,
     });
-  };
-
-  const handleExport = () => {
-    const toExportMenu =
-      menu || JSON.parse(localStorage.getItem("lastMenu")) || [];
-    // collect unique full dish objects used in menu
-    const usedNames = new Set();
-    // placeholder used for "no dish" should NOT be exported as a dish
-    const placeholder = settings.noDishText || "Brak potraw";
-
-    // support multi-week (array of weeks) and single-week (array of days)
-    const flatDays = Array.isArray(toExportMenu[0])
-      ? toExportMenu.flat()
-      : toExportMenu;
-    flatDays.forEach((entry) =>
-      ["śniadanie", "obiad", "kolacja"].forEach((m) => {
-        const d = entry?.[m];
-        const name = d?.name ?? d;
-        if (!name) return;
-        // ignore placeholder/no-dish text
-        if (name === placeholder) return;
-        if (name) usedNames.add(name);
-      })
-    );
-    const exportDishes = Array.from(usedNames).map((name) => {
-      const d = dishesAll.find((x) => x.name === name);
-      return d
-        ? {
-            name: d.name,
-            tags: d.tags || [],
-            params: d.params || "",
-            probability: d.probability ?? 100,
-            maxRepeats: d.maxRepeats ?? 1,
-            allowedMeals: d.allowedMeals || ["śniadanie", "obiad", "kolacja"],
-            rating: d.rating ?? 0,
-            favorite: !!d.favorite,
-            ingredients: d.ingredients || [],
-            color: d.color || "",
-            maxAcrossWeeks: d.maxAcrossWeeks ?? null,
-          }
-        : { name };
-    });
-
-    // include full settings so import restores UI and generation settings
-    const exportSettings = {
-      excludedTags: settings.excludedTags,
-      specialDishes: settings.specialDishes,
-      ui: settings.ui,
-      noDishText: settings.noDishText, // <-- include custom placeholder
-    };
-
-    // include saved lists of dishes (if any)
-    const storedLists = JSON.parse(localStorage.getItem("dishLists") || "[]");
-
-    const exportData = {
-      meta: {
-        exportedAt: new Date().toISOString(),
-        source: "jadlospis",
-      },
-      settings: exportSettings,
-      menu: toExportMenu,
-      dishes: exportDishes,
-      lists: storedLists, // <-- exported lists of dishes
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `jadlospis_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    Swal.fire({
-      title: "Wyeksportowano",
-      text: "Jadłospis został pobrany w formacie JSON.",
-      icon: "success",
-      confirmButtonText: "OK",
-    });
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleImportFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const parsed = JSON.parse(ev.target.result);
-
-        // expected new format: { settings: {...}, menu: [...], dishes: [...] }
-        // support legacy: array -> menu only
-        let importedMenu = null;
-        let importedDishes = [];
-        let importedSettings = null;
-
-        if (Array.isArray(parsed)) {
-          // legacy: either single-week array (days) or multi-week array (weeks)
-          // detect: if first element is an array -> multi-week
-          if (Array.isArray(parsed[0])) {
-            importedMenu = parsed; // multi-week
-          } else {
-            importedMenu = parsed; // single-week
-          }
-        } else if (parsed && parsed.menu) {
-          importedMenu = parsed.menu;
-          if (Array.isArray(parsed.dishes)) importedDishes = parsed.dishes;
-          if (parsed.settings) importedSettings = parsed.settings;
-          // also support lists exported as `lists` or `dishLists`
-          if (Array.isArray(parsed.lists) || Array.isArray(parsed.dishLists)) {
-            const importedLists = parsed.lists || parsed.dishLists;
-            localStorage.setItem("dishLists", JSON.stringify(importedLists));
-            setAvailableLists(importedLists);
-          }
-        } else {
-          throw new Error("Nieprawidłym formacie pliku");
-        }
-
-        // Validate minimal menu structure:
-        // - single-week: array of day objects with day property
-        // - multi-week: array of weeks, each week is array of day objects
-        const isMultiWeek = Array.isArray(importedMenu[0]);
-        const valid =
-          Array.isArray(importedMenu) &&
-          (isMultiWeek
-            ? importedMenu.every(
-                (week) =>
-                  Array.isArray(week) &&
-                  week.every((row) => row && typeof row.day === "string")
-              )
-            : importedMenu.every((row) => row && typeof row.day === "string"));
-        if (!valid) throw new Error("Nieprawidłowa struktura menu");
-
-        // If settings present in file, apply them now (and persist to localStorage)
-        if (importedSettings) {
-          if (importedSettings.excludedTags) {
-            settings.excludedTags = importedSettings.excludedTags;
-            localStorage.setItem(
-              "excludedTags",
-              JSON.stringify(importedSettings.excludedTags)
-            );
-          }
-          if (importedSettings.specialDishes) {
-            settings.specialDishes = importedSettings.specialDishes;
-            localStorage.setItem(
-              "specialDishes",
-              JSON.stringify(importedSettings.specialDishes)
-            );
-          }
-          if (importedSettings.ui) {
-            settings.ui = importedSettings.ui;
-            localStorage.setItem(
-              "uiSettings",
-              JSON.stringify(importedSettings.ui)
-            );
-          }
-          // apply custom no-dish text from file (important to do before extracting dishes)
-          if (importedSettings.noDishText != null) {
-            settings.noDishText = importedSettings.noDishText;
-            localStorage.setItem("noDishText", importedSettings.noDishText);
-          }
-        }
-
-        // also accept lists placed under top-level `lists` or `dishLists` inside parsed.settings
-        if (
-          importedSettings &&
-          (importedSettings.lists || importedSettings.dishLists)
-        ) {
-          const importedLists =
-            importedSettings.lists || importedSettings.dishLists;
-          localStorage.setItem("dishLists", JSON.stringify(importedLists));
-          setAvailableLists(importedLists);
-        }
-
-        // If no explicit parsed.dishes provided, also try to extract dish objects embedded in menu
-        if ((!importedDishes || importedDishes.length === 0) && importedMenu) {
-          const extracted = [];
-          const currentPlaceholder = settings.noDishText || "Brak potraw";
-          if (Array.isArray(importedMenu[0])) {
-            {
-              // multi-week
-              importedMenu.forEach((week) =>
-                week.forEach((day) =>
-                  ["śniadanie", "obiad", "kolacja"].forEach((m) => {
-                    const d = day?.[m];
-                    if (
-                      d &&
-                      typeof d === "object" &&
-                      d.name &&
-                      d.name !== currentPlaceholder
-                    ) {
-                      extracted.push(d);
-                    }
-                  })
-                )
-              );
-            }
-          } else {
-            // single-week
-            importedMenu.forEach((day) =>
-              ["śniadanie", "obiad", "kolacja"].forEach((m) => {
-                const d = day?.[m];
-                if (
-                  d &&
-                  typeof d === "object" &&
-                  d.name &&
-                  d.name !== currentPlaceholder
-                )
-                  extracted.push(d);
-              })
-            );
-          }
-          if (extracted.length) importedDishes = extracted;
-        }
-
-        // Add imported dish metadata to local dishes if missing; also merge rating/favorite/color
-        importedDishes.forEach((imp) => {
-          if (!imp || !imp.name) return;
-          // don't add the placeholder as a dish
-          if (imp.name === (settings.noDishText || "Brak potraw")) return;
-          const exists = dishesAll.find((d) => d.name === imp.name);
-          if (!exists) {
-            const data = {
-              name: imp.name,
-              tags:
-                imp.tags ||
-                (Array.isArray(imp.tags) ? imp.tags.join(", ") : "") ||
-                "",
-              params: imp.params || "",
-              probability: imp.probability ?? 100,
-              maxRepeats: imp.maxRepeats ?? 1,
-              allowedMeals: imp.allowedMeals || [
-                "śniadanie",
-                "obiad",
-                "kolacja",
-              ],
-              rating: imp.rating ?? 0,
-              favorite: !!imp.favorite,
-              ingredients: imp.ingredients || [],
-              color: imp.color || "",
-              maxAcrossWeeks: imp.maxAcrossWeeks ?? null,
-            };
-            try {
-              addDish(data);
-            } catch (err) {
-              console.warn(
-                "Import: nie udało się dodać potrawy",
-                imp.name,
-                err
-              );
-            }
-          } else {
-            // merge provided meta
-            if (imp.rating != null) exists.rating = imp.rating;
-            if (imp.favorite != null) exists.favorite = !!imp.favorite;
-            if (imp.color != null) exists.color = imp.color;
-            if (imp.maxRepeats != null) exists.maxRepeats = imp.maxRepeats;
-            if (imp.maxAcrossWeeks != null)
-              exists.maxAcrossWeeks = imp.maxAcrossWeeks;
-            if (imp.tags)
-              exists.tags = Array.isArray(imp.tags)
-                ? imp.tags
-                : ("" + imp.tags)
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean);
-          }
-        });
-
-        // set menu and persist lastMenu
-        setMenu(importedMenu);
-        localStorage.setItem("lastMenu", JSON.stringify(importedMenu));
-
-        Swal.fire({
-          title: "Zaimportowano",
-          text: "Jadłospis, potrawy i ustawienia zostały zaimportowane pomyślnie.",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
-      } catch (err) {
-        Swal.fire({
-          title: "Błąd importu",
-          text: "Plik JSON ma niewłaściwy format.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      } finally {
-        e.target.value = "";
-      }
-    };
-    reader.readAsText(file);
   };
 
   // Drag & drop handlers (support single-week and multi-week menus)
@@ -833,7 +554,7 @@ export default function Jadlospis() {
                       {week.map((entry, index) => (
                         <TableRow key={index}>
                           <TableCell sx={{ p: cellPadding }}>
-                            {entry.day}
+                            {getVisualDay(index, entry.day)}
                           </TableCell>
                           {["śniadanie", "obiad", "kolacja"].map((meal) => {
                             const dish = entry[meal];
@@ -1083,7 +804,9 @@ export default function Jadlospis() {
               {menu.map((entry, index) => {
                 return (
                   <TableRow key={index}>
-                    <TableCell sx={{ p: cellPadding }}>{entry.day}</TableCell>
+                    <TableCell sx={{ p: cellPadding }}>
+                      {getVisualDay(index, entry.day)}
+                    </TableCell>
                     {["śniadanie", "obiad", "kolacja"].map((meal) => {
                       const dish = entry[meal];
                       const name =
