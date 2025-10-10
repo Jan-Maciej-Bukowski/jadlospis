@@ -17,6 +17,86 @@ const STORAGE_KEY = "dishLists";
 export default function Listy() {
   const [lists, setLists] = useState([]);
   const [newName, setNewName] = useState("");
+  // touch-dnd state kept on window to survive re-renders
+  const createGhost = (label) => {
+    const g = document.createElement("div");
+    g.textContent = label;
+    Object.assign(g.style, {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      padding: "6px 10px",
+      background: "rgba(0,0,0,0.8)",
+      color: "#fff",
+      borderRadius: 6,
+      zIndex: 99999,
+      pointerEvents: "none",
+      fontSize: "0.9rem",
+    });
+    document.body.appendChild(g);
+    return g;
+  };
+
+  const startTouchDrag = (e, dishName) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    // prevent page scrolling while dragging
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.touchAction = "none";
+
+    // store payload and ghost
+    window.__touchDrag = { payload: dishName, ghost: createGhost(dishName) };
+    window.__touchDrag.ghost.style.top = t.clientY + 6 + "px";
+    window.__touchDrag.ghost.style.left = t.clientX + 6 + "px";
+
+    const cleanup = () => {
+      try {
+        if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
+      } catch (err) {}
+      window.__touchDrag = null;
+      document.body.style.touchAction = prevTouchAction || "";
+      window.removeEventListener("touchmove", onMove, { passive: false });
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+
+    const onMove = (ev) => {
+      const tt = ev.touches && ev.touches[0];
+      if (!tt || !window.__touchDrag) return;
+      window.__touchDrag.ghost.style.top = tt.clientY + 6 + "px";
+      window.__touchDrag.ghost.style.left = tt.clientX + 6 + "px";
+      // preventDefault only when allowed (avoids Intervention console message)
+      if (ev.cancelable) ev.preventDefault();
+    };
+
+    const onEnd = (ev) => {
+      const last = ev.changedTouches && ev.changedTouches[0];
+      if (last && window.__touchDrag) {
+        const el = document.elementFromPoint(last.clientX, last.clientY);
+        const listEl = el && el.closest && el.closest("[data-list-id]");
+        if (listEl) {
+          onDropToList(
+            {
+              preventDefault: () => {},
+              dataTransfer: { getData: () => window.__touchDrag.payload },
+            },
+            listEl.dataset.listId
+          );
+        }
+      }
+      cleanup();
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) cleanup();
+    };
+
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    document.addEventListener("visibilitychange", onVisibility);
+  };
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -59,6 +139,15 @@ export default function Listy() {
 
   const onDragStart = (e, dishName) => {
     e.dataTransfer.setData("text/plain", dishName);
+    // ukryj przegląd przeciągania przeglądarki (czarne prostokąty) na desktopie/mobilu
+    try {
+      const img = new Image();
+      img.src =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XqzXQAAAAASUVORK5CYII=";
+      e.dataTransfer.setDragImage(img, 0, 0);
+    } catch (err) {
+      /* noop */
+    }
   };
 
   const onDropToList = (e, listId) => {
@@ -115,6 +204,7 @@ export default function Listy() {
                 label={d.name}
                 draggable
                 onDragStart={(e) => onDragStart(e, d.name)}
+                onTouchStart={(e) => startTouchDrag(e, d.name)}
                 variant="outlined"
                 sx={{ cursor: "grab" }}
               />
@@ -136,6 +226,7 @@ export default function Listy() {
               }}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => onDropToList(e, l.id)}
+              data-list-id={l.id} // for touch fallback
             >
               <Box
                 sx={{

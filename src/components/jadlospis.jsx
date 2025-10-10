@@ -466,6 +466,15 @@ export default function Jadlospis() {
     // src = { week: number|null, dayIndex: number, meal: "śniadanie"|"obiad"|"kolacja" }
     e.dataTransfer.setData("application/json", JSON.stringify(src));
     e.dataTransfer.effectAllowed = "move";
+    // ukryj domyślny podgląd przeciągania - ustaw 1x1 transparentny obraz
+    try {
+      const img = new Image();
+      img.src =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XqzXQAAAAASUVORK5CYII=";
+      e.dataTransfer.setDragImage(img, 0, 0);
+    } catch (err) {
+      // ignore if setDragImage not supported
+    }
   };
 
   const handleDragOver = (e) => {
@@ -517,6 +526,111 @@ export default function Jadlospis() {
       console.warn("handleDrop parse error:", err);
     }
   };
+
+  // touch-dnd helpers for moving dishes on touch devices
+  const createGhost = (label) => {
+    const g = document.createElement("div");
+    g.textContent = label;
+    Object.assign(g.style, {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      padding: "6px 10px",
+      background: "rgba(0,0,0,0.8)",
+      color: "#fff",
+      borderRadius: 6,
+      zIndex: 99999,
+      pointerEvents: "none",
+      fontSize: "0.9rem",
+    });
+    document.body.appendChild(g);
+    return g;
+  };
+
+  const startTouchDragCell = (e, src) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.touchAction = "none";
+
+    window.__touchDrag = {
+      payload: src,
+      ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
+    };
+    window.__touchDrag.ghost.style.top = t.clientY + 6 + "px";
+    window.__touchDrag.ghost.style.left = t.clientX + 6 + "px";
+
+    const cleanup = () => {
+      try {
+        if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
+      } catch (err) {}
+      window.__touchDrag = null;
+      document.body.style.touchAction = prevTouchAction || "";
+      window.removeEventListener("touchmove", onMove, { passive: false });
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+
+    const onMove = (ev) => {
+      const tt = ev.touches && ev.touches[0];
+      if (!tt || !window.__touchDrag) return;
+      window.__touchDrag.ghost.style.top = tt.clientY + 6 + "px";
+      window.__touchDrag.ghost.style.left = tt.clientX + 6 + "px";
+      if (ev.cancelable) ev.preventDefault();
+    };
+
+    const onEnd = (ev) => {
+      const last = ev.changedTouches && ev.changedTouches[0];
+      if (last && window.__touchDrag) {
+        const el = document.elementFromPoint(last.clientX, last.clientY);
+        const slotEl = el && el.closest && el.closest("[data-drop-week]");
+        if (slotEl) {
+          const dest = {
+            week: Number(slotEl.dataset.dropWeek),
+            dayIndex: Number(slotEl.dataset.dropDayindex),
+            meal: slotEl.dataset.dropMeal,
+          };
+          if (typeof window.__touchDrag.payload === "object") {
+            moveDish(window.__touchDrag.payload, dest);
+          } else {
+            const current = JSON.parse(
+              JSON.stringify(
+                menu || JSON.parse(localStorage.getItem("lastMenu")) || []
+              )
+            );
+            const isMulti = Array.isArray(current[0]);
+            const placeholderObj = {
+              name: window.__touchDrag.payload,
+              favorite: false,
+            };
+            if (isMulti)
+              current[dest.week][dest.dayIndex][dest.meal] = placeholderObj;
+            else current[dest.dayIndex][dest.meal] = placeholderObj;
+            setMenu(current);
+            localStorage.setItem("lastMenu", JSON.stringify(current));
+          }
+        }
+      }
+      cleanup();
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) cleanup();
+    };
+
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    document.addEventListener("visibilitychange", onVisibility);
+  };
+
+  const transparentDragImage = (() => {
+    const img = new Image();
+    img.src =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XqzXQAAAAASUVORK5CYII=";
+    return img;
+  })();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -598,16 +712,96 @@ export default function Jadlospis() {
                   >
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ p: cellPadding }}>
+                        <TableCell
+                          draggable={false}
+                          onDragStart={(e) => {
+                            // uniemożliwiamy domyślny preview/drag nagłówka
+                            try {
+                              e.dataTransfer.setDragImage(
+                                transparentDragImage,
+                                0,
+                                0
+                              );
+                            } catch (err) {}
+                            if (e.preventDefault) e.preventDefault();
+                          }}
+                          sx={{
+                            p: cellPadding,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
+                            WebkitUserDrag: "none",
+                            touchAction: "manipulation",
+                          }}
+                        >
                           <strong>Dzień tygodnia</strong>
                         </TableCell>
-                        <TableCell sx={{ p: cellPadding }}>
+
+                        <TableCell
+                          draggable={false}
+                          onDragStart={(e) => {
+                            try {
+                              e.dataTransfer.setDragImage(
+                                transparentDragImage,
+                                0,
+                                0
+                              );
+                            } catch (err) {}
+                            if (e.preventDefault) e.preventDefault();
+                          }}
+                          sx={{
+                            p: cellPadding,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
+                            WebkitUserDrag: "none",
+                            touchAction: "manipulation",
+                          }}
+                        >
                           <strong>Śniadanie</strong>
                         </TableCell>
-                        <TableCell sx={{ p: cellPadding }}>
+
+                        <TableCell
+                          draggable={false}
+                          onDragStart={(e) => {
+                            try {
+                              e.dataTransfer.setDragImage(
+                                transparentDragImage,
+                                0,
+                                0
+                              );
+                            } catch (err) {}
+                            if (e.preventDefault) e.preventDefault();
+                          }}
+                          sx={{
+                            p: cellPadding,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
+                            WebkitUserDrag: "none",
+                            touchAction: "manipulation",
+                          }}
+                        >
                           <strong>Obiad</strong>
                         </TableCell>
-                        <TableCell sx={{ p: cellPadding }}>
+
+                        <TableCell
+                          draggable={false}
+                          onDragStart={(e) => {
+                            try {
+                              e.dataTransfer.setDragImage(
+                                transparentDragImage,
+                                0,
+                                0
+                              );
+                            } catch (err) {}
+                            if (e.preventDefault) e.preventDefault();
+                          }}
+                          sx={{
+                            p: cellPadding,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
+                            WebkitUserDrag: "none",
+                            touchAction: "manipulation",
+                          }}
+                        >
                           <strong>Kolacja</strong>
                         </TableCell>
                       </TableRow>
@@ -655,6 +849,17 @@ export default function Jadlospis() {
                                     meal,
                                   })
                                 }
+                                data-drop-week={wi}
+                                data-drop-dayindex={index}
+                                data-drop-meal={meal}
+                                // touch start for moving cell contents
+                                onTouchStart={(e) =>
+                                  startTouchDragCell(e, {
+                                    week: wi,
+                                    dayIndex: index,
+                                    meal,
+                                  })
+                                }
                               >
                                 <Box
                                   sx={{
@@ -676,6 +881,13 @@ export default function Jadlospis() {
                                       draggable
                                       onDragStart={(e) =>
                                         handleDragStart(e, {
+                                          week: wi,
+                                          dayIndex: index,
+                                          meal,
+                                        })
+                                      }
+                                      onTouchStart={(e) =>
+                                        startTouchDragCell(e, {
                                           week: wi,
                                           dayIndex: index,
                                           meal,
@@ -769,16 +981,77 @@ export default function Jadlospis() {
           <Table size={tableSize}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ p: cellPadding }}>
+                <TableCell
+                  draggable={false}
+                  onDragStart={(e) => {
+                    // uniemożliwiamy domyślny preview/drag nagłówka
+                    try {
+                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+                    } catch (err) {}
+                    if (e.preventDefault) e.preventDefault();
+                  }}
+                  sx={{
+                    p: cellPadding,
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitUserDrag: "none",
+                    touchAction: "manipulation",
+                  }}
+                >
                   <strong>Dzień tygodnia</strong>
                 </TableCell>
-                <TableCell sx={{ p: cellPadding }}>
+                <TableCell
+                  draggable={false}
+                  onDragStart={(e) => {
+                    try {
+                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+                    } catch (err) {}
+                    if (e.preventDefault) e.preventDefault();
+                  }}
+                  sx={{
+                    p: cellPadding,
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitUserDrag: "none",
+                    touchAction: "manipulation",
+                  }}
+                >
                   <strong>Śniadanie</strong>
                 </TableCell>
-                <TableCell sx={{ p: cellPadding }}>
+                <TableCell
+                  draggable={false}
+                  onDragStart={(e) => {
+                    try {
+                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+                    } catch (err) {}
+                    if (e.preventDefault) e.preventDefault();
+                  }}
+                  sx={{
+                    p: cellPadding,
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitUserDrag: "none",
+                    touchAction: "manipulation",
+                  }}
+                >
                   <strong>Obiad</strong>
                 </TableCell>
-                <TableCell sx={{ p: cellPadding }}>
+                <TableCell
+                  draggable={false}
+                  onDragStart={(e) => {
+                    try {
+                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+                    } catch (err) {}
+                    if (e.preventDefault) e.preventDefault();
+                  }}
+                  sx={{
+                    p: cellPadding,
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitUserDrag: "none",
+                    touchAction: "manipulation",
+                  }}
+                >
                   <strong>Kolacja</strong>
                 </TableCell>
               </TableRow>
