@@ -29,8 +29,6 @@ export default function Jadlospis() {
   const [selectedListId, setSelectedListId] = useState("all");
   const [availableLists, setAvailableLists] = useState([]);
 
-  const fileInputRef = useRef(null);
-
   const ui = settings.ui || {};
   // wykrywanie wąskich ekranów (<768px)
   const isNarrow = useMediaQuery("(max-width:768px)");
@@ -56,7 +54,7 @@ export default function Jadlospis() {
     }
   }, []);
 
-  // helper before generating: pick dishes from selected list (or all)
+  //
   const getDishesForGeneration = () => {
     if (selectedListId === "all") return dishesAll;
     const arr = availableLists.find((l) => l.id === selectedListId);
@@ -95,6 +93,74 @@ export default function Jadlospis() {
       confirmButtonColor: "#4CAF50",
       background: "#fefefe",
       color: "#333",
+    });
+  };
+
+  // SAVE/LOAD saved menus via localStorage and cross-component event
+  useEffect(() => {
+    const onLoad = (ev) => {
+      const importedMenu = ev.detail;
+      if (!importedMenu) return;
+      setMenu(importedMenu);
+      localStorage.setItem("lastMenu", JSON.stringify(importedMenu));
+      Swal.fire({
+        icon: "success",
+        title: "Załadowano jadłospis",
+        showConfirmButton: false,
+        timer: 900,
+      });
+    };
+    window.addEventListener("loadSavedMenu", onLoad);
+
+    // jeśli ktoś zapisał pendingMenu (np. z innej sekcji), wczytaj je przy mountcie
+    try {
+      const pendingRaw = localStorage.getItem("pendingMenu");
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending && Array.isArray(pending)) {
+          setMenu(pending);
+          localStorage.setItem("lastMenu", JSON.stringify(pending));
+          localStorage.removeItem("pendingMenu");
+          Swal.fire({
+            icon: "success",
+            title: "Załadowano jadłospis",
+            showConfirmButton: false,
+            timer: 900,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Nie udało się wczytać pendingMenu", err);
+    }
+
+    return () => window.removeEventListener("loadSavedMenu", onLoad);
+  }, []);
+
+  const handleSaveCurrentMenu = async () => {
+    if (!menu) {
+      Swal.fire({
+        icon: "warning",
+        title: "Brak wygenerowanego jadłospisu",
+        text: "Najpierw wygeneruj jadłospis.",
+      });
+      return;
+    }
+    const { value: name } = await Swal.fire({
+      title: "Zapisz jadłospis",
+      input: "text",
+      inputLabel: "Nazwa jadłospisu",
+      inputPlaceholder: "np. Tydzień 2025-10-10",
+      showCancelButton: true,
+    });
+    if (!name) return;
+    const saved = JSON.parse(localStorage.getItem("savedMenus") || "[]");
+    const id = Date.now().toString();
+    saved.push({ id, name, menu, createdAt: new Date().toISOString() });
+    localStorage.setItem("savedMenus", JSON.stringify(saved));
+    Swal.fire({
+      icon: "success",
+      title: "Zapisano",
+      text: `Jadłospis "${name}" zapisany.`,
     });
   };
 
@@ -281,21 +347,24 @@ export default function Jadlospis() {
           const extracted = [];
           const currentPlaceholder = settings.noDishText || "Brak potraw";
           if (Array.isArray(importedMenu[0])) {
-            // multi-week
-            importedMenu.forEach((week) =>
-              week.forEach((day) =>
-                ["śniadanie", "obiad", "kolacja"].forEach((m) => {
-                  const d = day?.[m];
-                  if (
-                    d &&
-                    typeof d === "object" &&
-                    d.name &&
-                    d.name !== currentPlaceholder
-                  )
-                    extracted.push(d);
-                })
-              )
-            );
+            {
+              // multi-week
+              importedMenu.forEach((week) =>
+                week.forEach((day) =>
+                  ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+                    const d = day?.[m];
+                    if (
+                      d &&
+                      typeof d === "object" &&
+                      d.name &&
+                      d.name !== currentPlaceholder
+                    ) {
+                      extracted.push(d);
+                    }
+                  })
+                )
+              );
+            }
           } else {
             // single-week
             importedMenu.forEach((day) =>
@@ -403,35 +472,22 @@ export default function Jadlospis() {
     e.preventDefault(); // allow drop
   };
 
-  const handleDrop = (e, dest) => {
-    e.preventDefault();
-    try {
-      const raw = e.dataTransfer.getData("application/json");
-      if (!raw) return;
-      const src = JSON.parse(raw);
-      moveDish(src, dest);
-    } catch (err) {
-      // ignore bad payload
-    }
-  };
-
+  // helper: swap/move dish between slots (supports single-week and multi-week menu)
   const moveDish = (src, dest) => {
     const current = JSON.parse(
       JSON.stringify(menu || JSON.parse(localStorage.getItem("lastMenu")) || [])
     );
     if (!Array.isArray(current) || current.length === 0) return;
-
     const isMulti = Array.isArray(current[0]);
+
     const sWeek = isMulti ? src.week ?? 0 : 0;
     const dWeek = isMulti ? dest.week ?? 0 : 0;
-
-    // normalize indices
     const sDay = src.dayIndex;
     const dDay = dest.dayIndex;
     const sMeal = src.meal;
     const dMeal = dest.meal;
 
-    // same slot -> noop
+    // noop when same slot
     if (sWeek === dWeek && sDay === dDay && sMeal === dMeal) return;
 
     // swap values
@@ -447,6 +503,19 @@ export default function Jadlospis() {
 
     setMenu(current);
     localStorage.setItem("lastMenu", JSON.stringify(current));
+  };
+
+  const handleDrop = (e, dest) => {
+    e.preventDefault();
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const src = JSON.parse(raw);
+      moveDish(src, dest);
+    } catch (err) {
+      // ignore bad payloads but log for debug
+      console.warn("handleDrop parse error:", err);
+    }
   };
 
   return (
@@ -500,25 +569,13 @@ export default function Jadlospis() {
           </Button>
         </Box>
 
-        <Button variant="outlined" color="primary" onClick={handleExport}>
-          Eksportuj JSON
-        </Button>
-
         <Button
           variant="outlined"
-          color="secondary"
-          onClick={handleImportClick}
+          color="primary"
+          onClick={handleSaveCurrentMenu}
         >
-          Importuj JSON
+          Zapisz jadłospis
         </Button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          onChange={handleImportFile}
-          style={{ display: "none" }}
-        />
       </Box>
 
       {menu &&

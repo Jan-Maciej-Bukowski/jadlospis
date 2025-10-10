@@ -20,6 +20,7 @@ import DodajPotrawe from "./dodajPotrawe";
 import Jadlospis from "./jadlospis";
 import Ustawienia from "./ustawienia";
 import Listy from "./listy";
+import Jadlospisy from "./jadlospisy";
 
 export default function Navbar() {
   const [open, setOpen] = React.useState(false);
@@ -38,6 +39,7 @@ export default function Navbar() {
 
   const menuItems = [
     "Jadłospis",
+    "Jadłospisy", // sekcja z zapisanymi jadłospisami
     "Potrawy",
     "Dodaj potrawę",
     "Listy potraw",
@@ -181,6 +183,7 @@ export default function Navbar() {
 
       <Box sx={{ p: 3 }}>
         {activeSection === "Jadłospis" && <Jadlospis />}
+        {activeSection === "Jadłospisy" && <Jadlospisy />}
         {activeSection === "Potrawy" && <Potrawy />}
         {activeSection === "Dodaj potrawę" && <DodajPotrawe />}
         {activeSection === "Listy potraw" && <Listy />}
