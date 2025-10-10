@@ -15,6 +15,7 @@ import {
   IconButton,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from '@mui/icons-material/Edit';
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import dishes from "../js/potrawy";
@@ -997,6 +998,7 @@ export default function Potrawy() {
                       <Button
                         variant="outlined"
                         color="primary"
+                        startIcon={<EditIcon />}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEdit(index);

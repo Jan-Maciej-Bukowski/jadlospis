@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import UploadIcon from '@mui/icons-material/Upload';
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Swal from "sweetalert2";
@@ -250,7 +251,7 @@ export default function Jadlospisy() {
                     onClick={() => handleLoadIntoPlanner(s)}
                     title="Załaduj"
                   >
-                    <CloudDownloadIcon />
+                    <UploadIcon />
                   </IconButton>
                   <IconButton
                     edge="end"

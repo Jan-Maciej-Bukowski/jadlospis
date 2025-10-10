@@ -31,8 +31,8 @@ Pozwala dodawać potrawy, przypisywać je do dni tygodnia, oznaczać kolorami i 
 1. Sklonuj repozytorium:
 
 ```
-   git clone https://github.com/twoj-user/twoje-repo.git
-   cd twoje-repo
+   git clone https://github.com/Jan-Maciej-Bukowski/jadlospis.git
+   cd jadlospis
 ```
 
 2. Zainstaluj zależności:

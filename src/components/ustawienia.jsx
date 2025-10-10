@@ -14,6 +14,7 @@ import {
   FormControlLabel,
   Divider,
   Stack,
+  Paper,
 } from "@mui/material";
 import { settings } from "../js/settings"; // Import settings z osobnego pliku
 
@@ -28,7 +29,9 @@ export default function Ustawienia() {
     JSON.parse(localStorage.getItem("uiSettings")) || {
       showFavoriteStar: true,
       compactTable: false,
-      highlightFavorites: false,
+      // highlightFavorites removed
+      showRating: true,
+      showTags: true,
     };
   const [uiSettings, setUiSettings] = useState(initialUi);
 
@@ -77,8 +80,6 @@ export default function Ustawienia() {
     // clear staged edits
     setEditedTags({});
     setEditedSpecialDishes({});
-
-    //console.info("settings saved!");
   };
 
   const handleEditTagChange = (day, meal, value) => {
@@ -134,28 +135,30 @@ export default function Ustawienia() {
     specialDishes,
   ]);
 
-  // Sekcja ustawień wyglądu (dodano showRating/showTags)
+  // Sekcja ustawień wyglądu (uprzątnięta, pionowy układ)
   return (
     <Box
       id="container"
       sx={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "stretch",
+        justifyContent: "flex-start",
         padding: 2,
+        gap: 2,
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2 }}>
+      <Typography variant="h4" sx={{ mb: 1 }}>
         Ustawienia
       </Typography>
 
-      {/* Sekcja ustawień stylistycznych */}
-      <Box sx={{ width: "100%", mb: 3 }}>
+      {/* Sekcja ustawień stylistycznych - otoczona Paper */}
+      <Paper sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Ustawienia wyglądu
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+
+        <Stack direction="column" spacing={1}>
           <FormControlLabel
             control={
               <Switch
@@ -165,6 +168,7 @@ export default function Ustawienia() {
             }
             label="Pokaż serce obok ulubionych"
           />
+
           <FormControlLabel
             control={
               <Switch
@@ -174,15 +178,9 @@ export default function Ustawienia() {
             }
             label="Kompaktowy widok tabeli"
           />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={!!uiSettings.highlightFavorites}
-                onChange={() => toggleUi("highlightFavorites")}
-              />
-            }
-            label="Podświetl ulubione w jadłospisie"
-          />
+
+          {/* usunięto: Podświetl ulubione w jadłospisie */}
+
           <FormControlLabel
             control={
               <Switch
@@ -192,6 +190,7 @@ export default function Ustawienia() {
             }
             label="Pokaż ocenę w jadłospisie"
           />
+
           <FormControlLabel
             control={
               <Switch
@@ -214,12 +213,12 @@ export default function Ustawienia() {
             helperText='Wyświetlany tekst gdy w komórce jadłospisu nie ma potrawy (np. "Brak potraw").'
           />
         </Box>
-      </Box>
+      </Paper>
 
-      <Divider sx={{ width: "100%", mb: 2 }} />
+      <Divider />
 
       {/* Dodany nagłówek sekcji generowania */}
-      <Typography variant="h6" sx={{ mb: 1, alignSelf: "flex-start" }}>
+      <Typography variant="h6" sx={{ mb: 1, mt: 1 }}>
         Ustawienia generowania jadłospisu
       </Typography>
 
@@ -297,6 +296,12 @@ export default function Ustawienia() {
           ))}
         </TableBody>
       </Table>
+
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+        <Button variant="contained" onClick={handleSaveAll}>
+          Zapisz ustawienia
+        </Button>
+      </Box>
     </Box>
   );
 }
