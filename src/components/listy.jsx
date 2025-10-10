@@ -126,6 +126,18 @@ export default function Listy() {
         setLists([]);
       }
     }
+    // nasłuchuj aktualizacji list utworzonych z importu jadłospisu
+    const onUpdated = (ev) => {
+      try {
+        const next =
+          ev?.detail || JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        setLists(next);
+      } catch {
+        setLists([]);
+      }
+    };
+    window.addEventListener("dishListsUpdated", onUpdated);
+    return () => window.removeEventListener("dishListsUpdated", onUpdated);
   }, []);
 
   const save = (next) => {

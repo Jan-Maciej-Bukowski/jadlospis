@@ -12,11 +12,11 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import UploadIcon from '@mui/icons-material/Upload';
+import UploadIcon from "@mui/icons-material/Upload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Swal from "sweetalert2";
-import dishesAll from "../js/potrawy";
+import dishesAll, { addDish } from "../js/potrawy";
 
 export default function Jadlospisy() {
   const [saved, setSaved] = useState([]);
@@ -130,6 +130,7 @@ export default function Jadlospisy() {
         if (!parsed || !parsed.menu || !Array.isArray(parsed.menu)) {
           throw new Error("Nieprawidłowy format");
         }
+
         const name =
           parsed.name || `Import ${new Date().toISOString().slice(0, 10)}`;
         const id = Date.now().toString();
@@ -137,6 +138,119 @@ export default function Jadlospisy() {
           ...saved,
           { id, name, menu: parsed.menu, createdAt: new Date().toISOString() },
         ];
+
+        // --- nowość: utwórz listę potraw (dish list) z potraw z importowanego jadłospisu ---
+        try {
+          const placeholder = "Brak potraw";
+          const flatDays = Array.isArray(parsed.menu[0])
+            ? parsed.menu.flat()
+            : parsed.menu;
+          const used = new Set();
+          flatDays.forEach((entry) =>
+            ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+              const d = entry?.[m];
+              const dishName = d?.name ?? d;
+              if (!dishName) return;
+              if (dishName === placeholder) return;
+              used.add(dishName);
+            })
+          );
+          const dishesArray = Array.from(used);
+          if (dishesArray.length > 0) {
+            const existing = JSON.parse(
+              localStorage.getItem("dishLists") || "[]"
+            );
+            const listId = `import-${Date.now()}`;
+            const listName = `Z ${name}`;
+            existing.push({ id: listId, name: listName, dishes: dishesArray });
+            localStorage.setItem("dishLists", JSON.stringify(existing));
+            // powiadom inne komponenty (Listy) że lista potraw się zmieniła
+            try {
+              window.dispatchEvent(
+                new CustomEvent("dishListsUpdated", { detail: existing })
+              );
+            } catch (err) {
+              console.warn("Nie udało się wysłać eventu dishListsUpdated", err);
+            }
+
+            // DODATKOWO: dodaj/importuj potrawy do globalnej listy potraw (dishes)
+            try {
+              // jeśli plik zawiera szczegółowe obiekty potraw w parsed.dishes -> użyj ich
+              const importedDishes = Array.isArray(parsed.dishes)
+                ? parsed.dishes
+                : [];
+
+              if (importedDishes.length > 0) {
+                importedDishes.forEach((imp) => {
+                  if (!imp || !imp.name) return;
+                  const exists = dishesAll.find((d) => d.name === imp.name);
+                  if (!exists) {
+                    const data = {
+                      name: imp.name,
+                      tags:
+                        imp.tags ||
+                        (Array.isArray(imp.tags)
+                          ? imp.tags
+                          : typeof imp.tags === "string"
+                          ? imp.tags.split(",").map((t) => t.trim())
+                          : []),
+                      params: imp.params || "",
+                      probability: imp.probability ?? 100,
+                      maxRepeats: imp.maxRepeats ?? 1,
+                      allowedMeals: imp.allowedMeals || [
+                        "śniadanie",
+                        "obiad",
+                        "kolacja",
+                      ],
+                      rating: imp.rating ?? 0,
+                      favorite: !!imp.favorite,
+                      ingredients: imp.ingredients || [],
+                      color: imp.color || "",
+                      maxAcrossWeeks: imp.maxAcrossWeeks ?? null,
+                    };
+                    addDish(data);
+                  } else {
+                    // merge some metadata if present
+                    if (imp.rating != null) exists.rating = imp.rating;
+                    if (imp.favorite != null) exists.favorite = !!imp.favorite;
+                    if (imp.color) exists.color = imp.color;
+                    if (imp.tags)
+                      exists.tags = Array.isArray(imp.tags)
+                        ? imp.tags
+                        : ("" + imp.tags)
+                            .split(",")
+                            .map((t) => t.trim())
+                            .filter(Boolean);
+                  }
+                });
+              } else {
+                // brak szczegółów -> dodaj minimalne potrawy po samych nazwach
+                dishesArray.forEach((dn) => {
+                  if (!dishesAll.find((d) => d.name === dn)) {
+                    addDish({ name: dn });
+                  }
+                });
+              }
+
+              // zapisz i powiadom komponenty, że lista potraw się zmieniła
+              localStorage.setItem("dishes", JSON.stringify(dishesAll));
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("dishesUpdated", { detail: dishesAll })
+                );
+              } catch (err) {
+                console.warn("Nie udało się wysłać eventu dishesUpdated", err);
+              }
+            } catch (err) {
+              console.warn("Błąd podczas dodawania potraw z importu:", err);
+            }
+            // nie próbujemy aktualizować komponentu Listy — odświeży się przy remoncie/ponownym wejściu
+          }
+        } catch (err) {
+          console.warn("Nie udało się utworzyć listy potraw z importu:", err);
+        }
+        // --- koniec tworzenia listy potraw ---
+
         saveAll(next);
         Swal.fire({
           icon: "success",

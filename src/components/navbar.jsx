@@ -22,6 +22,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import SettingsIcon from "@mui/icons-material/Settings";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import Swal from "sweetalert2";
 import { ThemeContext } from "../context/ThemeContext";
 import Potrawy from "./potrawy";
@@ -30,6 +31,7 @@ import Jadlospis from "./jadlospis";
 import Ustawienia from "./ustawienia";
 import Listy from "./listy";
 import Jadlospisy from "./jadlospisy";
+import ListaZakupow from "./listaZakupow";
 
 export default function Navbar() {
   const [open, setOpen] = React.useState(false);
@@ -49,7 +51,7 @@ export default function Navbar() {
   // podzielone sekcje menu — między grupami pojawi się pozioma linia (Divider)
   const menuGroups = [
     { items: ["Jadłospis", "Jadłospisy"] },
-    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw"] },
+    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] }, // <- dodano Lista zakupów
     { items: ["Ustawienia"] },
   ];
 
@@ -65,6 +67,8 @@ export default function Navbar() {
         return <AddCircleOutlineIcon />;
       case "Listy potraw":
         return <FormatListBulletedIcon />;
+      case "Lista zakupów":
+        return <ShoppingCartIcon />;
       case "Ustawienia":
         return <SettingsIcon />;
       default:
@@ -230,6 +234,7 @@ export default function Navbar() {
       <Box sx={{ p: 3 }}>
         {activeSection === "Jadłospis" && <Jadlospis />}
         {activeSection === "Jadłospisy" && <Jadlospisy />}
+        {activeSection === "Lista zakupów" && <ListaZakupow />}
         {activeSection === "Potrawy" && <Potrawy />}
         {activeSection === "Dodaj potrawę" && <DodajPotrawe />}
         {activeSection === "Listy potraw" && <Listy />}
