@@ -19,23 +19,42 @@ export default function Listy() {
   const [newName, setNewName] = useState("");
   // touch-dnd state kept on window to survive re-renders
   const createGhost = (label) => {
+    // invisible ghost (text/color hidden) — payload stored in dataset only
     const g = document.createElement("div");
-    g.textContent = label;
+    g.dataset.payload = String(label || "");
     Object.assign(g.style, {
       position: "fixed",
       top: 0,
       left: 0,
       padding: "6px 10px",
-      background: "rgba(0,0,0,0.8)",
-      color: "#fff",
-      borderRadius: 6,
+      background: "transparent",
+      color: "transparent",
+      borderRadius: "6px",
       zIndex: 99999,
       pointerEvents: "none",
       fontSize: "0.9rem",
+      opacity: "0",
     });
+    g.setAttribute("aria-hidden", "true");
     document.body.appendChild(g);
     return g;
   };
+
+  // cleanup leftover ghost on unmount/pagehide
+  useEffect(() => {
+    const cleanupGlobal = () => {
+      try {
+        if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
+      } catch (err) {}
+      window.__touchDrag = null;
+      document.body.style.touchAction = "";
+    };
+    window.addEventListener("pagehide", cleanupGlobal);
+    return () => {
+      window.removeEventListener("pagehide", cleanupGlobal);
+      cleanupGlobal();
+    };
+  }, []);
 
   const startTouchDrag = (e, dishName) => {
     const t = e.touches && e.touches[0];

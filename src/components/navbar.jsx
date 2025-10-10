@@ -11,10 +11,17 @@ import {
   ListItem,
   ListItemText,
   ListItemButton,
+  ListItemIcon,
   TextField,
   Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import SaveIcon from "@mui/icons-material/Save";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import SettingsIcon from "@mui/icons-material/Settings";
 import Swal from "sweetalert2";
 import { ThemeContext } from "../context/ThemeContext";
 import Potrawy from "./potrawy";
@@ -45,6 +52,25 @@ export default function Navbar() {
     { items: ["Potrawy", "Dodaj potrawę", "Listy potraw"] },
     { items: ["Ustawienia"] },
   ];
+
+  const iconFor = (text) => {
+    switch (text) {
+      case "Jadłospis":
+        return <CalendarTodayIcon />;
+      case "Jadłospisy":
+        return <SaveIcon />;
+      case "Potrawy":
+        return <RestaurantMenuIcon />;
+      case "Dodaj potrawę":
+        return <AddCircleOutlineIcon />;
+      case "Listy potraw":
+        return <FormatListBulletedIcon />;
+      case "Ustawienia":
+        return <SettingsIcon />;
+      default:
+        return <MenuIcon />;
+    }
+  };
 
   const handleCustomColorApply = () => {
     if (/^#[0-9A-F]{6}$/i.test(customHex)) {
@@ -97,6 +123,9 @@ export default function Navbar() {
                     onClick={() => handleMenuClick(text)}
                     selected={activeSection === text}
                   >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      {iconFor(text)}
+                    </ListItemIcon>
                     <ListItemText primary={text} />
                   </ListItemButton>
                 ))}

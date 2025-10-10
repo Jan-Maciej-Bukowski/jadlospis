@@ -283,7 +283,7 @@ export default function Jadlospis() {
             setAvailableLists(importedLists);
           }
         } else {
-          throw new Error("Nieprawidłowy format pliku");
+          throw new Error("Nieprawidłym formacie pliku");
         }
 
         // Validate minimal menu structure:
@@ -529,23 +529,43 @@ export default function Jadlospis() {
 
   // touch-dnd helpers for moving dishes on touch devices
   const createGhost = (label) => {
+    // create an invisible ghost (no visible text, transparent colors)
     const g = document.createElement("div");
-    g.textContent = label;
+    // keep payload in dataset for debugging if needed, but do not show it
+    g.dataset.payload = String(label || "");
     Object.assign(g.style, {
       position: "fixed",
       top: 0,
       left: 0,
       padding: "6px 10px",
-      background: "rgba(0,0,0,0.8)",
-      color: "#fff",
-      borderRadius: 6,
+      background: "transparent",
+      color: "transparent",
+      borderRadius: "6px",
       zIndex: 99999,
       pointerEvents: "none",
       fontSize: "0.9rem",
+      opacity: "0",
     });
+    g.setAttribute("aria-hidden", "true");
     document.body.appendChild(g);
     return g;
   };
+
+  // ensure any leftover ghost is removed on unmount / pagehide
+  useEffect(() => {
+    const cleanupGlobal = () => {
+      try {
+        if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
+      } catch (err) {}
+      window.__touchDrag = null;
+      document.body.style.touchAction = "";
+    };
+    window.addEventListener("pagehide", cleanupGlobal);
+    return () => {
+      window.removeEventListener("pagehide", cleanupGlobal);
+      cleanupGlobal();
+    };
+  }, []);
 
   const startTouchDragCell = (e, src) => {
     const t = e.touches && e.touches[0];
@@ -557,6 +577,9 @@ export default function Jadlospis() {
       payload: src,
       ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
     };
+
+    console.log(__touchDrag);
+
     window.__touchDrag.ghost.style.top = t.clientY + 6 + "px";
     window.__touchDrag.ghost.style.left = t.clientX + 6 + "px";
 
@@ -1067,7 +1090,7 @@ export default function Jadlospis() {
                         dish?.name ??
                         dish ??
                         settings.noDishText ??
-                        "Braak potraw";
+                        "Brak potraw";
                       const favorite = !!dish?.favorite;
                       const dishObj = dishesAll.find((d) => d.name === name);
                       const dishColor = dishObj?.color || dish?.color || "";
