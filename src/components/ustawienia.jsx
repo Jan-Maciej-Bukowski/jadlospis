@@ -163,7 +163,7 @@ export default function Ustawienia() {
                 onChange={() => toggleUi("showFavoriteStar")}
               />
             }
-            label="Pokaż gwiazdkę obok ulubionych"
+            label="Pokaż serce obok ulubionych"
           />
           <FormControlLabel
             control={

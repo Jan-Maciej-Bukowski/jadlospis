@@ -55,6 +55,7 @@ export default function Potrawy() {
     ingredients: "",
     probability: 100,
     maxRepeats: 1,
+    maxPerDay: "",
     allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
     rating: 0,
     favorite: false,
@@ -78,6 +79,7 @@ export default function Potrawy() {
         : dish.ingredients || "",
       probability: dish.probability || 100,
       maxRepeats: dish.maxRepeats || 1,
+      maxPerDay: dish.maxPerDay ?? "",
       allowedMeals: {
         śniadanie: dish.allowedMeals?.includes("śniadanie") || false,
         obiad: dish.allowedMeals?.includes("obiad") || false,
@@ -103,6 +105,10 @@ export default function Potrawy() {
       .filter(Boolean);
     dishes[index].probability = editedDish.probability;
     dishes[index].maxRepeats = editedDish.maxRepeats;
+    dishes[index].maxPerDay =
+      editedDish.maxPerDay === "" || editedDish.maxPerDay == null
+        ? null
+        : Number(editedDish.maxPerDay);
     dishes[index].allowedMeals = Object.keys(editedDish.allowedMeals).filter(
       (meal) => editedDish.allowedMeals[meal]
     );
@@ -131,6 +137,7 @@ export default function Potrawy() {
       ingredients: "",
       probability: 100,
       maxRepeats: 1,
+      maxPerDay: "",
       allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
       rating: 0,
       favorite: false,
@@ -755,6 +762,25 @@ export default function Potrawy() {
                           },
                         }}
                         sx={{ mb: 2 }}
+                      />
+                      <TextField
+                        label="Maks na dzień"
+                        variant="outlined"
+                        type="number"
+                        size="small"
+                        value={editedDish.maxPerDay}
+                        onChange={(e) =>
+                          setEditedDish({
+                            ...editedDish,
+                            maxPerDay: e.target.value,
+                          })
+                        }
+                        slotProps={{
+                          htmlInput: {
+                            min: 0,
+                          },
+                        }}
+                        sx={{ mb: 2, ml: 0 }}
                       />
                       <br />
                       <TextField

@@ -29,6 +29,7 @@ export default function DodajPotrawe() {
   const [favorite, setFavorite] = useState(false);
   const [color, setColor] = useState(""); // kolor tła w jadlospisie
   const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
+  const [maxPerDay, setMaxPerDay] = useState(""); // maks na dzień (opcjonalnie)
 
   const handleMealChange = (meal) => {
     setAllowedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
@@ -52,6 +53,7 @@ export default function DodajPotrawe() {
       ingredients: ingredients,
       probability: probability,
       maxRepeats: maxRepeats,
+      maxPerDay: maxPerDay === "" ? null : Number(maxPerDay),
       allowedMeals: Object.keys(allowedMeals).filter(
         (meal) => allowedMeals[meal]
       ),
@@ -81,6 +83,7 @@ export default function DodajPotrawe() {
     setFavorite(false);
     setColor("");
     setMaxAcrossWeeks("");
+    setMaxPerDay("");
   }
 
   return (
@@ -160,27 +163,49 @@ export default function DodajPotrawe() {
           valueLabelDisplay="auto"
         />
         <TextField
-          label="Maksymalna liczba powtórzeń w tygodniu"
+          label="Maks wystąpień w dniu"
           variant="outlined"
           type="number"
-          fullWidth
+          size="medium"
+          value={maxPerDay}
+          onChange={(e) => setMaxPerDay(e.target.value)}
+          slotProps={{
+            htmlInput: {
+              min: 0,
+              max: 3
+            },
+          }}
+          placeholder="np. 1"
+          //sx={{ width: 260, mb: 1 }}
+        />
+        <TextField
+          label="Maks wystąpień w tygodniu"
+          variant="outlined"
+          type="number"
+          size="medium"
           value={maxRepeats}
           onChange={(e) => setMaxRepeats(Number(e.target.value))}
           slotProps={{
             htmlInput: {
               min: 0,
+              max: 7
             },
           }}
         />
         <TextField
-          label="Maks wystąpień w wygenerowanym przedziale (opcjonalnie)"
+          label="Maks wystąpień w jadłospisie"
           variant="outlined"
           type="number"
-          size="small"
+          size="medium"
           value={maxAcrossWeeks}
           onChange={(e) => setMaxAcrossWeeks(e.target.value)}
+          slotProps={{
+            htmlInput: {
+              min: 0,
+            },
+          }}
           placeholder="np. 3"
-          sx={{ width: 260, mb: 1 }}
+          //sx={{ width: 260, mb: 1 }}
         />
         <Typography gutterBottom>Dozwolone pory dnia:</Typography>
         <FormGroup>

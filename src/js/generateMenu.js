@@ -1,5 +1,6 @@
 export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
   // returns array of weeks: [ week0DaysArray, week1DaysArray, ... ]
+  console.log(dishes)
   const W = Math.max(1, Number(weeks) || 1);
   const { excludedTags = {}, specialDishes = {} } = settings || {};
   const placeholder = settings?.noDishText || "Brak potraw";
@@ -52,6 +53,16 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     const currentWeekCount = weekCountsForWeek[dish.name] || 0;
     const maxPerWeek = dish.maxRepeats ?? Infinity;
     if (currentWeekCount >= maxPerWeek) return false;
+    // per-day limit: count already placed occurrences of this dish in same week & day
+    const currentDayCount = slots.filter(
+      (x) =>
+        x.week === slot.week &&
+        x.dayIndex === slot.dayIndex &&
+        x.assigned &&
+        x.assigned.name === dish.name
+    ).length;
+    const maxPerDay = dish.maxPerDay ?? Infinity;
+    if (currentDayCount >= maxPerDay) return false;
     const currentGlobal = globalCounts[dish.name] || 0;
     const maxAcross = dish.maxAcrossWeeks ?? Infinity;
     if (currentGlobal >= maxAcross) return false;

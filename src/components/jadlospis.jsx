@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import { Rating, Chip } from "@mui/material";
+import { Rating, Chip, useMediaQuery } from "@mui/material";
 import Swal from "sweetalert2";
 import {
   Box,
@@ -13,7 +13,7 @@ import {
   Typography,
   TextField,
 } from "@mui/material";
-import dishes, { addDish } from "../js/potrawy";
+import dishesAll from "../js/potrawy";
 import { generateMenu } from "../js/generateMenu";
 import { settings } from "../js/settings.js";
 
@@ -26,10 +26,14 @@ export default function Jadlospis() {
     JSON.parse(localStorage.getItem("lastMenu")) || null
   );
   const [weeksToGenerate, setWeeksToGenerate] = useState(1);
+  const [selectedListId, setSelectedListId] = useState("all");
+  const [availableLists, setAvailableLists] = useState([]);
 
   const fileInputRef = useRef(null);
 
   const ui = settings.ui || {};
+  // wykrywanie wąskich ekranów (<768px)
+  const isNarrow = useMediaQuery("(max-width:768px)");
   const tableSize = ui.compactTable ? "small" : "medium";
   const cellPadding = ui.compactTable ? "6px 8px" : undefined;
 
@@ -43,9 +47,39 @@ export default function Jadlospis() {
     "Niedziela",
   ];
 
+  useEffect(() => {
+    const raw = localStorage.getItem("dishLists");
+    try {
+      setAvailableLists(raw ? JSON.parse(raw) : []);
+    } catch {
+      setAvailableLists([]);
+    }
+  }, []);
+
+  // helper before generating: pick dishes from selected list (or all)
+  const getDishesForGeneration = () => {
+    if (selectedListId === "all") return dishesAll;
+    const arr = availableLists.find((l) => l.id === selectedListId);
+    if (!arr) return [];
+    // map names to dish objects from master list
+    return arr.dishes
+      .map((name) => dishesAll.find((d) => d.name === name))
+      .filter(Boolean);
+  };
+
   const handleGenerateMenu = () => {
+    const source = getDishesForGeneration();
+    if (!Array.isArray(source) || source.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Brak potraw w źródle",
+        text: "Wybrana lista nie zawiera żadnych potraw. Wybierz inną listę lub dodaj potrawy.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
     const generated = generateMenu(
-      dishes,
+      source,
       settings,
       daysOfWeek,
       weeksToGenerate
@@ -87,7 +121,7 @@ export default function Jadlospis() {
       })
     );
     const exportDishes = Array.from(usedNames).map((name) => {
-      const d = dishes.find((x) => x.name === name);
+      const d = dishesAll.find((x) => x.name === name);
       return d
         ? {
             name: d.name,
@@ -264,7 +298,7 @@ export default function Jadlospis() {
           if (!imp || !imp.name) return;
           // don't add the placeholder as a dish
           if (imp.name === (settings.noDishText || "Brak potraw")) return;
-          const exists = dishes.find((d) => d.name === imp.name);
+          const exists = dishesAll.find((d) => d.name === imp.name);
           if (!exists) {
             const data = {
               name: imp.name,
@@ -400,7 +434,31 @@ export default function Jadlospis() {
         Jadłospis
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 2,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <TextField
+          select
+          SelectProps={{ native: true }}
+          label="Źródło potraw"
+          value={selectedListId}
+          onChange={(e) => setSelectedListId(e.target.value)}
+          size="small"
+        >
+          <option value="all">Wszystkie potrawy</option>
+          {availableLists.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name} ({l.dishes.length})
+            </option>
+          ))}
+        </TextField>
+
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <TextField
             label="Ile tygodni?"
@@ -453,131 +511,178 @@ export default function Jadlospis() {
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Tydzień {wi + 1}
                 </Typography>
-                <Table size={tableSize}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ p: cellPadding }}>
-                        <strong>Dzień tygodnia</strong>
-                      </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        <strong>Śniadanie</strong>
-                      </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        <strong>Obiad</strong>
-                      </TableCell>
-                      <TableCell sx={{ p: cellPadding }}>
-                        <strong>Kolacja</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {week.map((entry, index) => (
-                      <TableRow key={index}>
+                <Box
+                  sx={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
+                >
+                  <Table
+                    size={tableSize}
+                    sx={{ minWidth: 0, tableLayout: "fixed" }}
+                  >
+                    <TableHead>
+                      <TableRow>
                         <TableCell sx={{ p: cellPadding }}>
-                          {entry.day}
+                          <strong>Dzień tygodnia</strong>
                         </TableCell>
-                        {["śniadanie", "obiad", "kolacja"].map((meal) => {
-                          const dish = entry[meal];
-                          const name =
-                            dish?.name ??
-                            dish ??
-                            settings.noDishText ??
-                            "Brak potraw";
-                          const favorite = !!dish?.favorite;
-                          const dishObj = dishes.find((d) => d.name === name);
-                          // safe: don't access dishObj.tags when dishObj is undefined
-                          const dishColor = dishObj?.color || dish?.color || "";
-                          const cellStyle = dishColor
-                            ? { backgroundColor: dishColor }
-                            : {};
-                          return (
-                            <TableCell
-                              key={meal}
-                              sx={{ p: cellPadding, ...cellStyle }}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) =>
-                                handleDrop(e, {
-                                  week: wi,
-                                  dayIndex: index,
-                                  meal,
-                                })
-                              }
-                            >
-                              <Box
+                        <TableCell sx={{ p: cellPadding }}>
+                          <strong>Śniadanie</strong>
+                        </TableCell>
+                        <TableCell sx={{ p: cellPadding }}>
+                          <strong>Obiad</strong>
+                        </TableCell>
+                        <TableCell sx={{ p: cellPadding }}>
+                          <strong>Kolacja</strong>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {week.map((entry, index) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ p: cellPadding }}>
+                            {entry.day}
+                          </TableCell>
+                          {["śniadanie", "obiad", "kolacja"].map((meal) => {
+                            const dish = entry[meal];
+                            const name =
+                              dish?.name ??
+                              dish ??
+                              settings.noDishText ??
+                              "Brak potraw";
+                            const favorite = !!dish?.favorite;
+                            const dishObj = dishesAll.find(
+                              (d) => d.name === name
+                            );
+                            // safe: don't access dishObj.tags when dishObj is undefined
+                            const dishColor =
+                              dishObj?.color || dish?.color || "";
+                            const cellStyle = dishColor
+                              ? { backgroundColor: dishColor }
+                              : {};
+                            return (
+                              <TableCell
+                                key={meal}
                                 sx={{
-                                  display: "flex",
-                                  gap: 1,
-                                  flexDirection: "column",
-                                  alignItems: "flex-start",
+                                  p: cellPadding,
+                                  ...cellStyle,
+                                  // make cells able to wrap and not force horizontal scroll
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                  overflowWrap: "anywhere",
+                                  maxWidth: { xs: 160, sm: 240, md: "auto" },
                                 }}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) =>
+                                  handleDrop(e, {
+                                    week: wi,
+                                    dayIndex: index,
+                                    meal,
+                                  })
+                                }
                               >
                                 <Box
                                   sx={{
                                     display: "flex",
-                                    alignItems: "center",
                                     gap: 1,
+                                    flexDirection: "column",
+                                    alignItems: "flex-start",
                                   }}
                                 >
-                                  {/* draggable handle */}
-                                  <span
-                                    draggable
-                                    onDragStart={(e) =>
-                                      handleDragStart(e, {
-                                        week: wi,
-                                        dayIndex: index,
-                                        meal,
-                                      })
-                                    }
-                                    style={{ cursor: "grab" }}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                    }}
                                   >
-                                    {name}
-                                  </span>
-                                  {favorite && ui.showFavoriteStar && (
-                                    <FavoriteIcon
-                                      color="error"
-                                      fontSize="small"
-                                    />
-                                  )}
-                                  {ui.showRating && dishObj?.rating != null && (
-                                    <Rating
-                                      value={dishObj.rating}
-                                      size="small"
-                                      readOnly
-                                      precision={0.5}
-                                      sx={{ ml: 1 }}
-                                    />
-                                  )}
-                                </Box>
-                                {ui.showTags &&
-                                  Array.isArray(dishObj?.tags) &&
-                                  dishObj.tags.length > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        gap: 0.5,
-                                        flexWrap: "wrap",
-                                        mt: 0.5,
+                                    {/* draggable handle */}
+                                    <span
+                                      draggable
+                                      onDragStart={(e) =>
+                                        handleDragStart(e, {
+                                          week: wi,
+                                          dayIndex: index,
+                                          meal,
+                                        })
+                                      }
+                                      style={{
+                                        cursor: "grab",
+                                        display: "inline-block",
+                                        maxWidth: "100%",
+                                        overflowWrap: "anywhere",
                                       }}
                                     >
-                                      {dishObj.tags.map((t, i) => (
-                                        <Chip
-                                          key={i}
-                                          label={t}
-                                          size={
-                                            ui.compactTable ? "small" : "medium"
-                                          }
+                                      <span
+                                        style={{
+                                          display: "inline-block",
+                                          fontSize: isNarrow
+                                            ? "0.85rem"
+                                            : "1rem",
+                                          lineHeight: 1.1,
+                                          maxWidth: "100%",
+                                        }}
+                                      >
+                                        {name}
+                                      </span>
+                                    </span>
+                                    {favorite && ui.showFavoriteStar && (
+                                      <FavoriteIcon
+                                        color="error"
+                                        sx={{ fontSize: isNarrow ? 14 : 18 }}
+                                      />
+                                    )}
+                                    {/* hide rating/opinie on narrow screens */}
+                                    {!isNarrow &&
+                                      ui.showRating &&
+                                      dishObj?.rating != null && (
+                                        <Rating
+                                          value={dishObj.rating}
+                                          size="small"
+                                          readOnly
+                                          precision={0.5}
+                                          sx={{ ml: 1 }}
                                         />
-                                      ))}
-                                    </Box>
-                                  )}
-                              </Box>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                      )}
+                                  </Box>
+                                  {ui.showTags &&
+                                    Array.isArray(dishObj?.tags) &&
+                                    dishObj.tags.length > 0 && (
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          gap: isNarrow ? 0.25 : 0.5,
+                                          flexWrap: "wrap",
+                                          mt: 0.5,
+                                        }}
+                                      >
+                                        {dishObj.tags.map((t, i) => (
+                                          <Chip
+                                            key={i}
+                                            label={t}
+                                            size={
+                                              isNarrow
+                                                ? "small"
+                                                : ui.compactTable
+                                                ? "small"
+                                                : "medium"
+                                            }
+                                            sx={{
+                                              fontSize: isNarrow
+                                                ? "0.65rem"
+                                                : undefined,
+                                              height: isNarrow ? 22 : undefined,
+                                            }}
+                                          />
+                                        ))}
+                                      </Box>
+                                    )}
+                                </Box>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
               </Box>
             ))}
           </Box>
@@ -613,7 +718,7 @@ export default function Jadlospis() {
                         settings.noDishText ??
                         "Braak potraw";
                       const favorite = !!dish?.favorite;
-                      const dishObj = dishes.find((d) => d.name === name);
+                      const dishObj = dishesAll.find((d) => d.name === name);
                       const dishColor = dishObj?.color || dish?.color || "";
                       const cellStyle = dishColor
                         ? { backgroundColor: dishColor }
@@ -638,19 +743,30 @@ export default function Jadlospis() {
                                 gap: 1,
                               }}
                             >
-                              <span>{name}</span>
+                              <span
+                                style={{
+                                  fontSize: isNarrow ? "0.85rem" : "1rem",
+                                }}
+                              >
+                                {name}
+                              </span>
                               {favorite && ui.showFavoriteStar && (
-                                <FavoriteIcon color="error" fontSize="small" />
-                              )}
-                              {ui.showRating && dishObj?.rating != null && (
-                                <Rating
-                                  value={dishObj.rating}
-                                  size="small"
-                                  readOnly
-                                  precision={0.5}
-                                  sx={{ ml: 1 }}
+                                <FavoriteIcon
+                                  sx={{ fontSize: isNarrow ? 1 : 18 }}
+                                  color="error"
                                 />
                               )}
+                              {!isNarrow &&
+                                ui.showRating &&
+                                dishObj?.rating != null && (
+                                  <Rating
+                                    value={dishObj.rating}
+                                    size="small"
+                                    readOnly
+                                    precision={0.5}
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
                             </Box>
                             {ui.showTags &&
                               Array.isArray(dishObj?.tags) &&
@@ -668,8 +784,18 @@ export default function Jadlospis() {
                                       key={i}
                                       label={t}
                                       size={
-                                        ui.compactTable ? "small" : "medium"
+                                        isNarrow
+                                          ? "small"
+                                          : ui.compactTable
+                                          ? "small"
+                                          : "medium"
                                       }
+                                      sx={{
+                                        fontSize: isNarrow
+                                          ? "0.65rem"
+                                          : undefined,
+                                        height: isNarrow ? 22 : undefined,
+                                      }}
                                     />
                                   ))}
                                 </Box>

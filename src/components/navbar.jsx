@@ -19,6 +19,7 @@ import Potrawy from "./potrawy";
 import DodajPotrawe from "./dodajPotrawe";
 import Jadlospis from "./jadlospis";
 import Ustawienia from "./ustawienia";
+import Listy from "./listy";
 
 export default function Navbar() {
   const [open, setOpen] = React.useState(false);
@@ -35,7 +36,13 @@ export default function Navbar() {
     setOpen(false);
   };
 
-  const menuItems = ["Jadłospis", "Potrawy", "Dodaj potrawę", "Ustawienia"];
+  const menuItems = [
+    "Jadłospis",
+    "Potrawy",
+    "Dodaj potrawę",
+    "Listy potraw",
+    "Ustawienia",
+  ];
 
   const handleCustomColorApply = () => {
     if (/^#[0-9A-F]{6}$/i.test(customHex)) {
@@ -176,6 +183,7 @@ export default function Navbar() {
         {activeSection === "Jadłospis" && <Jadlospis />}
         {activeSection === "Potrawy" && <Potrawy />}
         {activeSection === "Dodaj potrawę" && <DodajPotrawe />}
+        {activeSection === "Listy potraw" && <Listy />}
         {activeSection === "Ustawienia" && <Ustawienia />}
       </Box>
     </>

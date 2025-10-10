@@ -109,15 +109,16 @@ export function addDish(data) {
     probability: data.probability,
     maxRepeats: data.maxRepeats || 1,
     ingredients: ingredientsArr,
+    maxPerDay: data.maxPerDay ?? null,
     allowedMeals: data.allowedMeals || ["śniadanie", "obiad", "kolacja"],
     rating: data.rating || 0,
     favorite: !!data.favorite,
-    color: data.color || "", // kolor tła w jadłospisie (np. "#e8f5e9")
+    color: data.color || "",
     maxAcrossWeeks: data.maxAcrossWeeks ?? null, // null = brak limitu dla zakresu tygodni
   });
 
   saveDishesToLocalStorage();
-  console.info("[potrawy] added dish:", newDish);
+  //console.info("[potrawy] added dish:", newDish);
   return newDish;
 }
 
