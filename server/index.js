@@ -202,6 +202,6 @@ app.delete("/api/user", auth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () =>
-  console.log(`Auth server running on http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
