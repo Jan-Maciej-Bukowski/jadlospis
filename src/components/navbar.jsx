@@ -1,19 +1,22 @@
-import React from "react";
+import React, { useState, useContext } from "react";
 import {
   AppBar,
   Box,
   Toolbar,
   Typography,
-  Button,
   IconButton,
   Drawer,
   List,
-  ListItem,
-  ListItemText,
   ListItemButton,
+  ListItemText,
   ListItemIcon,
-  TextField,
+  ListItem,
   Divider,
+  Button,
+  TextField,
+  Avatar,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -23,35 +26,61 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import Swal from "sweetalert2";
-import { ThemeContext } from "../context/ThemeContext";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+
+import Jadlospis from "./jadlospis";
+import Jadlospisy from "./jadlospisy";
 import Potrawy from "./potrawy";
 import DodajPotrawe from "./dodajPotrawe";
-import Jadlospis from "./jadlospis";
-import Ustawienia from "./ustawienia";
 import Listy from "./listy";
-import Jadlospisy from "./jadlospisy";
 import ListaZakupow from "./listaZakupow";
+import Ustawienia from "./ustawienia";
+import Logowanie from "./logowanie";
+import Swal from "sweetalert2";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function Navbar() {
-  const [open, setOpen] = React.useState(false);
-  const [activeSection, setActiveSection] = React.useState("Jadłospis");
-  const { changeTheme, updateCustomColor } = React.useContext(ThemeContext);
-  const [customHex, setCustomHex] = React.useState("");
+  const [open, setOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("Jadłospis");
 
-  const toggleDrawer = (state) => () => {
-    setOpen(state);
+  // theme context
+  const { changeTheme, updateCustomColor } = useContext(ThemeContext);
+
+  // lokalny stan pola na HEX (używany w TextField)
+  const [customHexInput, setCustomHexInput] = useState(
+    localStorage.getItem("customColor") || "#1976d2"
+  );
+
+  const handleCustomColorApply = () => {
+    const v = (customHexInput || "").trim();
+    if (!/^#([0-9A-Fa-f]{6})$/.test(v)) {
+      Swal.fire({
+        icon: "error",
+        title: "Nieprawidłowy HEX",
+        text: "Podaj kolor w formacie #RRGGBB",
+      });
+      return;
+    }
+    // ustaw customColor i przełącz motyw na "custom"
+    updateCustomColor(v);
+    changeTheme("custom");
+    // zapisz też w settings (ThemeContext robi to przez useEffect)
+    Swal.fire({
+      icon: "success",
+      title: "Zastosowano",
+      text: `Kolor ${v} ustawiony`,
+    });
   };
 
-  const handleMenuClick = (section) => {
-    setActiveSection(section);
-    setOpen(false);
-  };
-
-  // podzielone sekcje menu — między grupami pojawi się pozioma linia (Divider)
   const menuGroups = [
     { items: ["Jadłospis", "Jadłospisy"] },
-    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] }, // <- dodano Lista zakupów
+    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
     { items: ["Ustawienia"] },
   ];
 
@@ -76,17 +105,129 @@ export default function Navbar() {
     }
   };
 
-  const handleCustomColorApply = () => {
-    if (/^#[0-9A-F]{6}$/i.test(customHex)) {
-      updateCustomColor(customHex);
-    } else {
-      Swal.fire({
-        icon: "warning",
-        title: "Wprowadź poprawny kolor HEX",
-        text: "Np. #ff6600",
-        confirmButtonText: "OK",
-      });
+  const handleMenuClick = (text) => {
+    setActiveSection(text);
+    // ensure focus is removed before closing drawer to avoid aria-hidden warning
+    try {
+      document.activeElement instanceof HTMLElement &&
+        document.activeElement.blur();
+    } catch {}
+    setOpen(false);
+  };
+
+  // helpers to close drawers with blur (fix aria-hidden focus issue)
+  const closeLeftDrawer = () => {
+    try {
+      document.activeElement instanceof HTMLElement &&
+        document.activeElement.blur();
+    } catch {}
+    setOpen(false);
+  };
+  const closeAuthDrawer = () => {
+    try {
+      document.activeElement instanceof HTMLElement &&
+        document.activeElement.blur();
+    } catch {}
+    setAuthOpen(false);
+  };
+
+  // fallbackowa paleta kolorów używana przy renderowaniu przycisków/pepytków
+  const customHex = [
+    "#F44336",
+    "#E91E63",
+    "#9C27B0",
+    "#673AB7",
+    "#3F51B5",
+    "#2196F3",
+    "#03A9F4",
+    "#00BCD4",
+    "#009688",
+    "#4CAF50",
+    "#8BC34A",
+    "#CDDC39",
+    "#FFEB3B",
+    "#FFC107",
+    "#FF9800",
+    "#FF5722",
+    "#795548",
+    "#9E9E9E",
+    "#607D8B",
+  ];
+
+  // auth panel actions
+  const goToLogin = () => {
+    setActiveSection("Logowanie");
+    closeAuthDrawer();
+  };
+  const goToRegister = () => {
+    // simple flag so Logowanie can open in register mode if implemented
+    try {
+      localStorage.setItem("authMode", "register");
+    } catch {}
+    setActiveSection("Logowanie");
+    closeAuthDrawer();
+  };
+  const deleteAccount = async () => {
+    const token = localStorage.getItem("token");
+    const answer = await Swal.fire({
+      title: "Usuń konto?",
+      text: "To działanie jest nieodwracalne.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Usuń",
+    });
+    if (!answer.isConfirmed) return;
+    if (token) {
+      try {
+        // próbuj wywołać endpoint usuwania konta (jeśli dodasz w backend)
+        await fetch(
+          (import.meta.env.VITE_API_URL || "http://localhost:4000") +
+            "/api/user",
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      } catch (err) {
+        // ignore network errors — nadal czyścimy lokalne dane
+      }
     }
+    localStorage.clear();
+    window.dispatchEvent(new CustomEvent("userLoggedOut"));
+    closeAuthDrawer();
+    window.location.reload();
+  };
+  const clearData = () => {
+    Swal.fire({
+      title: "Jesteś pewien?",
+      text: "Usuniętych danych nie da się przywrócić!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Usuń",
+      cancelButtonText: "Anuluj",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    });
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // opcjonalnie: zachowaj lokal kopie? tutaj czyścimy aplikacyjne dane
+    localStorage.removeItem("dishes");
+    localStorage.removeItem("dishLists");
+    localStorage.removeItem("lastMenu");
+    localStorage.removeItem("savedMenus");
+    localStorage.removeItem("settings");
+    window.dispatchEvent(new CustomEvent("userLoggedOut"));
+    // odśwież UI
+    setTimeout(() => {
+      closeAuthDrawer();
+      setActiveSection("Jadłospis");
+      window.location.reload();
+    }, 100);
   };
 
   return (
@@ -97,40 +238,41 @@ export default function Navbar() {
             size="large"
             edge="start"
             color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-            onClick={toggleDrawer(true)}
+            onClick={() => setOpen(true)}
           >
             <MenuIcon />
           </IconButton>
-
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Planer Jadłospisów
           </Typography>
+
+          {/* przycisk otwierający prawy auth-panel */}
+          <IconButton
+            color="inherit"
+            onClick={() => setAuthOpen(true)}
+            aria-label="konto"
+          >
+            <AccountCircleIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
 
-      <Drawer anchor="left" open={open} onClose={toggleDrawer(false)}>
-        <Box
-          sx={{ width: 250 }}
-          role="presentation"
-          onClick={toggleDrawer(false)}
-          onKeyDown={toggleDrawer(false)}
-        >
-          {/* menu podzielone na grupy z dividerami */}
+      {/* lewy główny drawer (sekcje) */}
+      <Drawer anchor="left" open={open} onClose={closeLeftDrawer}>
+        <Box sx={{ width: 260 }} role="presentation" onKeyDown={() => {}}>
           {menuGroups.map((group, gi) => (
             <Box key={gi}>
               <List>
-                {group.items.map((text) => (
+                {group.items.map((it) => (
                   <ListItemButton
-                    key={text}
-                    onClick={() => handleMenuClick(text)}
-                    selected={activeSection === text}
+                    key={it}
+                    selected={activeSection === it}
+                    onClick={() => handleMenuClick(it)}
                   >
                     <ListItemIcon sx={{ minWidth: 36 }}>
-                      {iconFor(text)}
+                      {iconFor(it)}
                     </ListItemIcon>
-                    <ListItemText primary={text} />
+                    <ListItemText primary={it} />
                   </ListItemButton>
                 ))}
               </List>
@@ -147,17 +289,16 @@ export default function Navbar() {
             </ListItem>
           </List>
 
-          {/* Kolory tęczy */}
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, p: 2 }}>
             {[
-              { name: "red", color: "#f44336" }, // Czerwony
-              { name: "orange", color: "#ff9800" }, // Pomarańczowy
-              { name: "yellow", color: "#ffeb3b" }, // Żółty
-              { name: "green", color: "#4caf50" }, // Zielony
-              { name: "blue", color: "#2196f3" }, // Niebieski
-              { name: "indigo", color: "#3f51b5" }, // Indygo
-              { name: "purple", color: "#9c27b0" }, // Fioletowy
-              { name: "dark", color: "#212121" }, // Ciemny motyw
+              { name: "red", color: "#f44336" },
+              { name: "orange", color: "#ff9800" },
+              { name: "yellow", color: "#ffeb3b" },
+              { name: "green", color: "#4caf50" },
+              { name: "blue", color: "#2196f3" },
+              { name: "indigo", color: "#3f51b5" },
+              { name: "purple", color: "#9c27b0" },
+              { name: "dark", color: "#212121" },
             ].map((theme) => (
               <Box
                 key={theme.name}
@@ -181,64 +322,120 @@ export default function Navbar() {
               label="Własny kolor HEX"
               variant="outlined"
               fullWidth
-              value={customHex}
-              onChange={(e) => setCustomHex(e.target.value)}
+              value={customHexInput}
+              onChange={(e) => setCustomHexInput(e.target.value)}
               sx={{ mb: 2 }}
-              onClick={(e) => e.stopPropagation()} // Zatrzymanie propagacji kliknięcia
-              onKeyDown={(e) => e.stopPropagation()} // Zatrzymanie propagacji klawiatury
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             />
             <Button
               variant="contained"
               color="primary"
               fullWidth
               onClick={(e) => {
-                e.stopPropagation(); // Zatrzymanie propagacji kliknięcia
+                e.stopPropagation();
                 handleCustomColorApply();
               }}
             >
               Zastosuj
             </Button>
           </Box>
+        </Box>
+      </Drawer>
 
-          {/* Przycisk do wyczyszczenia danych */}
-          <ListItem>
-            <Button
-              variant="contained"
-              color="secondary"
-              fullWidth
+      {/* prawy auth-panel (kompaktowy) */}
+      <Drawer anchor="right" open={authOpen} onClose={closeAuthDrawer}>
+        <Box sx={{ width: 320, p: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <AccountCircleIcon /> Konto
+          </Typography>
+
+          {/* pokaż nazwę użytkownika jeśli jest */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+            <Avatar>
+              {(
+                JSON.parse(localStorage.getItem("user") || "null")?.username ||
+                "U"
+              )
+                ?.charAt(0)
+                ?.toUpperCase()}
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle1">
+                {JSON.parse(localStorage.getItem("user") || "null")?.username ||
+                  "Gość"}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {JSON.parse(localStorage.getItem("user") || "null")?.email ||
+                  ""}
+              </Typography>
+            </Box>
+          </Box>
+
+          <List>
+            <ListItemButton onClick={goToLogin}>
+              <ListItemIcon>
+                <LoginIcon />
+              </ListItemIcon>
+              <ListItemText primary="Zaloguj" />
+            </ListItemButton>
+
+            <ListItemButton onClick={goToRegister}>
+              <ListItemIcon>
+                <PersonAddIcon />
+              </ListItemIcon>
+              <ListItemText primary="Zarejestruj" />
+            </ListItemButton>
+
+            <Divider sx={{ my: 1 }} />
+
+            <ListItemButton
               onClick={() => {
-                Swal.fire({
-                  title: "Jesteś pewien?",
-                  text: "Usuniętych danych nie da się przywrócić!",
-                  icon: "warning",
-                  showCancelButton: true,
-                  confirmButtonColor: "#3085d6",
-                  cancelButtonColor: "#d33",
-                  confirmButtonText: "Usuń",
-                  cancelButtonText: "Anuluj", // 👈 tu zmieniasz napis
-                }).then((result) => {
-                  if (result.isConfirmed) {
-                    localStorage.clear();
-                    window.location.reload();
-                  }
-                });
+                handleLogout();
+                closeAuthDrawer();
               }}
-              sx={{ mt: 2 }}
             >
-              Wyczyść dane
-            </Button>
-          </ListItem>
+              <ListItemIcon>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText primary="Wyloguj" />
+            </ListItemButton>
+
+            <ListItemButton onClick={deleteAccount}>
+              <ListItemIcon>
+                <DeleteForeverIcon color="error" />
+              </ListItemIcon>
+              <ListItemText primary="Usuń konto" />
+            </ListItemButton>
+
+            <ListItemButton
+              onClick={() => {
+                clearData();
+              }}
+            >
+              <ListItemIcon>
+                <DeleteSweepIcon />
+              </ListItemIcon>
+              <ListItemText primary="Wyczyść dane" />
+            </ListItemButton>
+          </List>
         </Box>
       </Drawer>
 
       <Box sx={{ p: 3 }}>
         {activeSection === "Jadłospis" && <Jadlospis />}
         {activeSection === "Jadłospisy" && <Jadlospisy />}
-        {activeSection === "Lista zakupów" && <ListaZakupow />}
         {activeSection === "Potrawy" && <Potrawy />}
         {activeSection === "Dodaj potrawę" && <DodajPotrawe />}
         {activeSection === "Listy potraw" && <Listy />}
+        {activeSection === "Lista zakupów" && <ListaZakupow />}
         {activeSection === "Ustawienia" && <Ustawienia />}
+        {activeSection === "Logowanie" && (
+          <Logowanie onLogged={() => setActiveSection("Jadłospis")} />
+        )}
       </Box>
     </>
   );

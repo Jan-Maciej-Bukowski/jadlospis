@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { ensureLocalDefault } from "../utils/storageHelpers";
 import {
   Box,
   Button,
@@ -22,6 +23,8 @@ export default function Jadlospisy() {
   const [saved, setSaved] = useState([]);
   const fileRef = useRef(null);
   useEffect(() => {
+    ensureLocalDefault("savedMenus", []);
+    // keep saved from localStorage
     const raw = localStorage.getItem("savedMenus");
     try {
       setSaved(raw ? JSON.parse(raw) : []);

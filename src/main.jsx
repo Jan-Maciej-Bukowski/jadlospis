@@ -1,13 +1,19 @@
-import { StrictMode } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
-import './App.css'; 
-import { ThemeContextProvider } from "./context/ThemeContext";
+import App from "./App";
+import "./App.css";
 
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <ThemeContextProvider>
+import { initUserSync } from "./utils/userSync";
+import { ThemeProvider } from "./context/ThemeContext";
+
+const root = createRoot(document.getElementById("root"));
+root.render(
+  <React.StrictMode>
+    <ThemeProvider>
       <App />
-    </ThemeContextProvider>
-  </StrictMode>
+    </ThemeProvider>
+  </React.StrictMode>
 );
+
+// start auto-sync (debounced) — wywołanie jednorazowe przy starcie aplikacji
+initUserSync();

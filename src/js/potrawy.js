@@ -4,7 +4,30 @@ const stripHtml = (html = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
-const dishes = JSON.parse(localStorage.getItem("dishes")) || [];
+// Utilities for dishes stored in localStorage. Always read current storage, merge and emit update.
+function safeParse(raw, fallback) {
+  try {
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readDishes() {
+  return safeParse(localStorage.getItem("dishes"), []);
+}
+
+function writeDishes(arr) {
+  try {
+    localStorage.setItem("dishes", JSON.stringify(arr));
+  } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent("dishesUpdated", { detail: arr }));
+  } catch {}
+  return arr;
+}
+
+const dishes = readDishes();
 
 // remove html from dishes
 dishes.forEach((dish) => {
@@ -82,84 +105,92 @@ if (normalized) {
   localStorage.setItem("dishes", JSON.stringify(dishes));
 }
 
-export function addDish(data) {
-  const ingredientsArr = Array.isArray(data.ingredients)
-    ? data.ingredients
-    : typeof data.ingredients === "string"
-    ? // split by newline when multiline provided, otherwise by comma
-      data.ingredients.includes("\n")
-      ? data.ingredients
+// addDish: merge with existing localStorage instead of using a static list
+export function addDish(dish) {
+  if (!dish || !dish.name) return null;
+  const existing = readDishes();
+
+  // normalize incoming dish
+  const norm = {
+    name: String(dish.name).trim(),
+    tags: Array.isArray(dish.tags)
+      ? dish.tags
+      : dish.tags
+      ? ("" + dish.tags)
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [],
+    params: dish.params || "",
+    ingredients: Array.isArray(dish.ingredients)
+      ? dish.ingredients
+      : dish.ingredients
+      ? ("" + dish.ingredients)
           .split("\n")
           .map((s) => s.trim())
           .filter(Boolean)
-      : data.ingredients
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-    : [];
-
-  const newDish = new Dish({
-    name: data.name,
-    tags: Array.isArray(data.tags)
-      ? data.tags
-      : typeof data.tags === "string"
-      ? data.tags.split(",").map((t) => t.trim())
       : [],
-    params: data.params,
-    probability: data.probability,
-    maxRepeats: data.maxRepeats || 1,
-    ingredients: ingredientsArr,
-    maxPerDay: data.maxPerDay ?? null,
-    allowedMeals: data.allowedMeals || ["śniadanie", "obiad", "kolacja"],
-    rating: data.rating || 0,
-    favorite: !!data.favorite,
-    color: data.color || "",
-    maxAcrossWeeks: data.maxAcrossWeeks ?? null, // null = brak limitu dla zakresu tygodni
-  });
+    probability: typeof dish.probability === "number" ? dish.probability : 100,
+    maxRepeats: dish.maxRepeats != null ? Number(dish.maxRepeats) : 1,
+    maxPerDay:
+      dish.maxPerDay != null
+        ? dish.maxPerDay === ""
+          ? null
+          : Number(dish.maxPerDay)
+        : null,
+    allowedMeals: Array.isArray(dish.allowedMeals)
+      ? dish.allowedMeals
+      : dish.allowedMeals
+      ? ("" + dish.allowedMeals)
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : ["śniadanie", "obiad", "kolacja"],
+    rating: dish.rating != null ? Number(dish.rating) : 0,
+    favorite: !!dish.favorite,
+    color: dish.color || "",
+    maxAcrossWeeks:
+      dish.maxAcrossWeeks != null
+        ? dish.maxAcrossWeeks === ""
+          ? null
+          : Number(dish.maxAcrossWeeks)
+        : null,
+  };
 
-  saveDishesToLocalStorage();
-  //console.info("[potrawy] added dish:", newDish);
-  return newDish;
-}
-
-class Dish {
-  constructor({
-    name = "NOT SPECIFIED",
-    tags = [],
-    params = "nie ma",
-    probability = 100,
-    ingredients = [],
-    extendedIngredients = null,
-    image = null,
-    maxRepeats = 1,
-    allowedMeals = ["śniadanie", "obiad", "kolacja"],
-    rating = 0,
-    favorite = false,
-    color = "", // kolor tła w jadłospisie
-    maxAcrossWeeks = null, // ile razy max w wygenerowanym przedziale (null = brak limitu)
-  } = {}) {
-    this.name = name;
-    this.tags = tags;
-    this.params = params;
-    this.probability = probability;
-    this.ingredients = ingredients;
-    this.extendedIngredients = extendedIngredients;
-    this.image = image;
-    this.maxRepeats = maxRepeats;
-    this.allowedMeals = allowedMeals;
-    this.rating = rating;
-    this.favorite = favorite;
-    this.color = color;
-    this.maxAcrossWeeks = maxAcrossWeeks;
-    dishes.push(this);
+  // if exact name exists, append unique suffix to avoid accidental replace
+  const exists = existing.find(
+    (e) => (e.name || "").toLowerCase() === norm.name.toLowerCase()
+  );
+  if (exists) {
+    // create unique name
+    let i = 2;
+    let base = norm.name;
+    while (
+      existing.find(
+        (e) =>
+          (e.name || "").toLowerCase() ===
+          (norm.name + " (" + i + ")").toLowerCase()
+      )
+    )
+      i++;
+    norm.name = base + " (" + i + ")";
   }
+
+  existing.push(norm);
+  writeDishes(existing);
+  return norm;
 }
 
-function saveDishesToLocalStorage() {
-  localStorage.setItem("dishes", JSON.stringify(dishes));
+// helper exports (optional)
+export function getAllDishes() {
+  return readDishes();
 }
 
-export default dishes;
+export function replaceAllDishes(arr) {
+  return writeDishes(Array.isArray(arr) ? arr : []);
+}
+
+export default getAllDishes;
 
 window.dane = () => {
   console.log(dishes);

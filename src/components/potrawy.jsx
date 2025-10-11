@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { ensureLocalDefault } from "../utils/storageHelpers";
 import {
   Box,
   List,
@@ -15,10 +16,10 @@ import {
   IconButton,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from '@mui/icons-material/Edit';
+import EditIcon from "@mui/icons-material/Edit";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import dishes from "../js/potrawy";
+import defaultDishes from "../js/potrawy";
 import Swal from "sweetalert2";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -29,6 +30,17 @@ const stripHtml = (html = "") =>
     .replace(/<[^>]+>/g, "")
     .replace(/\s+/g, " ")
     .trim();
+
+function safeParse(raw, fallback) {
+  try {
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// ensure key exists (do not overwrite existing data)
+ensureLocalDefault("dishes", defaultDishes || []);
 
 export default function Potrawy() {
   const [openIndex, setOpenIndex] = useState(null);
@@ -66,15 +78,54 @@ export default function Potrawy() {
     maxAcrossWeeks: "",
   });
 
+  // dishes state: load from localStorage or fallback to defaultDishes
+  const [dishes, setDishes] = useState(() =>
+    safeParse(localStorage.getItem("dishes"), defaultDishes || [])
+  );
+
+  useEffect(() => {
+    // listen for external updates (other tabs / sync)
+    const handler = (e) => {
+      const ext = safeParse(localStorage.getItem("dishes"), null);
+      if (ext) setDishes(ext);
+    };
+    window.addEventListener("dishesUpdated", handler);
+    const storageHandler = (e) => {
+      if (e.key === "dishes") {
+        const val = safeParse(e.newValue, null);
+        if (val) setDishes(val);
+      }
+    };
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      window.removeEventListener("dishesUpdated", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
+  }, []);
+
+  const saveLocal = (next) => {
+    const toSave = next ?? dishes;
+    try {
+      localStorage.setItem("dishes", JSON.stringify(toSave));
+    } catch {}
+    setVersion((v) => v + 1);
+    // notify sync module / other components
+    try {
+      window.dispatchEvent(
+        new CustomEvent("dishesUpdated", { detail: toSave })
+      );
+    } catch {}
+  };
+
   const handleToggle = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   const handleEdit = (index) => {
-    const dish = dishes[index];
+    const dish = dishes[index] || {};
     setEditIndex(index);
     setEditedDish({
-      name: dish.name,
+      name: dish.name || "",
       tags: Array.isArray(dish.tags) ? dish.tags.join(", ") : dish.tags || "",
       params: dish.params || "",
       ingredients: Array.isArray(dish.ingredients)
@@ -96,38 +147,42 @@ export default function Potrawy() {
   };
 
   const handleSave = (index) => {
-    dishes[index].name = editedDish.name;
-    dishes[index].tags = editedDish.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-    dishes[index].params = editedDish.params;
-    dishes[index].ingredients = editedDish.ingredients
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    dishes[index].probability = editedDish.probability;
-    dishes[index].maxRepeats = editedDish.maxRepeats;
-    dishes[index].maxPerDay =
-      editedDish.maxPerDay === "" || editedDish.maxPerDay == null
-        ? null
-        : Number(editedDish.maxPerDay);
-    dishes[index].allowedMeals = Object.keys(editedDish.allowedMeals).filter(
-      (meal) => editedDish.allowedMeals[meal]
-    );
-    if (editedDish.rating != null) dishes[index].rating = editedDish.rating;
-    if (editedDish.favorite != null)
-      dishes[index].favorite = editedDish.favorite;
-    // save color
-    dishes[index].color = editedDish.color || "";
-    dishes[index].maxAcrossWeeks =
-      editedDish.maxAcrossWeeks === "" || editedDish.maxAcrossWeeks == null
-        ? null
-        : Number(editedDish.maxAcrossWeeks);
-
-    // Zapisz i wymuś rerender
-    localStorage.setItem("dishes", JSON.stringify(dishes));
-    setVersion((v) => v + 1);
+    setDishes((prev) => {
+      const copy = [...prev];
+      const d = copy[index] || {};
+      copy[index] = {
+        ...d,
+        name: editedDish.name,
+        tags: editedDish.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        params: editedDish.params,
+        ingredients: editedDish.ingredients
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        probability: editedDish.probability,
+        maxRepeats: editedDish.maxRepeats,
+        maxPerDay:
+          editedDish.maxPerDay === "" || editedDish.maxPerDay == null
+            ? null
+            : Number(editedDish.maxPerDay),
+        allowedMeals: Object.keys(editedDish.allowedMeals).filter(
+          (meal) => editedDish.allowedMeals[meal]
+        ),
+        rating: editedDish.rating != null ? editedDish.rating : d.rating,
+        favorite:
+          editedDish.favorite != null ? editedDish.favorite : !!d.favorite,
+        color: editedDish.color || d.color || "",
+        maxAcrossWeeks:
+          editedDish.maxAcrossWeeks === "" || editedDish.maxAcrossWeeks == null
+            ? null
+            : Number(editedDish.maxAcrossWeeks),
+      };
+      saveLocal(copy);
+      return copy;
+    });
     setEditIndex(null);
   };
 
@@ -160,13 +215,24 @@ export default function Potrawy() {
   };
 
   const toggleFavorite = (index) => {
-    dishes[index].favorite = !dishes[index].favorite;
-    saveLocal();
+    setDishes((prev) => {
+      const copy = [...prev];
+      copy[index] = {
+        ...(copy[index] || {}),
+        favorite: !copy[index]?.favorite,
+      };
+      saveLocal(copy);
+      return copy;
+    });
   };
 
   const setDishRating = (index, value) => {
-    dishes[index].rating = value;
-    saveLocal();
+    setDishes((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...(copy[index] || {}), rating: value };
+      saveLocal(copy);
+      return copy;
+    });
   };
 
   const handleDelete = (index) => {
@@ -180,8 +246,12 @@ export default function Potrawy() {
       cancelButtonText: "Anuluj",
     }).then((result) => {
       if (result.isConfirmed) {
-        dishes.splice(index, 1);
-        saveLocal();
+        setDishes((prev) => {
+          const copy = [...prev];
+          copy.splice(index, 1);
+          saveLocal(copy);
+          return copy;
+        });
         setOpenIndex(null);
         if (editIndex === index) setEditIndex(null);
         Swal.fire({
@@ -193,9 +263,56 @@ export default function Potrawy() {
     });
   };
 
-  const saveLocal = () => {
-    localStorage.setItem("dishes", JSON.stringify(dishes));
-    setVersion((v) => v + 1);
+  // bulk edit logic (kept same, but using saveLocal when applying)
+  const applyBulkForTag = () => {
+    const tag = (tagToEdit || "").trim().toLowerCase();
+    if (!tag) {
+      Swal.fire({
+        icon: "warning",
+        title: "Podaj tag",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+    setDishes((prev) => {
+      let changed = 0;
+      const copy = prev.map((dish) => {
+        if (!Array.isArray(dish.tags)) return dish;
+        if (!dish.tags.some((t) => ("" + t).toLowerCase() === tag)) return dish;
+        const nd = { ...dish };
+        if (bulkEdited.probability != null)
+          nd.probability = Number(bulkEdited.probability);
+        if (bulkEdited.maxRepeats !== "")
+          nd.maxRepeats = Number(bulkEdited.maxRepeats);
+        if (bulkEdited.maxAcrossWeeks !== "")
+          nd.maxAcrossWeeks = Number(bulkEdited.maxAcrossWeeks);
+        if (bulkEdited.color !== "") nd.color = bulkEdited.color;
+        if (bulkEdited.favorite !== null) nd.favorite = !!bulkEdited.favorite;
+        if (bulkEdited.rating != null) nd.rating = Number(bulkEdited.rating);
+        nd.allowedMeals = Object.keys(bulkEdited.allowedMeals).filter(
+          (m) => bulkEdited.allowedMeals[m]
+        );
+        changed++;
+        return nd;
+      });
+      if (changed > 0) {
+        saveLocal(copy);
+        Swal.fire({
+          icon: "success",
+          title: "Zaktualizowano",
+          text: `Zaktualizowano ${changed} potraw(y) z tagiem "${tagToEdit}"`,
+          confirmButtonText: "OK",
+        });
+      } else {
+        Swal.fire({
+          icon: "info",
+          title: "Brak rezultatów",
+          text: "Nie znaleziono potraw z podanym tagiem.",
+          confirmButtonText: "OK",
+        });
+      }
+      return copy;
+    });
   };
 
   return (
@@ -544,10 +661,7 @@ export default function Potrawy() {
           .filter((dish) => {
             if ((dish.rating || 0) < filterRating) return false;
             if (onlyFavorites && dish.favorite !== true) return false;
-            if (
-              !(Array.isArray(dish.tags) && dish.tags.length > 0)
-            )
-              return false;
+            // remove previous requirement "must have tags" — show also potrawy bez tagów
             // filtrowanie po wpisanych tagach (AND, case-insensitive)
             const raw = (filterTagsInput || "").trim();
             if (raw !== "") {

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { ensureLocalDefault } from "../utils/storageHelpers";
+import { safeParse } from "../utils/safeParse"; // create helper or inline parse below
 import {
   Box,
   Button,
@@ -9,10 +11,12 @@ import {
   IconButton,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import dishes from "../js/potrawy";
 import Swal from "sweetalert2";
 
 const STORAGE_KEY = "dishLists";
+
+// ensure dishes exist
+ensureLocalDefault("dishes", []);
 
 export default function Listy() {
   const [lists, setLists] = useState([]);
@@ -200,6 +204,43 @@ export default function Listy() {
     save(next);
   };
 
+  // use localStorage dishes instead of importing static list
+  const [allDishes, setAllDishes] = useState(() =>
+    (() => {
+      try {
+        const raw = localStorage.getItem("dishes");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    })()
+  );
+
+  // update displayed "all dishes" when storage changes
+  useEffect(() => {
+    const storageHandler = (e) => {
+      if (e.key === "dishes") {
+        try {
+          setAllDishes(e.newValue ? JSON.parse(e.newValue) : []);
+        } catch {
+          setAllDishes([]);
+        }
+      }
+    };
+    window.addEventListener("storage", storageHandler);
+    window.addEventListener("dishesUpdated", () => {
+      try {
+        setAllDishes(JSON.parse(localStorage.getItem("dishes") || "[]"));
+      } catch {
+        setAllDishes([]);
+      }
+    });
+    return () => {
+      window.removeEventListener("storage", storageHandler);
+      window.removeEventListener("dishesUpdated", () => {});
+    };
+  }, []);
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -229,7 +270,7 @@ export default function Listy() {
         <Paper sx={{ p: 2, minWidth: 240, maxWidth: 360 }}>
           <Typography variant="subtitle1">Wszystkie potrawy</Typography>
           <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-            {dishes.map((d, i) => (
+            {allDishes.map((d, i) => (
               <Chip
                 key={i}
                 label={d.name}

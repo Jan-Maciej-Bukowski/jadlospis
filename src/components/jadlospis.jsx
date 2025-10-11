@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ensureLocalDefault } from "../utils/storageHelpers";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { Rating, Chip, useMediaQuery } from "@mui/material";
 import Swal from "sweetalert2";
@@ -13,11 +14,44 @@ import {
   Typography,
   TextField,
 } from "@mui/material";
-import dishesAll from "../js/potrawy";
 import { generateMenu } from "../js/generateMenu";
 import { settings } from "../js/settings.js";
 
+// ensure storage keys (safe: does not use hooks)
+ensureLocalDefault("dishes", []);
+ensureLocalDefault("dishLists", []);
+ensureLocalDefault("savedMenus", []);
+ensureLocalDefault("lastMenu", null);
+
 export default function Jadlospis() {
+  // read available dishes from localStorage (live)
+  const [dishesAll, setDishesAll] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dishes") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const h = () => {
+      try {
+        setDishesAll(JSON.parse(localStorage.getItem("dishes") || "[]"));
+      } catch {
+        setDishesAll([]);
+      }
+    };
+    window.addEventListener("dishesUpdated", h);
+    const storageHandler = (e) => {
+      if (e.key === "dishes") h();
+    };
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      window.removeEventListener("dishesUpdated", h);
+      window.removeEventListener("storage", storageHandler);
+    };
+  }, []);
+
   // menu może być:
   // - null
   // - legacy: single week array [{day, śniadanie, obiad, kolacja}, ...]
@@ -45,19 +79,15 @@ export default function Jadlospis() {
     "Niedziela",
   ];
 
-  const daysOfWeek_mobile = [
-    "Pon",
-    "Wt",
-    "Śr",
-    "Czw",
-    "Pt",
-    "Sob",
-    "Niedz",
-  ];
+  const daysOfWeek_mobile = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Niedz"];
 
   // Zwraca tekst widoczny w pierwszej kolumnie (możesz ustawić daysOfWeek_mobile)
   const getVisualDay = (dayIndex, fallback) => {
-    if (Array.isArray(daysOfWeek_mobile) && daysOfWeek_mobile[dayIndex] && isNarrow ) {
+    if (
+      Array.isArray(daysOfWeek_mobile) &&
+      daysOfWeek_mobile[dayIndex] &&
+      isNarrow
+    ) {
       return daysOfWeek_mobile[dayIndex];
     }
     return fallback ?? daysOfWeek[dayIndex] ?? "";
@@ -72,7 +102,6 @@ export default function Jadlospis() {
     }
   }, []);
 
-  //
   const getDishesForGeneration = () => {
     if (selectedListId === "all") return dishesAll;
     const arr = availableLists.find((l) => l.id === selectedListId);
@@ -298,8 +327,6 @@ export default function Jadlospis() {
       payload: src,
       ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
     };
-
-    console.log(__touchDrag);
 
     window.__touchDrag.ghost.style.top = t.clientY + 6 + "px";
     window.__touchDrag.ghost.style.left = t.clientX + 6 + "px";
