@@ -8,7 +8,13 @@ export default function Logowanie({ onLogged }) {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+    /\/+$/,
+    ""
+  );
+
+  // helper tworzący poprawny URL niezależnie od trailing slash
+  const makeUrl = (path) => new URL(path, API).toString();
 
   const clear = () => {
     setEmail("");
@@ -70,12 +76,19 @@ export default function Logowanie({ onLogged }) {
 
   const handleRegister = async () => {
     try {
-      const res = await fetch(`${API}/api/register`, {
+      // register
+      const res = await fetch(makeUrl("/api/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, username, password }),
       });
-      const body = await res.json();
+      const text = await res.text();
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = { error: text };
+      }
       if (!res.ok) throw new Error(body.error || "Błąd rejestracji");
       localStorage.setItem("token", body.token);
       localStorage.setItem("user", JSON.stringify(body.user));
@@ -112,12 +125,19 @@ export default function Logowanie({ onLogged }) {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch(`${API}/api/login`, {
+      // login
+      const res = await fetch(makeUrl("/api/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ emailOrUsername: email || username, password }),
       });
-      const body = await res.json();
+      const text = await res.text();
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = { error: text };
+      }
       if (!res.ok) throw new Error(body.error || "Błąd logowania");
       localStorage.setItem("token", body.token);
       localStorage.setItem("user", JSON.stringify(body.user));
