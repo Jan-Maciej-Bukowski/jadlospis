@@ -32,9 +32,25 @@ mongoose
   });
 
 const app = express();
-app.use(cors());
-app.use(helmet());
+
+// zezwól tylko frontendowi (bezpieczniejsze niż '*')
+app.use(
+  cors({
+    origin: "https://jadlospis-agvr.onrender.com",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+
+// opcjonalnie: globalny handler preflight
+app.options(
+  "*",
+  cors({
+    origin: "https://jadlospis-agvr.onrender.com",
+    credentials: true,
+  })
+);
 
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -205,4 +221,3 @@ app.delete("/api/user", auth, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-d
