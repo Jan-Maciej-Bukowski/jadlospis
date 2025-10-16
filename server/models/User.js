@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
 
+  // top-level avatar path (np. "/uploads/xxx.jpg")
+  avatar: { type: String, default: null },
+
   // tutaj przechowujemy wszystkie dane użytkownika (potrawy, listy, ustawienia, jadłospisy)
   data: {
     dishes: { type: Array, default: [] }, // src/js/potrawy

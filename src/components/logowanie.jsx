@@ -3,8 +3,9 @@ import { Box, Button, TextField, Typography, Paper } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import Swal from "sweetalert2";
 
-export default function Logowanie({ onLogged }) {
-  const [mode, setMode] = useState("login");
+export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
+  // initialMode comes from Navbar (either "login" or "register")
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -91,9 +92,15 @@ export default function Logowanie({ onLogged }) {
       }
       if (!res.ok) throw new Error(body.error || "Błąd rejestracji");
       localStorage.setItem("token", body.token);
-      localStorage.setItem("user", JSON.stringify(body.user));
       const data = body.userData ?? (await fetchUserData(body.token));
+      // zapisz złączonego usera (z polem data) aby inne komponenty mogły odczytać avatar
+      const mergedUser = { ...body.user, data };
+      localStorage.setItem("user", JSON.stringify(mergedUser));
       applyUserData(data);
+      // powiadom komponenty, np. navbar nasłuchuje userUpdated
+      window.dispatchEvent(
+        new CustomEvent("userUpdated", { detail: mergedUser })
+      );
 
       // IMPORTANT: oznacz userSync, że localStorage odpowiada serwerowi (lastHash)
       try {
@@ -140,9 +147,13 @@ export default function Logowanie({ onLogged }) {
       }
       if (!res.ok) throw new Error(body.error || "Błąd logowania");
       localStorage.setItem("token", body.token);
-      localStorage.setItem("user", JSON.stringify(body.user));
       const data = body.userData ?? (await fetchUserData(body.token));
+      const mergedUser = { ...body.user, data };
+      localStorage.setItem("user", JSON.stringify(mergedUser));
       applyUserData(data);
+      window.dispatchEvent(
+        new CustomEvent("userUpdated", { detail: mergedUser })
+      );
 
       // IMPORTANT: oznacz userSync, że localStorage odpowiada serwerowi (lastHash)
       try {

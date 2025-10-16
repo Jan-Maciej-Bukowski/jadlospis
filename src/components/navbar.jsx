@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   AppBar,
   Box,
@@ -39,6 +39,7 @@ import Potrawy from "./potrawy";
 import DodajPotrawe from "./dodajPotrawe";
 import Listy from "./listy";
 import ListaZakupow from "./listaZakupow";
+import UstawieniaKonta from "./ustawieniaKonta";
 import Ustawienia from "./ustawienia";
 import Logowanie from "./logowanie";
 import Swal from "sweetalert2";
@@ -48,6 +49,9 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Jadłospis");
+
+  // which mode should Logowanie open in: "login" or "register"
+  const [authMode, setAuthMode] = useState("login");
 
   // theme context
   const { changeTheme, updateCustomColor } = useContext(ThemeContext);
@@ -156,14 +160,12 @@ export default function Navbar() {
 
   // auth panel actions
   const goToLogin = () => {
+    setAuthMode("login");
     setActiveSection("Logowanie");
     closeAuthDrawer();
   };
   const goToRegister = () => {
-    // simple flag so Logowanie can open in register mode if implemented
-    try {
-      localStorage.setItem("authMode", "register");
-    } catch {}
+    setAuthMode("register");
     setActiveSection("Logowanie");
     closeAuthDrawer();
   };
@@ -229,6 +231,36 @@ export default function Navbar() {
       window.location.reload();
     }, 100);
   };
+
+  const [userAvatarSrc, setUserAvatarSrc] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "null");
+      const s =
+        u?.settings?.avatar || u?.data?.settings?.avatar || u?.avatar || null;
+      if (!s) return null;
+      return s.startsWith("http")
+        ? s
+        : (import.meta.env.VITE_API_URL || "http://localhost:4000") + s;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const onUserUpdated = (e) => {
+      const u = e?.detail || JSON.parse(localStorage.getItem("user") || "null");
+      const s =
+        u?.settings?.avatar || u?.data?.settings?.avatar || u?.avatar || null;
+      const src = s
+        ? s.startsWith("http")
+          ? s
+          : (import.meta.env.VITE_API_URL || "http://localhost:4000") + s
+        : null;
+      setUserAvatarSrc(src ? `${src}?t=${Date.now()}` : null);
+    };
+    window.addEventListener("userUpdated", onUserUpdated);
+    return () => window.removeEventListener("userUpdated", onUserUpdated);
+  }, []);
 
   return (
     <>
@@ -355,7 +387,7 @@ export default function Navbar() {
 
           {/* pokaż nazwę użytkownika jeśli jest */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-            <Avatar>
+            <Avatar src={userAvatarSrc}>
               {(
                 JSON.parse(localStorage.getItem("user") || "null")?.username ||
                 "U"
@@ -388,6 +420,19 @@ export default function Navbar() {
                 <PersonAddIcon />
               </ListItemIcon>
               <ListItemText primary="Zarejestruj" />
+            </ListItemButton>
+
+            {/* PRZYCISK: przejście do ustawień konta (oddzielne od ogólnych ustawień) */}
+            <ListItemButton
+              onClick={() => {
+                setActiveSection("Ustawienia konta");
+                closeAuthDrawer();
+              }}
+            >
+              <ListItemIcon>
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Ustawienia konta" />
             </ListItemButton>
 
             <Divider sx={{ my: 1 }} />
@@ -433,8 +478,12 @@ export default function Navbar() {
         {activeSection === "Listy potraw" && <Listy />}
         {activeSection === "Lista zakupów" && <ListaZakupow />}
         {activeSection === "Ustawienia" && <Ustawienia />}
+        {activeSection === "Ustawienia konta" && <UstawieniaKonta />}
         {activeSection === "Logowanie" && (
-          <Logowanie onLogged={() => setActiveSection("Jadłospis")} />
+          <Logowanie
+            mode={authMode}
+            onLogged={() => setActiveSection("Jadłospis")}
+          />
         )}
       </Box>
     </>
