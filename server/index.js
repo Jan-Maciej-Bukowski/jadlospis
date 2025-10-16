@@ -11,6 +11,7 @@ const fs = require("fs");
 require("dotenv").config();
 
 const User = require("./models/User");
+const PublicMenu = require("./models/PublicMenu");
 const auth = require("./middleware/auth");
 
 const PORT = process.env.PORT || 4000;
@@ -429,6 +430,84 @@ app.delete("/api/user/avatar", auth, async (req, res) => {
     res.json({ ok: true, path: null });
   } catch (e) {
     console.error("DELETE /api/user/avatar error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// publikuj zapisany jadłospis (chronione)
+app.post("/api/public/menus", auth, async (req, res) => {
+  try {
+    const { title, menu, tags, dishes } = req.body || {};
+    if (!title || !menu)
+      return res.status(400).json({ error: "title i menu są wymagane" });
+
+    const pm = await PublicMenu.create({
+      title,
+      menu,
+      // save optional full dishes metadata if provided
+      dishes: Array.isArray(dishes) ? dishes : [],
+      author: { id: req.user.id, username: req.user.username },
+      tags: Array.isArray(tags) ? tags : [],
+    });
+
+    res.status(201).json({ id: pm._id, createdAt: pm.createdAt });
+  } catch (err) {
+    console.error("POST /api/public/menus error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// lista publicznych jadlospisow (public, paginacja)
+app.get("/api/public/menus", async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.min(
+      50,
+      Math.max(5, parseInt(req.query.limit || "12", 10))
+    );
+    const skip = (page - 1) * limit;
+
+    const filter = { public: true };
+    if (q) filter.title = { $regex: q, $options: "i" };
+
+    const total = await PublicMenu.countDocuments(filter);
+    const items = await PublicMenu.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({ total, page, limit, items });
+  } catch (err) {
+    console.error("GET /api/public/menus error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// pobierz pojedynczy publiczny jadłospis
+app.get("/api/public/menus/:id", async (req, res) => {
+  try {
+    const pm = await PublicMenu.findById(req.params.id).lean();
+    if (!pm) return res.status(404).json({ error: "Not found" });
+    res.json(pm);
+  } catch (err) {
+    console.error("GET /api/public/menus/:id error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// usuń własny opublikowany jadłospis
+app.delete("/api/public/menus/:id", auth, async (req, res) => {
+  try {
+    const pm = await PublicMenu.findById(req.params.id);
+    if (!pm) return res.status(404).json({ error: "Not found" });
+    if (!pm.author?.id || pm.author.id.toString() !== req.user.id)
+      return res.status(403).json({ error: "No permission" });
+    await pm.remove();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /api/public/menus/:id error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

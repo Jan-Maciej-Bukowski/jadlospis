@@ -202,13 +202,67 @@ export default function Jadlospis() {
     if (!name) return;
     const saved = JSON.parse(localStorage.getItem("savedMenus") || "[]");
     const id = Date.now().toString();
-    saved.push({ id, name, menu, createdAt: new Date().toISOString() });
+    const newEntry = { id, name, menu, createdAt: new Date().toISOString() };
+    saved.push(newEntry);
     localStorage.setItem("savedMenus", JSON.stringify(saved));
     Swal.fire({
       icon: "success",
       title: "Zapisano",
       text: `Jadłospis "${name}" zapisany.`,
     });
+
+    // --- create new dish list from saved menu and add missing dishes to global dishes ---
+    try {
+      const placeholder = settings.noDishText || "Brak potraw";
+      const flatDays = Array.isArray(menu[0]) ? menu.flat() : menu;
+      const used = new Set();
+      flatDays.forEach((entry) =>
+        ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+          const d = entry?.[m];
+          const dishName = d?.name ?? d;
+          if (!dishName) return;
+          if (dishName === placeholder) return;
+          used.add(dishName);
+        })
+      );
+      const dishesArray = Array.from(used);
+      if (dishesArray.length > 0) {
+        // add new dish list
+        const lists = JSON.parse(localStorage.getItem("dishLists") || "[]");
+        const listId = `saved-${Date.now()}`;
+        const listName = `Z ${name}`;
+        lists.push({ id: listId, name: listName, dishes: dishesArray });
+        localStorage.setItem("dishLists", JSON.stringify(lists));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("dishListsUpdated", { detail: lists })
+          );
+        } catch {}
+
+        // ensure dishes exist in global dishes list
+        const all = JSON.parse(localStorage.getItem("dishes") || "[]");
+        let changed = false;
+        dishesArray.forEach((dn) => {
+          if (!all.find((x) => x.name === dn)) {
+            all.push({ name: dn });
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem("dishes", JSON.stringify(all));
+          try {
+            window.dispatchEvent(
+              new CustomEvent("dishesUpdated", { detail: all })
+            );
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "Nie udało się utworzyć listy potraw przy zapisie jadłospisu",
+        err
+      );
+    }
   };
 
   // Drag & drop handlers (support single-week and multi-week menus)

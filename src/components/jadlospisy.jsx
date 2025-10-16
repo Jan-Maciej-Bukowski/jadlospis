@@ -16,8 +16,14 @@ import EditIcon from "@mui/icons-material/Edit";
 import UploadIcon from "@mui/icons-material/Upload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import PublishIcon from "@mui/icons-material/Publish";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
+
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  ""
+);
 
 export default function Jadlospisy() {
   const [saved, setSaved] = useState([]);
@@ -89,13 +95,11 @@ export default function Jadlospisy() {
         used.add(name);
       })
     );
+    // dishesAll to funkcja -> wywołaj, aby dostać aktualną tablicę potraw
+    const allForExport = dishesAll();
     const dishes = Array.from(used).map((n) => {
-      const d = dishesAll.find((x) => x.name === n);
-      return (
-        d || {
-          name: n,
-        }
-      );
+      const d = allForExport.find((x) => x.name === n);
+      return d || { name: n };
     });
     const out = {
       meta: { createdAt: item.createdAt, source: "jadlospis-saved" },
@@ -186,7 +190,8 @@ export default function Jadlospisy() {
               if (importedDishes.length > 0) {
                 importedDishes.forEach((imp) => {
                   if (!imp || !imp.name) return;
-                  const exists = dishesAll.find((d) => d.name === imp.name);
+                  const allNow = dishesAll();
+                  const exists = allNow.find((d) => d.name === imp.name);
                   if (!exists) {
                     const data = {
                       name: imp.name,
@@ -229,20 +234,26 @@ export default function Jadlospisy() {
               } else {
                 // brak szczegółów -> dodaj minimalne potrawy po samych nazwach
                 dishesArray.forEach((dn) => {
-                  if (!dishesAll.find((d) => d.name === dn)) {
+                  const allNow = dishesAll();
+                  if (!allNow.find((d) => d.name === dn)) {
                     addDish({ name: dn });
                   }
                 });
               }
 
               // zapisz i powiadom komponenty, że lista potraw się zmieniła
-              localStorage.setItem("dishes", JSON.stringify(dishesAll));
+              // ensure storage reflects current master list and notify listeners
               try {
+                const current = dishesAll();
+                localStorage.setItem("dishes", JSON.stringify(current));
                 window.dispatchEvent(
-                  new CustomEvent("dishesUpdated", { detail: dishesAll })
+                  new CustomEvent("dishesUpdated", { detail: current })
                 );
               } catch (err) {
-                console.warn("Nie udało się wysłać eventu dishesUpdated", err);
+                console.warn(
+                  "Nie udało się zapisać/notify potraw po imporcie:",
+                  err
+                );
               }
             } catch (err) {
               console.warn("Błąd podczas dodawania potraw z importu:", err);
@@ -292,6 +303,73 @@ export default function Jadlospisy() {
       showConfirmButton: false,
       timer: 900,
     });
+  };
+
+  const handlePublish = async (item) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      Swal.fire({
+        icon: "warning",
+        title: "Zaloguj się",
+        text: "Musisz być zalogowany, żeby opublikować jadłospis.",
+      });
+      return;
+    }
+    try {
+      // build full dishes metadata array for used dishes (if available in master list)
+      const toExport = item.menu || [];
+      const used = new Set();
+      const placeholder = "Brak potraw";
+      const flatDays = Array.isArray(toExport[0]) ? toExport.flat() : toExport;
+      flatDays.forEach((entry) =>
+        ["śniadanie", "obiad", "kolacja"].forEach((m) => {
+          const d = entry?.[m];
+          const name = d?.name ?? d;
+          if (!name) return;
+          if (name === placeholder) return;
+          used.add(name);
+        })
+      );
+      // dishesAll to funkcja -> wywołaj, aby dostać aktualną tablicę potraw
+      const allForExport = dishesAll();
+      const dishes = Array.from(used).map((n) => {
+        const d = allForExport.find((x) => x.name === n);
+        return (
+          d || {
+            name: n,
+          }
+        );
+      });
+
+      const res = await fetch(`${API}/api/public/menus`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: item.name || `Jadłospis ${item.id}`,
+          menu: item.menu,
+          dishes,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || res.statusText || "Publish failed");
+      }
+      Swal.fire({
+        icon: "success",
+        title: "Opublikowano",
+        text: "Jadłospis został opublikowany.",
+      });
+    } catch (err) {
+      console.error("publish:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: err.message || "Nie udało się opublikować",
+      });
+    }
   };
 
   return (
@@ -369,6 +447,13 @@ export default function Jadlospisy() {
                     title="Załaduj"
                   >
                     <UploadIcon />
+                  </IconButton>
+                  <IconButton
+                    edge="end"
+                    onClick={() => handlePublish(s)}
+                    title="Opublikuj"
+                  >
+                    <PublishIcon />
                   </IconButton>
                   <IconButton
                     edge="end"

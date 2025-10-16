@@ -32,9 +32,11 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import PublicIcon from "@mui/icons-material/Public";
 
 import Jadlospis from "./jadlospis";
 import Jadlospisy from "./jadlospisy";
+import PublicJadlospisy from "./publicJadlospisy";
 import Potrawy from "./potrawy";
 import DodajPotrawe from "./dodajPotrawe";
 import Listy from "./listy";
@@ -83,7 +85,7 @@ export default function Navbar() {
   };
 
   const menuGroups = [
-    { items: ["Jadłospis", "Jadłospisy"] },
+    { items: ["Jadłospis", "Jadłospisy", "Publiczne jadłospisy"] },
     { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
     { items: ["Ustawienia"] },
   ];
@@ -94,6 +96,8 @@ export default function Navbar() {
         return <CalendarTodayIcon />;
       case "Jadłospisy":
         return <SaveIcon />;
+      case "Publiczne jadłospisy":
+        return <PublicIcon />;
       case "Potrawy":
         return <RestaurantMenuIcon />;
       case "Dodaj potrawę":
@@ -472,6 +476,9 @@ export default function Navbar() {
 
       <Box sx={{ p: 3 }}>
         {activeSection === "Jadłospis" && <Jadlospis />}
+        {activeSection === "Publiczne jadłospisy" && (
+          <PublicJadlospisy onLoad={(m) => setActiveSection("Jadłospis")} />
+        )}
         {activeSection === "Jadłospisy" && <Jadlospisy />}
         {activeSection === "Potrawy" && <Potrawy />}
         {activeSection === "Dodaj potrawę" && <DodajPotrawe />}
