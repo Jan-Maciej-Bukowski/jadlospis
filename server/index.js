@@ -353,33 +353,29 @@ app.post("/api/user/avatar", auth, (req, res) => {
           return res.status(413).json({ error: "Plik za duży" });
         return res.status(400).json({ error: err.message || "Upload error" });
       }
+
       const file = req.file;
+      console.log("avatar upload file:", file); // debug
       if (!file) return res.status(400).json({ error: "Brak pliku" });
 
+      // find user (auth middleware setuje req.user.id)
       const user = await User.findById(req.user.id);
       if (!user)
         return res.status(404).json({ error: "Użytkownik nie istnieje" });
 
-      // remove previous avatar file if stored at top-level or in data.settings
-      const prevTop = user.avatar;
-      const prevSettings = user.data?.settings?.avatar;
-      const removeIfLocal = (p) => {
-        if (p && p.startsWith("/uploads/")) {
-          const fp = path.join(__dirname, p);
-          try {
-            if (fs.existsSync(fp)) fs.unlinkSync(fp);
-          } catch (e) {
-            /* ignore */
-          }
-        }
-      };
-      removeIfLocal(prevTop);
-      removeIfLocal(prevSettings);
-
       const storedPath = `/uploads/${file.filename}`;
-      // store avatar on top-level user.avatar (only path)
-      user.avatar = storedPath;
+      // remove previous avatar file if present (optional cleanup)
+      try {
+        const prev = user.avatar || user.data?.settings?.avatar;
+        if (prev && prev.startsWith("/uploads/")) {
+          const prevFile = path.join(__dirname, prev);
+          if (fs.existsSync(prevFile)) fs.unlinkSync(prevFile);
+        }
+      } catch (e) {
+        /* ignore cleanup errors */
+      }
 
+      user.avatar = storedPath;
       await user.save();
 
       console.log(
@@ -389,7 +385,11 @@ app.post("/api/user/avatar", auth, (req, res) => {
         storedPath
       );
 
-      const fullUrl = `${req.protocol}://${req.get("host")}${storedPath}`;
+      // build public URL: prefer explicit APP_URL (set this in Render), fallback to request host
+      const baseUrl =
+        process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+      const fullUrl = `${baseUrl}${storedPath}`;
+
       return res.json({ path: storedPath, url: fullUrl, avatar: storedPath });
     } catch (e) {
       console.error("POST /api/user/avatar error:", e);

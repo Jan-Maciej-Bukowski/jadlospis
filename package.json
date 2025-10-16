@@ -8,8 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "refresh": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
-    "deploy": "gh-pages -d dist",
-    "update": "git pull origin master --rebase && git add . && git commit -m \"Aktualizacja\" || echo 'Brak zmian do commita' && npm run build && npm run deploy"
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
