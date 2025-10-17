@@ -9,6 +9,11 @@ const UserSchema = new mongoose.Schema({
   // top-level avatar path (np. "/uploads/xxx.jpg")
   avatar: { type: String, default: null },
 
+  // OAuth identifiers (np. Google)
+  oauth: {
+    googleId: { type: String, index: true, sparse: true },
+  },
+
   // tutaj przechowujemy wszystkie dane użytkownika (potrawy, listy, ustawienia, jadłospisy)
   data: {
     dishes: { type: Array, default: [] }, // src/js/potrawy

@@ -190,10 +190,11 @@ export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("token");
       if (!t) return;
+
       // save token
       localStorage.setItem("token", t);
 
-      // decode JWT payload (base64url)
+      // decode JWT payload for basic user info
       const parseJwt = (token) => {
         try {
           const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -208,21 +209,92 @@ export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
           return null;
         }
       };
-
       const payload = parseJwt(t) || {};
       const user = {
         id: payload.id || payload._id || null,
         username: payload.username || payload.name || null,
         email: payload.email || null,
-        // avatar can be fetched later from backend if needed
       };
       localStorage.setItem("user", JSON.stringify(user));
-
-      // notify app about login
       try {
         window.dispatchEvent(new CustomEvent("userLoggedIn", { detail: user }));
         window.dispatchEvent(new CustomEvent("userUpdated", { detail: user }));
       } catch (e) {}
+
+      // fetch server-side persisted user.data and merge/apply to localStorage
+      (async () => {
+        try {
+          const res = await fetch(`${API}/api/user/data`, {
+            headers: { Authorization: `Bearer ${t}` },
+          });
+          if (res.ok) {
+            const body = await res.json();
+            const server = body.data || {};
+
+            // simple merge: arrays -> union by name/id, objects -> shallow merge, primitives -> server wins
+            const mergeArrayByName = (localArr = [], serverArr = []) => {
+              const map = new Map();
+              localArr.forEach((it) => {
+                const key = it.id || it.name || JSON.stringify(it);
+                map.set(key, it);
+              });
+              serverArr.forEach((it) => {
+                const key = it.id || it.name || JSON.stringify(it);
+                map.set(key, it); // server overrides / adds
+              });
+              return Array.from(map.values());
+            };
+
+            // load local
+            const localDishes = JSON.parse(
+              localStorage.getItem("dishes") || "[]"
+            );
+            const localLists = JSON.parse(
+              localStorage.getItem("dishLists") || "[]"
+            );
+            const localSaved = JSON.parse(
+              localStorage.getItem("savedMenus") || "[]"
+            );
+
+            // merge and store
+            if (Array.isArray(server.dishes)) {
+              const mergedDishes = mergeArrayByName(localDishes, server.dishes);
+              localStorage.setItem("dishes", JSON.stringify(mergedDishes));
+              window.dispatchEvent(
+                new CustomEvent("dishesUpdated", { detail: mergedDishes })
+              );
+            }
+            if (Array.isArray(server.dishLists)) {
+              const mergedLists = mergeArrayByName(
+                localLists,
+                server.dishLists
+              );
+              localStorage.setItem("dishLists", JSON.stringify(mergedLists));
+              window.dispatchEvent(
+                new CustomEvent("dishListsUpdated", { detail: mergedLists })
+              );
+            }
+            if (Array.isArray(server.savedMenus)) {
+              const mergedSaved = mergeArrayByName(
+                localSaved,
+                server.savedMenus
+              );
+              localStorage.setItem("savedMenus", JSON.stringify(mergedSaved));
+            }
+            if (server.lastMenu !== undefined)
+              localStorage.setItem("lastMenu", JSON.stringify(server.lastMenu));
+            if (server.settings)
+              localStorage.setItem("settings", JSON.stringify(server.settings));
+
+            // optionally notify app that full user data is loaded
+            window.dispatchEvent(
+              new CustomEvent("userDataLoaded", { detail: server })
+            );
+          }
+        } catch (e) {
+          console.warn("Nie udało się pobrać user.data po OAuth:", e);
+        }
+      })();
 
       // remove token param from URL
       params.delete("token");

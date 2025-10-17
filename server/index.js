@@ -49,11 +49,15 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             profile.displayName ||
             (email && email.split("@")[0]) ||
             "google-user";
-          // try find by email
-          let user = null;
-          if (email) user = await User.findOne({ email });
+
+          // find by email OR previously saved google id (robustne dopasowanie)
+          const search = [];
+          if (email) search.push({ email });
+          search.push({ "oauth.googleId": profile.id });
+          let user = await User.findOne({ $or: search });
+
           if (!user) {
-            // create user with random passwordHash
+            // create user with google id stored under oauth.googleId
             const random = crypto.randomBytes(20).toString("hex");
             const hash = await bcrypt.hash(random, 12);
             user = await User.create({
@@ -66,6 +70,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
                 profile.photos && profile.photos[0]?.value
                   ? profile.photos[0].value
                   : null,
+              oauth: { googleId: profile.id },
               data: {
                 dishes: [],
                 dishLists: [],
@@ -75,8 +80,14 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
               },
             });
           } else {
-            // update avatar from profile if available
-            if (
+            // ensure googleId is recorded for later direct match
+            if (!user.oauth || user.oauth.googleId !== profile.id) {
+              user.oauth = user.oauth || {};
+              user.oauth.googleId = profile.id;
+              if (profile.photos && profile.photos[0]?.value)
+                user.avatar = profile.photos[0].value;
+              await user.save();
+            } else if (
               profile.photos &&
               profile.photos[0]?.value &&
               (!user.avatar || user.avatar !== profile.photos[0].value)
@@ -85,6 +96,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
               await user.save();
             }
           }
+
           return done(null, user);
         } catch (err) {
           return done(err);
