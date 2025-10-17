@@ -54,29 +54,99 @@ import Swal from "sweetalert2";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function Navbar() {
+  // podstawowe stany komponentu
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Jadłospis");
-
-  // which mode should Logowanie open in: "login" or "register"
   const [authMode, setAuthMode] = useState("login");
-
-  // czy użytkownik jest zalogowany (inicjalizacja z localStorage)
+  // stan dla własnego koloru (jeśli był używany)
+  const [customHexInput, setCustomHexInput] = useState("");
   const [isLogged, setIsLogged] = useState(() => {
     try {
-      return !!localStorage.getItem("token") || !!localStorage.getItem("user");
+      return !!localStorage.getItem("token");
     } catch {
       return false;
     }
   });
+  const [userAvatarSrc, setUserAvatarSrc] = useState(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user.avatar || null;
+    } catch {
+      return null;
+    }
+  });
 
-  // theme context
-  const { changeTheme, updateCustomColor } = useContext(ThemeContext);
+  // nasłuchuj zmian w danych użytkownika (login/logout/avatar)
+  useEffect(() => {
+    const onLogin = () => setIsLogged(true);
+    const onLogout = () => setIsLogged(false);
+    const onUserUpdated = (e) => {
+      const user = e.detail || {};
+      setUserAvatarSrc(user.avatar || null);
+    };
 
-  // lokalny stan pola na HEX (używany w TextField)
-  const [customHexInput, setCustomHexInput] = useState(
-    localStorage.getItem("customColor") || "#1976d2"
-  );
+    window.addEventListener("userLoggedIn", onLogin);
+    window.addEventListener("userLoggedOut", onLogout);
+    window.addEventListener("userUpdated", onUserUpdated);
+
+    return () => {
+      window.removeEventListener("userLoggedIn", onLogin);
+      window.removeEventListener("userLoggedOut", onLogout);
+      window.removeEventListener("userUpdated", onUserUpdated);
+    };
+  }, []);
+
+  // obsługa OAuth callback token
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const t = params.get("token");
+        if (!t) return;
+
+        localStorage.setItem("token", t);
+
+        // pobierz dane użytkownika
+        try {
+          const me = await fetch(`${API}/api/user/me`, {
+            headers: { Authorization: `Bearer ${t}` },
+          }).then((r) => (r.ok ? r.json() : null));
+
+          const data = await fetch(`${API}/api/user/data`, {
+            headers: { Authorization: `Bearer ${t}` },
+          }).then((r) => (r.ok ? r.json() : null));
+
+          const user = (me && me.user) || {
+            id: null,
+            username: null,
+            email: null,
+            avatar: null,
+          };
+          const mergedUser = { ...user, data: data?.data || {} };
+
+          localStorage.setItem("user", JSON.stringify(mergedUser));
+          setUserAvatarSrc(user.avatar || null);
+
+          window.dispatchEvent(
+            new CustomEvent("userUpdated", { detail: mergedUser })
+          );
+          window.dispatchEvent(
+            new CustomEvent("userLoggedIn", { detail: mergedUser })
+          );
+
+          // usuń token z URL
+          params.delete("token");
+          const newUrl =
+            window.location.pathname +
+            (params.toString() ? `?${params.toString()}` : "");
+          window.history.replaceState({}, "", newUrl);
+        } catch (e) {
+          console.warn("OAuth postprocessing failed", e);
+        }
+      } catch (e) {}
+    })();
+  }, []);
 
   const handleCustomColorApply = () => {
     const v = (customHexInput || "").trim();
@@ -260,20 +330,6 @@ export default function Navbar() {
     }, 100);
   };
 
-  const [userAvatarSrc, setUserAvatarSrc] = useState(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user") || "null");
-      const s =
-        u?.settings?.avatar || u?.data?.settings?.avatar || u?.avatar || null;
-      if (!s) return null;
-      return s.startsWith("http")
-        ? s
-        : (import.meta.env.VITE_API_URL || "http://localhost:4000") + s;
-    } catch {
-      return null;
-    }
-  });
-
   useEffect(() => {
     const onUserUpdated = (e) => {
       const u = e?.detail || JSON.parse(localStorage.getItem("user") || "null");
@@ -290,15 +346,104 @@ export default function Navbar() {
     return () => window.removeEventListener("userUpdated", onUserUpdated);
   }, []);
 
+  // Globalne przetwarzanie ?token=... (OAuth redirect) — Navbar jest zawsze montowany
   useEffect(() => {
-    const onLogin = () => setIsLogged(true);
-    const onLogout = () => setIsLogged(false);
-    window.addEventListener("userLoggedIn", onLogin);
-    window.addEventListener("userLoggedOut", onLogout);
-    return () => {
-      window.removeEventListener("userLoggedIn", onLogin);
-      window.removeEventListener("userLoggedOut", onLogout);
-    };
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const t = params.get("token");
+        if (!t) return;
+        // zapisz token
+        localStorage.setItem("token", t);
+
+        // pobierz podstawowy profil (avatar, username)
+        try {
+          const apiBase = (
+            import.meta.env.VITE_API_URL || "http://localhost:4000"
+          ).replace(/\/+$/, "");
+          const me = await fetch(`${apiBase}/api/user/me`, {
+            headers: { Authorization: `Bearer ${t}` },
+          }).then((r) => (r.ok ? r.json() : null));
+          const data = await fetch(`${apiBase}/api/user/data`, {
+            headers: { Authorization: `Bearer ${t}` },
+          }).then((r) => (r.ok ? r.json() : null));
+
+          const user = (me && me.user) || {
+            id: null,
+            username: null,
+            email: null,
+            avatar: null,
+          };
+          // attach server-side data if available
+          const mergedUser = { ...user, data: data?.data || {} };
+          localStorage.setItem("user", JSON.stringify(mergedUser));
+
+          // apply server data to localStorage keys like in Logowanie.applyUserData
+          try {
+            const server = mergedUser.data || {};
+            if (Array.isArray(server.dishes)) {
+              localStorage.setItem("dishes", JSON.stringify(server.dishes));
+              window.dispatchEvent(
+                new CustomEvent("dishesUpdated", { detail: server.dishes })
+              );
+            }
+            if (Array.isArray(server.dishLists)) {
+              localStorage.setItem(
+                "dishLists",
+                JSON.stringify(server.dishLists)
+              );
+              window.dispatchEvent(
+                new CustomEvent("dishListsUpdated", {
+                  detail: server.dishLists,
+                })
+              );
+            }
+            if (server.lastMenu !== undefined) {
+              localStorage.setItem("lastMenu", JSON.stringify(server.lastMenu));
+              window.dispatchEvent(
+                new CustomEvent("lastMenuUpdated", { detail: server.lastMenu })
+              );
+            }
+            if (Array.isArray(server.savedMenus)) {
+              localStorage.setItem(
+                "savedMenus",
+                JSON.stringify(server.savedMenus)
+              );
+              window.dispatchEvent(
+                new CustomEvent("savedMenusUpdated", {
+                  detail: server.savedMenus,
+                })
+              );
+            }
+            if (server.settings) {
+              localStorage.setItem("settings", JSON.stringify(server.settings));
+              window.dispatchEvent(
+                new CustomEvent("settingsUpdated", { detail: server.settings })
+              );
+            }
+          } catch (e) {
+            console.warn("apply server data failed", e);
+          }
+
+          // notify app
+          window.dispatchEvent(
+            new CustomEvent("userUpdated", { detail: mergedUser })
+          );
+          window.dispatchEvent(
+            new CustomEvent("userLoggedIn", { detail: mergedUser })
+          );
+
+          // usuń token z URL
+          params.delete("token");
+          const newUrl =
+            window.location.pathname +
+            (params.toString() ? `?${params.toString()}` : "");
+          window.history.replaceState({}, "", newUrl);
+        } catch (e) {
+          console.warn("OAuth postprocessing failed", e);
+        }
+      } catch (e) {}
+    })();
   }, []);
 
   return (

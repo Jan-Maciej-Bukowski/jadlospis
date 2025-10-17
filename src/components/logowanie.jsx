@@ -149,25 +149,10 @@ export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
       if (!res.ok) throw new Error(body.error || "Błąd logowania");
       localStorage.setItem("token", body.token);
       const data = body.userData ?? (await fetchUserData(body.token));
-      const mergedUser = { ...body.user, data };
-      localStorage.setItem("user", JSON.stringify(mergedUser));
-      applyUserData(data);
-      window.dispatchEvent(
-        new CustomEvent("userUpdated", { detail: mergedUser })
-      );
-
-      // IMPORTANT: oznacz userSync, że localStorage odpowiada serwerowi (lastHash)
-      try {
-        window.dispatchEvent(
-          new CustomEvent("userSync:setLastHash", { detail: data })
-        );
-      } catch (e) {
-        console.debug("could not dispatch userSync:setLastHash", e);
-      }
-
-      window.dispatchEvent(
-        new CustomEvent("userLoggedIn", { detail: body.user })
-      );
+      const user = data.user || {};
+      localStorage.setItem("user", JSON.stringify(user));
+      window.dispatchEvent(new CustomEvent("userUpdated", { detail: user }));
+      window.dispatchEvent(new CustomEvent("userLoggedIn", { detail: user }));
       Swal.fire({
         icon: "success",
         title: "Zalogowano",

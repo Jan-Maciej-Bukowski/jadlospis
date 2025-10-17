@@ -50,7 +50,15 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             (email && email.split("@")[0]) ||
             "google-user";
 
-          // find by email OR previously saved google id (robustne dopasowanie)
+          // helper: rozpoznaj lokalny upload vs URL Google
+          const isLocalAvatar = (a) =>
+            typeof a === "string" && a.startsWith("/uploads/");
+          const isGoogleAvatar = (a) =>
+            typeof a === "string" &&
+            a.startsWith("http") &&
+            a.includes("googleusercontent.com");
+
+          // find by email OR previously saved google id
           const search = [];
           if (email) search.push({ email });
           search.push({ "oauth.googleId": profile.id });
@@ -81,19 +89,23 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             });
           } else {
             // ensure googleId is recorded for later direct match
+            const photo = profile.photos && profile.photos[0]?.value;
             if (!user.oauth || user.oauth.googleId !== profile.id) {
               user.oauth = user.oauth || {};
               user.oauth.googleId = profile.id;
-              if (profile.photos && profile.photos[0]?.value)
-                user.avatar = profile.photos[0].value;
+              // only set Google avatar if user has no avatar or current avatar is also a Google URL
+              if (photo && (!user.avatar || isGoogleAvatar(user.avatar))) {
+                user.avatar = photo;
+              }
               await user.save();
-            } else if (
-              profile.photos &&
-              profile.photos[0]?.value &&
-              (!user.avatar || user.avatar !== profile.photos[0].value)
-            ) {
-              user.avatar = profile.photos[0].value;
-              await user.save();
+            } else if (photo) {
+              // update Google avatar only when current avatar is empty or already from Google
+              if (!user.avatar || isGoogleAvatar(user.avatar)) {
+                if (user.avatar !== photo) {
+                  user.avatar = photo;
+                  await user.save();
+                }
+              }
             }
           }
 
@@ -725,6 +737,80 @@ app.delete("/api/public/dishes/:id", auth, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// GET basic user info (chronione) - id, email, username, avatar
+app.get("/api/user/me", auth, async (req, res) => {
+  try {
+    const u = await User.findById(req.user.id).lean();
+    if (!u) return res.status(404).json({ error: "Użytkownik nie istnieje" });
+    res.json({
+      user: {
+        id: u._id,
+        email: u.email,
+        username: u.username,
+        avatar: u.avatar || null,
+      },
+    });
+  } catch (err) {
+    console.error("GET /api/user/me error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// aktualizuj profil użytkownika (chronione)
+app.post(
+  "/api/user/profile",
+  auth,
+  upload.single("avatar"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      // jeśli przesłano nowy avatar
+      if (req.file) {
+        // usuń stary plik tylko jeśli to był lokalny upload (nie URL Google)
+        if (user.avatar && user.avatar.startsWith("/uploads/")) {
+          try {
+            fs.unlinkSync(path.join(__dirname, "public", user.avatar));
+          } catch (e) {
+            console.warn("Avatar file delete failed:", e);
+          }
+        }
+        // zapisz nową ścieżkę
+        user.avatar = "/uploads/" + req.file.filename;
+      }
+
+      // aktualizuj inne pola jeśli przesłano
+      if (req.body.username) user.username = req.body.username;
+      if (req.body.email) user.email = req.body.email;
+      if (req.body.currentPassword && req.body.newPassword) {
+        const valid = await bcrypt.compare(
+          req.body.currentPassword,
+          user.passwordHash
+        );
+        if (!valid)
+          return res.status(400).json({ error: "Niepoprawne aktualne hasło" });
+        user.passwordHash = await bcrypt.hash(req.body.newPassword, 12);
+      }
+
+      await user.save();
+
+      // zwróć zaktualizowane podstawowe dane
+      res.json({
+        user: {
+          id: user._id,
+          email: user.email,
+          username: user.username,
+          avatar: user.avatar,
+        },
+      });
+    } catch (err) {
+      console.error("POST /api/user/profile error:", err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
