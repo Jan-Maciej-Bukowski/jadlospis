@@ -54,12 +54,13 @@ import Swal from "sweetalert2";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function Navbar() {
+  const { changeTheme, updateCustomColor } = useContext(ThemeContext);
+
   // podstawowe stany komponentu
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Jadłospis");
   const [authMode, setAuthMode] = useState("login");
-  // stan dla własnego koloru (jeśli był używany)
   const [customHexInput, setCustomHexInput] = useState("");
   const [isLogged, setIsLogged] = useState(() => {
     try {
@@ -68,10 +69,20 @@ export default function Navbar() {
       return false;
     }
   });
+
+  // Helper do budowania URL avatara
+  const buildAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith("http")) return avatarPath; // URL Google
+    // Dla ścieżek lokalnych (/uploads/...) dodaj bazowy URL API
+    return `${API}${avatarPath}`;
+  };
+
+  // Zmodyfikuj useState dla userAvatarSrc
   const [userAvatarSrc, setUserAvatarSrc] = useState(() => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      return user.avatar || null;
+      return buildAvatarUrl(user.avatar);
     } catch {
       return null;
     }
@@ -124,9 +135,8 @@ export default function Navbar() {
             avatar: null,
           };
           const mergedUser = { ...user, data: data?.data || {} };
-
           localStorage.setItem("user", JSON.stringify(mergedUser));
-          setUserAvatarSrc(user.avatar || null);
+          setUserAvatarSrc(buildAvatarUrl(user.avatar));
 
           window.dispatchEvent(
             new CustomEvent("userUpdated", { detail: mergedUser })
@@ -158,10 +168,8 @@ export default function Navbar() {
       });
       return;
     }
-    // ustaw customColor i przełącz motyw na "custom"
     updateCustomColor(v);
     changeTheme("custom");
-    // zapisz też w settings (ThemeContext robi to przez useEffect)
     Swal.fire({
       icon: "success",
       title: "Zastosowano",
@@ -170,15 +178,9 @@ export default function Navbar() {
   };
 
   const menuGroups = [
-    {
-      items: ["Jadłospis", "Jadłospisy"],
-    },
-    {
-      items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"],
-    },
-    {
-      items: ["Publiczne jadłospisy", "Publiczne potrawy"],
-    },
+    { items: ["Jadłospis", "Jadłospisy"] },
+    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
+    { items: ["Publiczne jadłospisy", "Publiczne potrawy"] },
     { items: ["Ustawienia"] },
   ];
 
@@ -330,17 +332,15 @@ export default function Navbar() {
     }, 100);
   };
 
+  // Zaktualizuj useEffect dla userUpdated
   useEffect(() => {
     const onUserUpdated = (e) => {
-      const u = e?.detail || JSON.parse(localStorage.getItem("user") || "null");
-      const s =
-        u?.settings?.avatar || u?.data?.settings?.avatar || u?.avatar || null;
-      const src = s
-        ? s.startsWith("http")
-          ? s
-          : (import.meta.env.VITE_API_URL || "http://localhost:4000") + s
-        : null;
-      setUserAvatarSrc(src ? `${src}?t=${Date.now()}` : null);
+      const user =
+        e?.detail || JSON.parse(localStorage.getItem("user") || "null");
+      if (!user) return;
+      // Użyj buildAvatarUrl do prawidłowego przetworzenia ścieżki avatara
+      const avatarPath = user.avatar || user?.settings?.avatar;
+      setUserAvatarSrc(buildAvatarUrl(avatarPath));
     };
     window.addEventListener("userUpdated", onUserUpdated);
     return () => window.removeEventListener("userUpdated", onUserUpdated);
@@ -374,9 +374,9 @@ export default function Navbar() {
             email: null,
             avatar: null,
           };
-          // attach server-side data if available
           const mergedUser = { ...user, data: data?.data || {} };
           localStorage.setItem("user", JSON.stringify(mergedUser));
+          setUserAvatarSrc(buildAvatarUrl(user.avatar));
 
           // apply server data to localStorage keys like in Logowanie.applyUserData
           try {
@@ -571,7 +571,7 @@ export default function Navbar() {
 
           {/* pokaż nazwę użytkownika jeśli jest */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-            <Avatar src={userAvatarSrc}>
+            <Avatar src={userAvatarSrc} sx={{ width: 32, height: 32 }}>
               {(
                 JSON.parse(localStorage.getItem("user") || "null")?.username ||
                 "U"

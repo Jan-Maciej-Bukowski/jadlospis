@@ -14,6 +14,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import LockIcon from "@mui/icons-material/Lock";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import Swal from "sweetalert2";
+import { stripQuotes } from "../utils/stripQuotes";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -157,7 +158,7 @@ export default function UstawieniaKonta() {
       form.append("avatar", file);
       const res = await fetch(`${API_BASE}/api/user/avatar`, {
         method: "POST",
-        headers: { ...getAuthHeaders() }, // nie ustawiaj Content-Type
+        headers: { ...getAuthHeaders() },
         body: form,
       });
       if (!res.ok) {
@@ -165,30 +166,13 @@ export default function UstawieniaKonta() {
         throw new Error(err.error || res.statusText || "Avatar upload failed");
       }
 
-      // helper: usuń "normal" i smart quotes z początku/końca
-      const stripQuotes = (s) =>
-        (s || "")
-          .toString()
-          .trim()
-          .replace(
-            /^[\u0022\u0027\u2018\u2019\u201C\u201D]+|[\u0022\u0027\u2018\u2019\u201C\u201D]+$/g,
-            ""
-          );
-
       const body = await res.json();
-
       const path = stripQuotes(body.path);
-      const url = stripQuotes(body.url);
-      const fullUrl = url || (path ? `${API_BASE}${path}` : null);
 
-      if (!fullUrl) throw new Error("Brak URL do avatara w odpowiedzi serwera");
-
-      // preview: pełny URL + cache-bust
-      setAvatarPreview(`${fullUrl}?t=${Date.now()}`);
-
-      // zapisz w localStorage tylko ścieżkę (bez cudzysłowów)
+      // Zaktualizuj użytkownika z nowym avatarem
       const updated = {
         ...user,
+        avatar: path, // Dodaj avatar bezpośrednio do głównego obiektu user
         data: {
           ...(user.data || {}),
           settings: { ...(user.data?.settings || {}), avatar: path },
@@ -198,7 +182,11 @@ export default function UstawieniaKonta() {
 
       localStorage.setItem("user", JSON.stringify(updated));
       setUser(updated);
+      setAvatarPreview(path);
+
+      // Wyślij event z pełnym obiektem użytkownika
       window.dispatchEvent(new CustomEvent("userUpdated", { detail: updated }));
+
       Swal.fire({
         icon: "success",
         title: "Zapisano",
@@ -246,6 +234,22 @@ export default function UstawieniaKonta() {
     }
   };
 
+  const handleSave = async () => {
+    // ...existing code...
+    if (response.ok) {
+      const data = await response.json();
+      // Zapisz zaktualizowane dane użytkownika
+      const updatedUser = data.user;
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      // Wyemituj event z pełnymi danymi użytkownika
+      window.dispatchEvent(
+        new CustomEvent("userUpdated", { detail: updatedUser })
+      );
+      // ...rest of the success handling...
+    }
+    // ...existing code...
+  };
+
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -291,10 +295,14 @@ export default function UstawieniaKonta() {
                     headers: { ...getAuthHeaders() },
                   });
                   if (!res.ok) throw new Error("Nie udało się usunąć avatara");
+
+                  // Zaktualizuj użytkownika bez avatara
                   const updated = {
                     ...user,
+                    avatar: null, // Usuń avatar z głównego obiektu
                     settings: { ...(user.settings || {}), avatar: null },
                   };
+
                   localStorage.setItem("user", JSON.stringify(updated));
                   setUser(updated);
                   window.dispatchEvent(
