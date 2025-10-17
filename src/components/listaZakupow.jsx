@@ -17,7 +17,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/CloudDownload";
 import PrintIcon from "@mui/icons-material/Print";
-import dishesAll from "../js/potrawy";
+import { getAllDishes } from "../js/potrawy";
 
 /**
  * Lista zakupów: generuje listę składników na podstawie aktualnego jadłospisu
@@ -54,12 +54,15 @@ export default function ListaZakupow() {
     const counts = new Map();
     const missingSet = new Set();
 
+    // Make sure dishesAll is an array
+    const dishes = getAllDishes();
+
     flat.forEach((day) =>
       ["śniadanie", "obiad", "kolacja"].forEach((meal) => {
         const d = day?.[meal];
         const name = d?.name ?? d;
         if (!name) return;
-        const dishObj = dishesAll.find((x) => x.name === name);
+        const dishObj = dishes.find((x) => x.name === name);
         if (
           !dishObj ||
           !Array.isArray(dishObj.ingredients) ||
@@ -168,7 +171,7 @@ export default function ListaZakupow() {
           Generuj listę zakupów
         </Button>
         <Button
-          variant="outlined"
+          variant="contained" // zmiana z outlined na contained
           startIcon={<ContentCopyIcon />}
           onClick={copyToClipboard}
           disabled={!items.length}
@@ -176,7 +179,7 @@ export default function ListaZakupow() {
           Kopiuj
         </Button>
         <Button
-          variant="outlined"
+          variant="contained" // zmiana z outlined na contained
           startIcon={<DownloadIcon />}
           onClick={exportTxt}
           disabled={!items.length}
@@ -184,7 +187,7 @@ export default function ListaZakupow() {
           Eksportuj .txt
         </Button>
         <Button
-          variant="outlined"
+          variant="contained" // zmiana z outlined na contained
           startIcon={<PrintIcon />}
           onClick={printList}
           disabled={!items.length}

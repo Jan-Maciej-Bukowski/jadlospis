@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ensureLocalDefault } from "../utils/storageHelpers";
-import { safeParse} from "../utils/safeParse";
+import { safeParse } from "../utils/safeParse";
 import {
   Box,
   List,
@@ -35,6 +35,9 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
 ensureLocalDefault("dishes", defaultDishes || []);
 
 export default function Potrawy() {
+  // Przenieś useRef na początek komponentu
+  const lastFavoriteUpdate = useRef({ index: null, ts: 0 });
+
   const [openIndex, setOpenIndex] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [version, setVersion] = useState(0); // wymusza rerender po zmianach bez edycji
@@ -206,14 +209,50 @@ export default function Potrawy() {
     }));
   };
 
-  const toggleFavorite = (index) => {
+  const toggleFavorite = (index, event) => {
+    console.log("toggled");
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    // guard przed szybkimi, podwójnymi kliknięciami
+    const now = Date.now();
+    if (!toggleFavorite.last) toggleFavorite.last = { index: null, ts: 0 };
+    const last = toggleFavorite.last;
+    if (last.index === index && now - last.ts < 400) return;
+    toggleFavorite.last = { index, ts: now };
+
     setDishes((prev) => {
       const copy = [...prev];
+      const newFavorite = !copy[index]?.favorite;
+
+      // Sprawdź czy ta sama zmiana nie została właśnie wykonana
+      if (
+        lastFavoriteUpdate.current.index === index &&
+        Date.now() - lastFavoriteUpdate.current.ts < 100
+      ) {
+        return prev; // zignoruj duplikat
+      }
+
+      // Zapisz informację o tej zmianie
+      lastFavoriteUpdate.current = { index, ts: Date.now() };
+
       copy[index] = {
         ...(copy[index] || {}),
-        favorite: !copy[index]?.favorite,
+        favorite: newFavorite,
       };
-      saveLocal(copy);
+
+      // Zapisz w localStorage
+      try {
+        localStorage.setItem("dishes", JSON.stringify(copy));
+        window.dispatchEvent(
+          new CustomEvent("dishesUpdated", { detail: copy })
+        );
+      } catch (e) {
+        console.warn("Failed to save dishes:", e);
+      }
+
       return copy;
     });
   };
@@ -344,9 +383,12 @@ export default function Potrawy() {
           label="Tylko ulubione"
         />
         <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => setFilterRating(0)}
+          variant="contained" // zmiana z outlined na contained
+          onClick={() => {
+            setFilterRating(0);
+            setOnlyFavorites(false);
+            setFilterTagsInput("");
+          }}
         >
           Wyczyść filtry
         </Button>
@@ -413,10 +455,8 @@ export default function Potrawy() {
                     <IconButton
                       edge="end"
                       aria-label="favorite"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(index);
-                      }}
+                      onClick={(e) => toggleFavorite(index, e)} // Dodaj event jako parametr
+                      sx={{ zIndex: 2 }} // Dodaj zIndex aby upewnić się, że przycisk jest klikalny
                     >
                       {dish.favorite ? (
                         <FavoriteIcon color="error" />

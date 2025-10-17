@@ -125,7 +125,9 @@ export function initUserSync() {
   ];
   const handlers = localEvents.map((ev) => {
     const h = () => {
-      console.debug("userSync: event", ev, "-> schedule push");
+      if (process.env.NODE_ENV === "development") {
+        console.log("userSync: event", ev, "-> schedule push");
+      }
       schedulePush();
     };
     window.addEventListener(ev, h);
@@ -236,4 +238,19 @@ export function initUserSync() {
     window.removeEventListener("userSync:setLastHash", setLastHashHandler);
     clearInterval(poller);
   };
+}
+
+// Guard -> zapobiega wielokrotnej inicjalizacji (hot-reload / podwójne importy)
+if (typeof window !== "undefined") {
+  if (window.__userSyncInitialized) {
+    // już zainicjalizowano, nic więcej nie rób
+    // można odkomentować poniższą linię do debugowania:
+    // console.debug("userSync: init skipped (already initialized)");
+  } else {
+    window.__userSyncInitialized = true;
+
+    // ...existing initialization code that registers event listeners...
+    // np. tutaj zostaje reszta istniejącego kodu userSync.js,
+    // który robi window.addEventListener("dishesUpdated", ...) itd.
+  }
 }

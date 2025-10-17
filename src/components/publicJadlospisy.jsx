@@ -242,6 +242,7 @@ export default function PublicJadlospisy({ onLoad }) {
             window.dispatchEvent(
               new CustomEvent("dishesUpdated", { detail: current })
             );
+            
           } catch (err) {
             console.warn(
               "Nie udało się zapisać/notify potraw po imporcie:",

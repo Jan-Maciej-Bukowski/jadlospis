@@ -75,7 +75,9 @@ export default function PublicPotrawy() {
       localStorage.setItem("dishes", JSON.stringify(current));
       window.dispatchEvent(
         new CustomEvent("dishesUpdated", { detail: current })
+        
       );
+      
       Swal.fire({
         icon: "success",
         title: "Zaimportowano",

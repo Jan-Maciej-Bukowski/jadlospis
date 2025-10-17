@@ -273,7 +273,7 @@ export default function UstawieniaKonta() {
           />
           <label htmlFor="avatar-file">
             <Button
-              variant="outlined"
+              variant="contained" // zmiana z outlined na contained
               component="span"
               startIcon={<PhotoCameraIcon />}
               disabled={avatarUploading}
@@ -282,6 +282,8 @@ export default function UstawieniaKonta() {
             </Button>
           </label>
           <Button
+            variant="contained" // zmiana z text na contained
+            color="error" // dodaj kolor error
             sx={{ ml: 1 }}
             onClick={() => {
               setAvatarPreview(null);

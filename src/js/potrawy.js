@@ -29,6 +29,9 @@ function writeDishes(arr) {
 
 const dishes = readDishes();
 
+// dodaj eksport dishes
+export { dishes };
+
 // remove html from dishes
 dishes.forEach((dish) => {
   dish.params = stripHtml(dish.params);

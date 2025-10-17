@@ -509,7 +509,7 @@ export default function Jadlospis() {
         </Box>
 
         <Button
-          variant="outlined"
+          variant="contained"
           color="primary"
           onClick={handleSaveCurrentMenu}
         >

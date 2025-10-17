@@ -416,7 +416,7 @@ export default function Jadlospisy() {
         </Button>
 
         <Button
-          variant="outlined"
+          variant="contained" // zmiana z outlined na contained
           startIcon={<UploadFileIcon />}
           onClick={() => fileRef.current?.click()}
         >

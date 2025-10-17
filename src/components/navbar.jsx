@@ -458,9 +458,23 @@ export default function Navbar() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Planer Jadłospisów
-          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div">
+              Planer Jadłospisów
+              {activeSection !== "Jadłospis" && (
+                <Typography
+                  component="span"
+                  sx={{
+                    //color: "rgba(255,255,255,0.7)", ten kolor jest zawsze jasny co jest słabow widoczne np na żułtym
+                    ml: 1,
+                    typography: "body1",
+                  }}
+                >
+                  &gt; {activeSection}
+                </Typography>
+              )}
+            </Typography>
+          </Box>
 
           {/* przycisk otwierający prawy auth-panel */}
           <IconButton
