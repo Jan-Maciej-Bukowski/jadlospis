@@ -15,16 +15,131 @@ const PublicMenu = require("./models/PublicMenu");
 const PublicDish = require("./models/PublicDish");
 const auth = require("./middleware/auth");
 
+// Google OAuth (passport)
+const passport = require("passport");
+const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
+const crypto = require("crypto");
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_CALLBACK_URL =
+  process.env.GOOGLE_CALLBACK_URL ||
+  `${process.env.APP_URL || "http://localhost:4000"}/auth/google/callback`;
+
+// --- moved up so app and JWT_SECRET exist before using passport ---
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET;
+const app = express();
+// --- end moved ---
+
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
+        callbackURL: GOOGLE_CALLBACK_URL,
+      },
+      // verify callback
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = (profile.emails && profile.emails[0]?.value) || null;
+          const displayName =
+            profile.displayName ||
+            (email && email.split("@")[0]) ||
+            "google-user";
+          // try find by email
+          let user = null;
+          if (email) user = await User.findOne({ email });
+          if (!user) {
+            // create user with random passwordHash
+            const random = crypto.randomBytes(20).toString("hex");
+            const hash = await bcrypt.hash(random, 12);
+            user = await User.create({
+              email: email || `google+${profile.id}@noemail.local`,
+              username:
+                displayName.replace(/\s+/g, "").substring(0, 30) ||
+                `g${profile.id}`,
+              passwordHash: hash,
+              avatar:
+                profile.photos && profile.photos[0]?.value
+                  ? profile.photos[0].value
+                  : null,
+              data: {
+                dishes: [],
+                dishLists: [],
+                lastMenu: null,
+                savedMenus: [],
+                settings: {},
+              },
+            });
+          } else {
+            // update avatar from profile if available
+            if (
+              profile.photos &&
+              profile.photos[0]?.value &&
+              (!user.avatar || user.avatar !== profile.photos[0].value)
+            ) {
+              user.avatar = profile.photos[0].value;
+              await user.save();
+            }
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
+      }
+    )
+  );
+  // no sessions
+  app.use(passport.initialize());
+  // auth routes
+  app.get(
+    "/auth/google",
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      session: false,
+    })
+  );
+
+  app.get(
+    "/auth/google/callback",
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: `${FRONTEND_URL}/?oauth=fail`,
+    }),
+    async (req, res) => {
+      try {
+        const user = req.user;
+        // create JWT
+        const token = jwt.sign(
+          { id: user._id, username: user.username, email: user.email },
+          JWT_SECRET,
+          {
+            expiresIn: "7d",
+          }
+        );
+        // redirect to frontend with token in query (frontend will finish setup)
+        const redirectTo = `${FRONTEND_URL.replace(
+          /\/+$/,
+          ""
+        )}/?token=${encodeURIComponent(token)}`;
+        return res.redirect(redirectTo);
+      } catch (e) {
+        console.error("OAuth callback error:", e);
+        return res.redirect(`${FRONTEND_URL}/?oauth=error`);
+      }
+    }
+  );
+} else {
+  console.warn("Google OAuth not configured: GOOGLE_CLIENT_ID/SECRET missing");
+}
+
 const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
   console.error("ERROR: MONGODB_URI is not set.");
-  process.exit(1);
-}
-if (!JWT_SECRET) {
-  console.error("ERROR: JWT_SECRET is not set.");
   process.exit(1);
 }
 
@@ -35,8 +150,6 @@ mongoose
     console.error("MongoDB connection error:", err);
     process.exit(1);
   });
-
-const app = express();
 
 // dozwolone originy (dodaj tu localhost podczas developmentu)
 const allowedOrigins = [

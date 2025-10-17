@@ -33,6 +33,11 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import PublicIcon from "@mui/icons-material/Public";
+import GoogleIcon from "@mui/icons-material/Google";
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  ""
+);
 
 import Jadlospis from "./jadlospis";
 import Jadlospisy from "./jadlospisy";
@@ -456,6 +461,18 @@ export default function Navbar() {
                     <PersonAddIcon />
                   </ListItemIcon>
                   <ListItemText primary="Zarejestruj" />
+                </ListItemButton>
+
+                <ListItemButton
+                  onClick={() => {
+                    // start Google OAuth flow
+                    window.location.href = `${API}/auth/google`;
+                  }}
+                >
+                  <ListItemIcon>
+                    <GoogleIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Zaloguj przez Google" />
                 </ListItemButton>
               </>
             )}

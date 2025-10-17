@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Button, TextField, Typography, Paper } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import GoogleIcon from "@mui/icons-material/Google";
 import Swal from "sweetalert2";
 
 export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
@@ -183,6 +184,57 @@ export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
     }
   };
 
+  // handle OAuth redirect token in URL: ?token=...
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("token");
+      if (!t) return;
+      // save token
+      localStorage.setItem("token", t);
+
+      // decode JWT payload (base64url)
+      const parseJwt = (token) => {
+        try {
+          const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+          const json = decodeURIComponent(
+            atob(b)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+          return JSON.parse(json);
+        } catch {
+          return null;
+        }
+      };
+
+      const payload = parseJwt(t) || {};
+      const user = {
+        id: payload.id || payload._id || null,
+        username: payload.username || payload.name || null,
+        email: payload.email || null,
+        // avatar can be fetched later from backend if needed
+      };
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // notify app about login
+      try {
+        window.dispatchEvent(new CustomEvent("userLoggedIn", { detail: user }));
+        window.dispatchEvent(new CustomEvent("userUpdated", { detail: user }));
+      } catch (e) {}
+
+      // remove token param from URL
+      params.delete("token");
+      const newUrl =
+        window.location.pathname +
+        (params.toString() ? `?${params.toString()}` : "");
+      window.history.replaceState({}, "", newUrl);
+    } catch (e) {
+      console.warn("OAuth token handling failed", e);
+    }
+  }, []);
+
   return (
     <Box sx={{ p: 2 }}>
       <Paper sx={{ p: 3, maxWidth: 520 }}>
@@ -251,6 +303,21 @@ export default function Logowanie({ onLogged, mode: initialMode = "login" }) {
               </Button>
             </>
           )}
+
+          {/* Google OAuth button */}
+          <Button
+            variant="outlined"
+            startIcon={<GoogleIcon />}
+            sx={{ mt: 1 }}
+            onClick={() => {
+              // redirect to backend Google OAuth start
+              window.location.href = `${API}/auth/google`;
+            }}
+          >
+            {mode === "register"
+              ? "Zarejestruj przez Google"
+              : "Zaloguj przez Google"}
+          </Button>
         </Box>
       </Paper>
     </Box>
