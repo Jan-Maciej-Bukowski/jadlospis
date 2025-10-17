@@ -56,6 +56,15 @@ export default function Navbar() {
   // which mode should Logowanie open in: "login" or "register"
   const [authMode, setAuthMode] = useState("login");
 
+  // czy użytkownik jest zalogowany (inicjalizacja z localStorage)
+  const [isLogged, setIsLogged] = useState(() => {
+    try {
+      return !!localStorage.getItem("token") || !!localStorage.getItem("user");
+    } catch {
+      return false;
+    }
+  });
+
   // theme context
   const { changeTheme, updateCustomColor } = useContext(ThemeContext);
 
@@ -87,14 +96,14 @@ export default function Navbar() {
 
   const menuGroups = [
     {
-      items: [
-        "Jadłospis",
-        "Jadłospisy",
-        "Publiczne jadłospisy",
-        "Publiczne potrawy",
-      ],
+      items: ["Jadłospis", "Jadłospisy"],
     },
-    { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
+    {
+      items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"],
+    },
+    {
+      items: ["Publiczne jadłospisy", "Publiczne potrawy"],
+    },
     { items: ["Ustawienia"] },
   ];
 
@@ -276,6 +285,17 @@ export default function Navbar() {
     return () => window.removeEventListener("userUpdated", onUserUpdated);
   }, []);
 
+  useEffect(() => {
+    const onLogin = () => setIsLogged(true);
+    const onLogout = () => setIsLogged(false);
+    window.addEventListener("userLoggedIn", onLogin);
+    window.addEventListener("userLoggedOut", onLogout);
+    return () => {
+      window.removeEventListener("userLoggedIn", onLogin);
+      window.removeEventListener("userLoggedOut", onLogout);
+    };
+  }, []);
+
   return (
     <>
       <AppBar position="static">
@@ -422,64 +442,78 @@ export default function Navbar() {
           </Box>
 
           <List>
-            <ListItemButton onClick={goToLogin}>
-              <ListItemIcon>
-                <LoginIcon />
-              </ListItemIcon>
-              <ListItemText primary="Zaloguj" />
-            </ListItemButton>
+            {!isLogged && (
+              <>
+                <ListItemButton onClick={goToLogin}>
+                  <ListItemIcon>
+                    <LoginIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Zaloguj" />
+                </ListItemButton>
 
-            <ListItemButton onClick={goToRegister}>
-              <ListItemIcon>
-                <PersonAddIcon />
-              </ListItemIcon>
-              <ListItemText primary="Zarejestruj" />
-            </ListItemButton>
+                <ListItemButton onClick={goToRegister}>
+                  <ListItemIcon>
+                    <PersonAddIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Zarejestruj" />
+                </ListItemButton>
+              </>
+            )}
 
-            {/* PRZYCISK: przejście do ustawień konta (oddzielne od ogólnych ustawień) */}
-            <ListItemButton
-              onClick={() => {
-                setActiveSection("Ustawienia konta");
-                closeAuthDrawer();
-              }}
-            >
-              <ListItemIcon>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Ustawienia konta" />
-            </ListItemButton>
+            {isLogged && (
+              <>
+                {/* PRZYCISK: przejście do ustawień konta (oddzielne od ogólnych ustawień) */}
+                <ListItemButton
+                  onClick={() => {
+                    setActiveSection("Ustawienia konta");
+                    closeAuthDrawer();
+                  }}
+                >
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Ustawienia konta" />
+                </ListItemButton>
 
-            <Divider sx={{ my: 1 }} />
+                <Divider sx={{ my: 1 }} />
 
-            <ListItemButton
-              onClick={() => {
-                handleLogout();
-                closeAuthDrawer();
-              }}
-            >
-              <ListItemIcon>
-                <LogoutIcon />
-              </ListItemIcon>
-              <ListItemText primary="Wyloguj" />
-            </ListItemButton>
+                <ListItemButton
+                  onClick={() => {
+                    handleLogout();
+                    closeAuthDrawer();
+                  }}
+                >
+                  <ListItemIcon>
+                    <LogoutIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Wyloguj" />
+                </ListItemButton>
 
-            <ListItemButton onClick={deleteAccount}>
-              <ListItemIcon>
-                <DeleteForeverIcon color="error" />
-              </ListItemIcon>
-              <ListItemText primary="Usuń konto" />
-            </ListItemButton>
+                <ListItemButton
+                  onClick={async () => {
+                    await deleteAccount();
+                    closeAuthDrawer();
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteForeverIcon color="error" />
+                  </ListItemIcon>
+                  <ListItemText primary="Usuń konto" />
+                </ListItemButton>
 
-            <ListItemButton
-              onClick={() => {
-                clearData();
-              }}
-            >
-              <ListItemIcon>
-                <DeleteSweepIcon />
-              </ListItemIcon>
-              <ListItemText primary="Wyczyść dane" />
-            </ListItemButton>
+                <ListItemButton
+                  onClick={() => {
+                    clearData();
+                    closeAuthDrawer();
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteSweepIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Wyczyść dane" />
+                </ListItemButton>
+              </>
+            )}
           </List>
         </Box>
       </Drawer>
