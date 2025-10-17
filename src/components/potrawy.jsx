@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ensureLocalDefault } from "../utils/storageHelpers";
+import { safeParse} from "../utils/safeParse";
 import {
   Box,
   List,
@@ -24,20 +25,11 @@ import Swal from "sweetalert2";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { Rating } from "@mui/material";
-
-const stripHtml = (html = "") =>
-  html
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-function safeParse(raw, fallback) {
-  try {
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+import PublishIcon from "@mui/icons-material/Publish";
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  ""
+);
 
 // ensure key exists (do not overwrite existing data)
 ensureLocalDefault("dishes", defaultDishes || []);
@@ -852,6 +844,59 @@ export default function Potrawy() {
                         }}
                       >
                         Usuń
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PublishIcon />}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          // publish dish
+                          const token = localStorage.getItem("token");
+                          if (!token) {
+                            Swal.fire({
+                              icon: "warning",
+                              title: "Zaloguj się",
+                              text: "Musisz być zalogowany, żeby opublikować potrawę.",
+                            });
+                            return;
+                          }
+                          try {
+                            const payload = { ...dish };
+                            const res = await fetch(
+                              `${API}/api/public/dishes`,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `Bearer ${token}`,
+                                },
+                                body: JSON.stringify(payload),
+                              }
+                            );
+                            if (!res.ok) {
+                              const body = await res.json().catch(() => ({}));
+                              throw new Error(
+                                body.error || res.statusText || "Publish failed"
+                              );
+                            }
+                            Swal.fire({
+                              icon: "success",
+                              title: "Opublikowano",
+                              text: "Potrawa została opublikowana.",
+                            });
+                          } catch (err) {
+                            console.error("publish dish:", err);
+                            Swal.fire({
+                              icon: "error",
+                              title: "Błąd",
+                              text:
+                                err.message ||
+                                "Nie udało się opublikować potrawy.",
+                            });
+                          }
+                        }}
+                      >
+                        Publikuj
                       </Button>
                     </Box>
                   )}

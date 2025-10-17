@@ -37,6 +37,7 @@ import PublicIcon from "@mui/icons-material/Public";
 import Jadlospis from "./jadlospis";
 import Jadlospisy from "./jadlospisy";
 import PublicJadlospisy from "./publicJadlospisy";
+import PublicPotrawy from "./publicPotrawy";
 import Potrawy from "./potrawy";
 import DodajPotrawe from "./dodajPotrawe";
 import Listy from "./listy";
@@ -85,7 +86,14 @@ export default function Navbar() {
   };
 
   const menuGroups = [
-    { items: ["Jadłospis", "Jadłospisy", "Publiczne jadłospisy"] },
+    {
+      items: [
+        "Jadłospis",
+        "Jadłospisy",
+        "Publiczne jadłospisy",
+        "Publiczne potrawy",
+      ],
+    },
     { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
     { items: ["Ustawienia"] },
   ];
@@ -97,6 +105,8 @@ export default function Navbar() {
       case "Jadłospisy":
         return <SaveIcon />;
       case "Publiczne jadłospisy":
+        return <PublicIcon />;
+      case "Publiczne potrawy":
         return <PublicIcon />;
       case "Potrawy":
         return <RestaurantMenuIcon />;
@@ -492,6 +502,7 @@ export default function Navbar() {
             onLogged={() => setActiveSection("Jadłospis")}
           />
         )}
+        {activeSection === "Publiczne potrawy" && <PublicPotrawy />}
       </Box>
     </>
   );

@@ -12,6 +12,7 @@ require("dotenv").config();
 
 const User = require("./models/User");
 const PublicMenu = require("./models/PublicMenu");
+const PublicDish = require("./models/PublicDish");
 const auth = require("./middleware/auth");
 
 const PORT = process.env.PORT || 4000;
@@ -508,6 +509,94 @@ app.delete("/api/public/menus/:id", auth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("DELETE /api/public/menus/:id error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// publikuj potrawę (chronione) - zapisuje pełne metadane potrawy
+app.post("/api/public/dishes", auth, async (req, res) => {
+  try {
+    const dish = req.body || {};
+    if (!dish.name) return res.status(400).json({ error: "name is required" });
+
+    const pd = await PublicDish.create({
+      name: dish.name,
+      tags: Array.isArray(dish.tags) ? dish.tags : dish.tags ? [dish.tags] : [],
+      params: dish.params || "",
+      ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
+      probability: dish.probability ?? 100,
+      maxRepeats: dish.maxRepeats ?? 1,
+      allowedMeals: Array.isArray(dish.allowedMeals)
+        ? dish.allowedMeals
+        : dish.allowedMeals
+        ? [dish.allowedMeals]
+        : ["śniadanie", "obiad", "kolacja"],
+      rating: dish.rating ?? 0,
+      favorite: !!dish.favorite,
+      color: dish.color || "",
+      maxAcrossWeeks: dish.maxAcrossWeeks ?? null,
+      author: { id: req.user.id, username: req.user.username },
+      public: true,
+    });
+
+    res.status(201).json({ id: pd._id, createdAt: pd.createdAt });
+  } catch (err) {
+    console.error("POST /api/public/dishes error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// lista publicznych potraw (public, proste filtrowanie/paginacja)
+app.get("/api/public/dishes", async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.min(
+      100,
+      Math.max(10, parseInt(req.query.limit || "50", 10))
+    );
+    const skip = (page - 1) * limit;
+
+    const filter = { public: true };
+    if (q) filter.name = { $regex: q, $options: "i" };
+
+    const total = await PublicDish.countDocuments(filter);
+    const items = await PublicDish.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({ total, page, limit, items });
+  } catch (err) {
+    console.error("GET /api/public/dishes error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// pobierz pojedynczą publiczną potrawę
+app.get("/api/public/dishes/:id", async (req, res) => {
+  try {
+    const pd = await PublicDish.findById(req.params.id).lean();
+    if (!pd) return res.status(404).json({ error: "Not found" });
+    res.json(pd);
+  } catch (err) {
+    console.error("GET /api/public/dishes/:id error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// usuń własną opublikowaną potrawę
+app.delete("/api/public/dishes/:id", auth, async (req, res) => {
+  try {
+    const pd = await PublicDish.findById(req.params.id);
+    if (!pd) return res.status(404).json({ error: "Not found" });
+    if (!pd.author?.id || pd.author.id.toString() !== req.user.id)
+      return res.status(403).json({ error: "No permission" });
+    await pd.remove();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /api/public/dishes/:id error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
