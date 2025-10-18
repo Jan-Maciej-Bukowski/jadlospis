@@ -316,7 +316,19 @@ export default function Jadlospisy() {
       return;
     }
     try {
-      // build full dishes metadata array for used dishes (if available in master list)
+      // Guard: avoid publishing same menu multiple times (by exact menu JSON)
+      const menuSignature = JSON.stringify(item.menu || []);
+      const publishedMenusRaw = localStorage.getItem("publishedMenus") || "[]";
+      const publishedMenus = JSON.parse(publishedMenusRaw || "[]");
+      if (publishedMenus.includes(menuSignature)) {
+        Swal.fire({
+          icon: "info",
+          title: "Już opublikowano",
+          text: "Ten jadłospis został już wcześniej opublikowany.",
+        });
+        return;
+      }
+
       const toExport = item.menu || [];
       const used = new Set();
       const placeholder = "Brak potraw";
@@ -357,6 +369,10 @@ export default function Jadlospisy() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || res.statusText || "Publish failed");
       }
+      // remember published signature
+      publishedMenus.push(menuSignature);
+      localStorage.setItem("publishedMenus", JSON.stringify(publishedMenus));
+
       Swal.fire({
         icon: "success",
         title: "Opublikowano",

@@ -52,6 +52,16 @@ export default function PublicPotrawy() {
 
   const importDish = (pd) => {
     try {
+      // prevent duplicate import by name
+      const current = dishesAll();
+      if (current.find((d) => d.name === pd.name)) {
+        Swal.fire({
+          icon: "info",
+          title: "Już masz tę potrawę",
+          text: `Potrawa "${pd.name}" już istnieje w Twojej kolekcji.`,
+        });
+        return;
+      }
       // if pd contains full metadata, add it
       const toAdd = {
         name: pd.name,
@@ -71,13 +81,12 @@ export default function PublicPotrawy() {
         maxAcrossWeeks: pd.maxAcrossWeeks ?? null,
       };
       addDish(toAdd);
-      const current = dishesAll();
-      localStorage.setItem("dishes", JSON.stringify(current));
+      const currentDishes = dishesAll();
+      localStorage.setItem("dishes", JSON.stringify(currentDishes));
       window.dispatchEvent(
-        new CustomEvent("dishesUpdated", { detail: current })
-        
+        new CustomEvent("dishesUpdated", { detail: currentDishes })
       );
-      
+
       Swal.fire({
         icon: "success",
         title: "Zaimportowano",

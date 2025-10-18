@@ -39,7 +39,7 @@ export default function Listy() {
       fontSize: "0.9rem",
       opacity: "0",
     });
-    g.setAttribute("aria-hidden", "true");
+    //g.setAttribute("aria-hidden", "true");
     document.body.appendChild(g);
     return g;
   };
@@ -63,9 +63,13 @@ export default function Listy() {
   const startTouchDrag = (e, dishName) => {
     const t = e.touches && e.touches[0];
     if (!t) return;
-    // prevent page scrolling while dragging
+    // prevent page scrolling / pull-to-refresh while dragging
     const prevTouchAction = document.body.style.touchAction;
+    const prevBodyOverscroll = document.body.style.overscrollBehavior;
+    const prevDocOverscroll = document.documentElement.style.overscrollBehavior;
     document.body.style.touchAction = "none";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overscrollBehavior = "none";
 
     // store payload and ghost
     window.__touchDrag = { payload: dishName, ghost: createGhost(dishName) };
@@ -78,6 +82,9 @@ export default function Listy() {
       } catch (err) {}
       window.__touchDrag = null;
       document.body.style.touchAction = prevTouchAction || "";
+      document.body.style.overscrollBehavior = prevBodyOverscroll || "";
+      document.documentElement.style.overscrollBehavior =
+        prevDocOverscroll || "";
       window.removeEventListener("touchmove", onMove, { passive: false });
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
@@ -242,7 +249,7 @@ export default function Listy() {
   }, []);
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2 }} className="not-scrollable">
       <Typography variant="h5" sx={{ mb: 2 }}>
         Listy potraw
       </Typography>

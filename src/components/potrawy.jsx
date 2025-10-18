@@ -890,7 +890,7 @@ export default function Potrawy() {
                         startIcon={<PublishIcon />}
                         onClick={async (e) => {
                           e.stopPropagation();
-                          // publish dish
+                          // publish dish - guard duplicates (frontend)
                           const token = localStorage.getItem("token");
                           if (!token) {
                             Swal.fire({
@@ -901,6 +901,19 @@ export default function Potrawy() {
                             return;
                           }
                           try {
+                            const publishedRaw =
+                              localStorage.getItem("publishedDishes") || "[]";
+                            const published = JSON.parse(publishedRaw || "[]");
+                            // check by name first
+                            if (published.includes(dish.name)) {
+                              Swal.fire({
+                                icon: "info",
+                                title: "Już opublikowano",
+                                text: "Wygląda na to, że tę potrawę już opublikowałeś.",
+                              });
+                              return;
+                            }
+
                             const payload = { ...dish };
                             const res = await fetch(
                               `${API}/api/public/dishes`,
@@ -919,6 +932,14 @@ export default function Potrawy() {
                                 body.error || res.statusText || "Publish failed"
                               );
                             }
+                            const body = await res.json().catch(() => ({}));
+                            // remember published by name (and id if returned)
+                            const key = body._id || dish.name;
+                            published.push(dish.name);
+                            localStorage.setItem(
+                              "publishedDishes",
+                              JSON.stringify(published)
+                            );
                             Swal.fire({
                               icon: "success",
                               title: "Opublikowano",

@@ -164,8 +164,18 @@ export default function PublicJadlospisy({ onLoad }) {
 
   const importPublicMenu = (pm) => {
     try {
-      // save to savedMenus
+      // prevent duplicate import by exact menu content
       const saved = JSON.parse(localStorage.getItem("savedMenus") || "[]");
+      const signature = JSON.stringify(pm.menu || []);
+      if (saved.some((s) => JSON.stringify(s.menu || []) === signature)) {
+        Swal.fire({
+          icon: "info",
+          title: "Już zaimportowano",
+          text: "Ten publiczny jadłospis jest już w Twoich zapisanych.",
+        });
+        return;
+      }
+      // save to savedMenus
       const id = Date.now().toString();
       const entry = {
         id,
@@ -175,6 +185,7 @@ export default function PublicJadlospisy({ onLoad }) {
       };
       saved.push(entry);
       localStorage.setItem("savedMenus", JSON.stringify(saved));
+      // note: savedMenusUpdated event maybe dispatched elsewhere
 
       // create dish list and add missing dishes (preserve full metadata if provided)
       const placeholder = "Brak potraw";
@@ -242,7 +253,6 @@ export default function PublicJadlospisy({ onLoad }) {
             window.dispatchEvent(
               new CustomEvent("dishesUpdated", { detail: current })
             );
-            
           } catch (err) {
             console.warn(
               "Nie udało się zapisać/notify potraw po imporcie:",

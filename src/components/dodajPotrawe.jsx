@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
@@ -9,6 +9,7 @@ import {
   FormControlLabel,
   Checkbox,
   Rating,
+  Paper,
 } from "@mui/material";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
@@ -25,14 +26,84 @@ export default function DodajPotrawe() {
     obiad: true,
     kolacja: true,
   });
+  // lists management
+  const [availableLists, setAvailableLists] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dishLists") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [selectedLists, setSelectedLists] = useState([]); // array of list ids
+  const [newListName, setNewListName] = useState("");
   const [rating, setRating] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [color, setColor] = useState(""); // kolor tła w jadlospisie
   const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
   const [maxPerDay, setMaxPerDay] = useState(""); // maks na dzień (opcjonalnie)
 
+  useEffect(() => {
+    const handler = () => {
+      try {
+        setAvailableLists(
+          JSON.parse(localStorage.getItem("dishLists") || "[]")
+        );
+      } catch {
+        setAvailableLists([]);
+      }
+    };
+    window.addEventListener("dishListsUpdated", handler);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "dishLists") handler();
+    });
+    return () => {
+      window.removeEventListener("dishListsUpdated", handler);
+    };
+  }, []);
+
   const handleMealChange = (meal) => {
     setAllowedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
+  };
+
+  const toggleListSelection = (id) => {
+    setSelectedLists((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const createAndSelectList = () => {
+    const name = (newListName || "").trim();
+    if (!name) {
+      Swal.fire({ icon: "warning", title: "Podaj nazwę listy" });
+      return;
+    }
+    const id = Date.now().toString();
+    const next = [...availableLists, { id, name, dishes: [] }];
+    localStorage.setItem("dishLists", JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("dishListsUpdated", { detail: next }));
+    setAvailableLists(next);
+    setSelectedLists((s) => [...s, id]);
+    setNewListName("");
+    Swal.fire({ icon: "success", title: "Utworzono listę", text: name });
+  };
+
+  const assignDishToLists = (dishName, listIds = []) => {
+    try {
+      const raw = localStorage.getItem("dishLists") || "[]";
+      const lists = JSON.parse(raw || "[]");
+      const next = lists.map((l) => {
+        if (!listIds.includes(l.id)) return l;
+        if (!Array.isArray(l.dishes)) l.dishes = [];
+        if (!l.dishes.includes(dishName)) l.dishes.push(dishName);
+        return l;
+      });
+      localStorage.setItem("dishLists", JSON.stringify(next));
+      window.dispatchEvent(
+        new CustomEvent("dishListsUpdated", { detail: next })
+      );
+    } catch (e) {
+      console.warn("assignDishToLists:", e);
+    }
   };
 
   function newDish() {
@@ -46,6 +117,16 @@ export default function DodajPotrawe() {
       });
       return;
     }
+    // walidacja: przynajmniej jedna dozwolona pora dnia
+    if (!Object.values(allowedMeals).some(Boolean)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Wybierz porę dnia",
+        text: "Musisz zaznaczyć przynajmniej jedną dozwoloną porę dnia.",
+      });
+      return;
+    }
+
     const data = {
       name: name,
       tags: tags,
@@ -64,6 +145,9 @@ export default function DodajPotrawe() {
     };
     console.log("dodano potrawę: ", data);
     addDish(data);
+
+    // przypisz potrawę do wybranych list (jeśli wybrano)
+    if (data.name) assignDishToLists(data.name, selectedLists);
 
     Swal.fire({
       title: "Dodano!",
@@ -84,6 +168,7 @@ export default function DodajPotrawe() {
     setColor("");
     setMaxAcrossWeeks("");
     setMaxPerDay("");
+    setSelectedLists([]);
   }
 
   return (
@@ -106,6 +191,44 @@ export default function DodajPotrawe() {
       <Typography variant="h4" sx={{ mb: 3 }}>
         Dodaj Nową Potrawę
       </Typography>
+
+      {/* List selection / create new list */}
+      <Paper sx={{ p: 2, mb: 2, width: "100%", maxWidth: 400 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          Przypisz do list
+        </Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {availableLists.length === 0 && (
+            <Typography variant="body2">
+              Brak list. Możesz utworzyć nową.
+            </Typography>
+          )}
+          {availableLists.map((l) => (
+            <FormControlLabel
+              key={l.id}
+              control={
+                <Checkbox
+                  checked={selectedLists.includes(l.id)}
+                  onChange={() => toggleListSelection(l.id)}
+                />
+              }
+              label={l.name}
+            />
+          ))}
+          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+            <TextField
+              size="small"
+              placeholder="Utwórz nową listę..."
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              fullWidth
+            />
+            <Button variant="contained" onClick={createAndSelectList}>
+              Dodaj
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
 
       <Box
         component="form"
@@ -172,7 +295,7 @@ export default function DodajPotrawe() {
           slotProps={{
             htmlInput: {
               min: 0,
-              max: 3
+              max: 3,
             },
           }}
           placeholder="np. 1"
@@ -184,11 +307,11 @@ export default function DodajPotrawe() {
           type="number"
           size="medium"
           value={maxRepeats}
-          onChange={(e) => setMaxRepeats(Number(e.target.value))}
+          onChange={(e) => setMaxRepeats(e.target.value)}
           slotProps={{
             htmlInput: {
               min: 0,
-              max: 7
+              max: 21,
             },
           }}
         />
@@ -253,14 +376,28 @@ export default function DodajPotrawe() {
         <Typography gutterBottom sx={{ mt: 1 }}>
           Kolor tła w jadłospisie:
         </Typography>
-        <Box sx={{ display: "flex", gap: 1, mb: 2, alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            mb: 2,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           {[
             { id: "", label: "Brak", color: "" },
+            { id: "#ffffff", label: "Neutralny", color: "#ffffff" },
+            { id: "#f7f7f7", label: "Jasny szary", color: "#f7f7f7" },
             { id: "#ccffd0", label: "Jasna zieleń", color: "#ccffd0" },
+            { id: "#e6ffe6", label: "Bardzo jasna zieleń", color: "#e6ffe6" },
             { id: "#c0deff", label: "Jasny niebieski", color: "#c0deff" },
+            { id: "#e1f5fe", label: "Bardzo jasny błękit", color: "#e1f5fe" },
             { id: "#ffc7c7", label: "Jasny czerwony", color: "#ffc7c7" },
             { id: "#fff6bc", label: "Jasny żółty", color: "#fff6bc" },
+            { id: "#ffefdb", label: "Kremowy", color: "#ffefdb" },
             { id: "#ddc0ff", label: "Jasny fiolet", color: "#ddc0ff" },
+            { id: "#fce4ec", label: "Jasny róż", color: "#fce4ec" },
           ].map((opt) => (
             <Button
               key={opt.id || "none"}

@@ -1,3 +1,9 @@
 body {
+  margin: 0;
+  height: 100vh;
   overflow: auto;
+}
+
+.not-scrollable {
+  overscroll-behavior: none;
 }
