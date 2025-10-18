@@ -10,15 +10,33 @@ import {
   Checkbox,
   Rating,
   Paper,
+  MenuItem,
+  IconButton,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
+
+// Stałe jednostki miary
+const UNITS = [
+  { value: "g", label: "gram (g)" },
+  { value: "kg", label: "kilogram (kg)" },
+  { value: "ml", label: "mililitr (ml)" },
+  { value: "l", label: "litr (l)" },
+  { value: "szt", label: "sztuka" },
+  { value: "łyżka", label: "łyżka (15ml)" },
+  { value: "łyżeczka", label: "łyżeczka (5ml)" },
+  { value: "szklanka", label: "szklanka (250ml)" },
+];
 
 export default function DodajPotrawe() {
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [params, setOtherParams] = useState(""); // przepis / opis
-  const [ingredients, setIngredients] = useState(""); // składniki: jedna linia = jeden składnik
+  const [ingredients, setIngredients] = useState([
+    { name: "", amount: "", unit: "g" },
+  ]); // składniki: jedna linia = jeden składnik
   const [probability, setProbability] = useState(100);
   const [maxRepeats, setMaxRepeats] = useState(21);
   const [allowedMeals, setAllowedMeals] = useState({
@@ -106,8 +124,24 @@ export default function DodajPotrawe() {
     }
   };
 
-  function newDish() {
-    // walidacja: nazwa potrawy jest wymagana
+  const addIngredient = () => {
+    setIngredients([...ingredients, { name: "", amount: "", unit: "g" }]);
+  };
+
+  const removeIngredient = (index) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const updateIngredient = (index, field, value) => {
+    const updated = ingredients.map((ing, i) => {
+      if (i !== index) return ing;
+      return { ...ing, [field]: value };
+    });
+    setIngredients(updated);
+  };
+
+  // walidacja: nazwa potrawy jest wymagana
+  const validateName = () => {
     if (!name || !name.trim()) {
       Swal.fire({
         icon: "warning",
@@ -115,15 +149,86 @@ export default function DodajPotrawe() {
         text: "Musisz podać nazwę potrawy, aby dodać ją do listy.",
         confirmButtonText: "OK",
       });
-      return;
+      return false;
     }
-    // walidacja: przynajmniej jedna dozwolona pora dnia
+    return true;
+  };
+
+  // walidacja: przynajmniej jedna dozwolona pora dnia
+  const validateAllowedMeals = () => {
     if (!Object.values(allowedMeals).some(Boolean)) {
       Swal.fire({
         icon: "warning",
         title: "Wybierz porę dnia",
         text: "Musisz zaznaczyć przynajmniej jedną dozwoloną porę dnia.",
       });
+      return false;
+    }
+    return true;
+  };
+
+  // walidacja: składniki
+  const validateIngredients = () => {
+    if (!ingredients.some((ing) => ing.name && ing.amount)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Brak składników",
+        text: "Dodaj przynajmniej jeden składnik z ilością.",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // walidacja: maksymalna liczba powtórzeń w tygodniu
+  const validateMaxRepeats = () => {
+    if (maxRepeats < 0 || maxRepeats > 21) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nieprawidłowa liczba powtórzeń",
+        text: "Maksymalna liczba powtórzeń w tygodniu musi być między 0 a 21.",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // walidacja: maksymalna liczba wystąpień w dniu
+  const validateMaxPerDay = () => {
+    if (maxPerDay < 0 || maxPerDay > 3) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nieprawidłowa liczba wystąpień",
+        text: "Maksymalna liczba wystąpień w dniu musi być między 0 a 3.",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // walidacja: maksymalna liczba wystąpień w jadłospisie
+  const validateMaxAcrossWeeks = () => {
+    if (maxAcrossWeeks < 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nieprawidłowa liczba wystąpień",
+        text: "Maksymalna liczba wystąpień w jadłospisie nie może być ujemna.",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // główna funkcja dodająca potrawę
+  function newDish() {
+    if (
+      !validateName() ||
+      !validateAllowedMeals() ||
+      !validateIngredients() ||
+      !validateMaxRepeats() ||
+      !validateMaxPerDay() ||
+      !validateMaxAcrossWeeks()
+    ) {
       return;
     }
 
@@ -131,7 +236,7 @@ export default function DodajPotrawe() {
       name: name,
       tags: tags,
       params: params,
-      ingredients: ingredients,
+      ingredients: ingredients.filter((ing) => ing.name && ing.amount), // tylko wypełnione
       probability: probability,
       maxRepeats: maxRepeats,
       maxPerDay: maxPerDay === "" ? null : Number(maxPerDay),
@@ -159,7 +264,7 @@ export default function DodajPotrawe() {
     setName("");
     setTags("");
     setOtherParams("");
-    setIngredients("");
+    setIngredients([{ name: "", amount: "", unit: "g" }]);
     setProbability(100);
     setMaxRepeats(21);
     setAllowedMeals({ śniadanie: true, obiad: true, kolacja: true });
@@ -255,17 +360,6 @@ export default function DodajPotrawe() {
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
-        <TextField
-          label="Składniki (jedna linia = jeden składnik)"
-          variant="outlined"
-          fullWidth
-          multiline
-          rows={4}
-          value={ingredients}
-          onChange={(e) => setIngredients(e.target.value)}
-          //helperText="Wpisz każdy składnik w nowej linii"
-        />
-
         <TextField
           label="Przepis"
           variant="outlined"
@@ -440,6 +534,75 @@ export default function DodajPotrawe() {
               sx={{ width: 120 }}
             />
           </Box>
+        </Box>
+
+        {/* Składniki */}
+        <Box sx={{ width: "100%", mb: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Składniki:
+          </Typography>
+          {ingredients.map((ing, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: "flex",
+                gap: 1,
+                mb: 1,
+                alignItems: "center",
+              }}
+            >
+              <TextField
+                label="Nazwa"
+                size="small"
+                value={ing.name}
+                onChange={(e) =>
+                  updateIngredient(index, "name", e.target.value)
+                }
+                sx={{ flexGrow: 1 }}
+              />
+              <TextField
+                label="Ilość"
+                size="small"
+                type="number"
+                value={ing.amount}
+                onChange={(e) =>
+                  updateIngredient(index, "amount", e.target.value)
+                }
+                sx={{ width: 100 }}
+                inputProps={{ min: 0, step: 0.1 }}
+              />
+              <TextField
+                select
+                label="Jednostka"
+                size="small"
+                value={ing.unit}
+                onChange={(e) =>
+                  updateIngredient(index, "unit", e.target.value)
+                }
+                sx={{ width: 120 }}
+              >
+                {UNITS.map((unit) => (
+                  <MenuItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <IconButton
+                color="error"
+                onClick={() => removeIngredient(index)}
+                disabled={ingredients.length === 1}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
+          ))}
+          <Button
+            startIcon={<AddIcon />}
+            onClick={addIngredient}
+            sx={{ mt: 1 }}
+          >
+            Dodaj składnik
+          </Button>
         </Box>
 
         <Button onClick={newDish} variant="contained" color="primary" fullWidth>

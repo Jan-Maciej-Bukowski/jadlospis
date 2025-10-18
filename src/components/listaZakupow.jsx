@@ -23,6 +23,101 @@ import { getAllDishes } from "../js/potrawy";
  * Lista zakupów: generuje listę składników na podstawie aktualnego jadłospisu
  * czytanego z localStorage.lastMenu (kompatybilne z single- i multi-week).
  */
+
+// Helper do konwersji jednostek
+const unitConversions = {
+  g: {
+    kg: (val) => val / 1000,
+    dg: (val) => val * 10,
+    mg: (val) => val * 1000,
+  },
+  kg: {
+    g: (val) => val * 1000,
+    dg: (val) => val * 10000,
+    mg: (val) => val * 1000000,
+  },
+  ml: {
+    l: (val) => val / 1000,
+    dl: (val) => val / 100,
+  },
+  l: {
+    ml: (val) => val * 1000,
+    dl: (val) => val * 10,
+  },
+};
+
+// Funkcja do normalizacji jednostek
+const normalizeUnit = (amount, unit) => {
+  // Progi konwersji
+  const thresholds = {
+    g: { kg: 1000 }, // konwertuj na kg jeśli >= 1000g
+    ml: { l: 1000 }, // konwertuj na l jeśli >= 1000ml
+  };
+
+  if (thresholds[unit]) {
+    for (const [targetUnit, threshold] of Object.entries(thresholds[unit])) {
+      if (amount >= threshold) {
+        return {
+          amount: unitConversions[unit][targetUnit](amount),
+          unit: targetUnit,
+        };
+      }
+    }
+  }
+  return { amount, unit };
+};
+
+// Funkcja do łączenia składników
+const mergeIngredients = (ingredients) => {
+  const groups = new Map();
+
+  ingredients.forEach((ing) => {
+    if (!ing.name || !ing.amount || !ing.unit) return;
+
+    const key = ing.name.toLowerCase();
+    const existing = groups.get(key);
+
+    if (existing) {
+      // Jeśli jednostki są takie same
+      if (existing.unit === ing.unit) {
+        existing.amount += parseFloat(ing.amount);
+      }
+      // Jeśli mamy konwerter dla tych jednostek
+      else if (unitConversions[existing.unit]?.[ing.unit]) {
+        existing.amount += unitConversions[existing.unit][ing.unit](
+          parseFloat(ing.amount)
+        );
+      } else if (unitConversions[ing.unit]?.[existing.unit]) {
+        const converted = unitConversions[ing.unit][existing.unit](
+          parseFloat(ing.amount)
+        );
+        existing.amount += converted;
+      }
+      // Jeśli nie możemy skonwertować, zachowaj osobno
+      else {
+        const newKey = `${key}_${ing.unit}`;
+        if (!groups.has(newKey)) {
+          groups.set(newKey, { ...ing, amount: parseFloat(ing.amount) });
+        } else {
+          groups.get(newKey).amount += parseFloat(ing.amount);
+        }
+      }
+    } else {
+      groups.set(key, { ...ing, amount: parseFloat(ing.amount) });
+    }
+  });
+
+  // Normalizuj jednostki przed zwróceniem
+  return Array.from(groups.values()).map((ing) => {
+    const normalized = normalizeUnit(ing.amount, ing.unit);
+    return {
+      ...ing,
+      amount: normalized.amount,
+      unit: normalized.unit,
+    };
+  });
+};
+
 export default function ListaZakupow() {
   const [items, setItems] = useState([]); // [{name, count, checked}]
   const [missing, setMissing] = useState([]); // potrawy bez składników
@@ -51,7 +146,7 @@ export default function ListaZakupow() {
     }
 
     const flat = Array.isArray(menu[0]) ? menu.flat() : menu;
-    const counts = new Map();
+    const allIngredients = [];
     const missingSet = new Set();
 
     // Make sure dishesAll is an array
@@ -71,22 +166,28 @@ export default function ListaZakupow() {
           missingSet.add(name);
           return;
         }
-        dishObj.ingredients.forEach((ing) => {
-          const key = normalizeIngredient(ing);
-          if (!key) return;
-          counts.set(key, (counts.get(key) || 0) + 1);
-        });
+
+        // Dodaj wszystkie składniki do listy
+        allIngredients.push(...dishObj.ingredients);
       })
     );
 
-    // convert map -> sorted array (alphabetically)
-    const list = Array.from(counts.entries())
-      .map(([name, count]) => ({ name, count, checked: false }))
-      .sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-      );
+    // Połącz składniki i normalizuj jednostki
+    const merged = mergeIngredients(allIngredients);
 
-    setItems(list);
+    // Sortuj po nazwie
+    const sorted = merged.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+
+    setItems(
+      sorted.map((ing) => ({
+        ...ing,
+        // Zaokrąglij liczby do 2 miejsc po przecinku
+        amount: Math.round(ing.amount * 100) / 100,
+        checked: false,
+      }))
+    );
     setMissing(Array.from(missingSet));
     setGeneratedAt(new Date().toISOString());
   };
@@ -215,10 +316,8 @@ export default function ListaZakupow() {
           <List>
             {items.map((it, i) => (
               <ListItem
-                key={it.name}
-                secondaryAction={
-                  <Chip label={it.count > 1 ? `x${it.count}` : ""} />
-                }
+                key={i}
+                secondaryAction={<Chip label={`${it.amount} ${it.unit}`} />}
               >
                 <ListItemIcon>
                   <Checkbox

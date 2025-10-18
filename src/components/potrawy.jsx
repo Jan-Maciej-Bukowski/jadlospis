@@ -15,9 +15,11 @@ import {
   FormControlLabel,
   Checkbox,
   IconButton,
+  MenuItem,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import defaultDishes from "../js/potrawy";
@@ -33,6 +35,40 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
 
 // ensure key exists (do not overwrite existing data)
 ensureLocalDefault("dishes", defaultDishes || []);
+
+const UNITS = [
+  { value: "g", label: "gram (g)" },
+  { value: "kg", label: "kilogram (kg)" },
+  { value: "ml", label: "mililitr (ml)" },
+  { value: "l", label: "litr (l)" },
+  { value: "szt", label: "sztuka" },
+  { value: "łyżka", label: "łyżka (15ml)" },
+  { value: "łyżeczka", label: "łyżeczka (5ml)" },
+  { value: "szklanka", label: "szklanka (250ml)" },
+];
+
+// Dodaj funkcje walidacji wartości
+const validateAmount = (amount, unit) => {
+  const val = parseFloat(amount);
+  if (isNaN(val) || val <= 0) return "Ilość musi być większa od 0";
+
+  const limits = {
+    kg: 100,
+    g: 10000,
+    l: 50,
+    ml: 5000,
+    szt: 1000,
+    łyżka: 100,
+    łyżeczka: 100,
+    szklanka: 50,
+  };
+
+  if (limits[unit] && val > limits[unit]) {
+    return `Wartość ${val} ${unit} wydaje się zbyt duża. Maksymalna wartość to ${limits[unit]} ${unit}`;
+  }
+
+  return null;
+};
 
 export default function Potrawy() {
   // Przenieś useRef na początek komponentu
@@ -123,9 +159,15 @@ export default function Potrawy() {
       name: dish.name || "",
       tags: Array.isArray(dish.tags) ? dish.tags.join(", ") : dish.tags || "",
       params: dish.params || "",
-      ingredients: Array.isArray(dish.ingredients)
-        ? dish.ingredients.join(", ")
-        : dish.ingredients || "",
+      ingredients:
+        Array.isArray(dish.ingredients) && dish.ingredients.length > 0
+          ? dish.ingredients.map((ing) => {
+              if (typeof ing === "string") {
+                return { name: ing, amount: "", unit: "g" };
+              }
+              return ing;
+            })
+          : [{ name: "", amount: "", unit: "g" }],
       probability: dish.probability || 100,
       maxRepeats: dish.maxRepeats || 1,
       maxPerDay: dish.maxPerDay ?? "",
@@ -142,21 +184,37 @@ export default function Potrawy() {
   };
 
   const handleSave = (index) => {
+    // Walidacja wszystkich składników
+    const errors = editedDish.ingredients.flatMap((ing, i) => {
+      const error = validateAmount(ing.amount, ing.unit);
+      if (error) return [`Składnik ${i + 1}: ${error}`];
+      if (!ing.name.trim()) return [`Składnik ${i + 1}: Nazwa jest wymagana`];
+      return [];
+    });
+
+    if (errors.length > 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Błędne dane",
+        html: errors.join("<br>"),
+      });
+      return;
+    }
+
     setDishes((prev) => {
       const copy = [...prev];
-      const d = copy[index] || {};
+      const d = copy[index] || {}; // dodaj tę linię
       copy[index] = {
-        ...d,
+        ...copy[index],
         name: editedDish.name,
         tags: editedDish.tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
         params: editedDish.params,
-        ingredients: editedDish.ingredients
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        ingredients: editedDish.ingredients.filter(
+          (ing) => ing.name.trim() && ing.amount
+        ),
         probability: editedDish.probability,
         maxRepeats: editedDish.maxRepeats,
         maxPerDay:
@@ -346,6 +404,28 @@ export default function Potrawy() {
     });
   };
 
+  const addIngredient = () => {
+    setEditedDish((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, { name: "", amount: "", unit: "g" }],
+    }));
+  };
+
+  const removeIngredient = (index) => {
+    setEditedDish((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateIngredient = (index, field, value) => {
+    setEditedDish((prev) => {
+      const newIngredients = [...prev.ingredients];
+      newIngredients[index] = { ...newIngredients[index], [field]: value };
+      return { ...prev, ingredients: newIngredients };
+    });
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 2 }}>
@@ -497,7 +577,9 @@ export default function Potrawy() {
                       <ul style={{ margin: "6px 0 0 20px", paddingLeft: 16 }}>
                         {dish.ingredients.map((ing, i) => (
                           <li key={i} style={{ marginBottom: 4 }}>
-                            {ing}
+                            {typeof ing === "string"
+                              ? ing
+                              : `${ing.name}: ${ing.amount} ${ing.unit}`}
                           </li>
                         ))}
                       </ul>
@@ -613,19 +695,90 @@ export default function Potrawy() {
                         }
                         sx={{ mb: 2 }}
                       />
-                      <TextField
-                        label="Składniki: "
-                        variant="outlined"
-                        fullWidth
-                        value={editedDish.ingredients}
-                        onChange={(e) =>
-                          setEditedDish({
-                            ...editedDish,
-                            ingredients: e.target.value,
-                          })
-                        }
-                        sx={{ mb: 2 }}
-                      />
+                      <Box sx={{ width: "100%", mb: 2 }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Składniki:
+                        </Typography>
+                        {editedDish.ingredients.map((ing, index) => {
+                          const error = validateAmount(ing.amount, ing.unit);
+                          return (
+                            <Box
+                              key={index}
+                              sx={{
+                                display: "flex",
+                                gap: 1,
+                                mb: 1,
+                                alignItems: "center",
+                              }}
+                            >
+                              <TextField
+                                label="Nazwa"
+                                size="small"
+                                value={ing.name}
+                                onChange={(e) =>
+                                  updateIngredient(
+                                    index,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                                sx={{ flexGrow: 1 }}
+                              />
+                              <TextField
+                                label="Ilość"
+                                size="small"
+                                type="number"
+                                value={ing.amount}
+                                onChange={(e) =>
+                                  updateIngredient(
+                                    index,
+                                    "amount",
+                                    e.target.value
+                                  )
+                                }
+                                sx={{ width: 100 }}
+                                inputProps={{ min: 0, step: 0.1 }}
+                                error={!!error}
+                                helperText={error}
+                              />
+                              <TextField
+                                select
+                                label="Jednostka"
+                                size="small"
+                                value={ing.unit}
+                                onChange={(e) =>
+                                  updateIngredient(
+                                    index,
+                                    "unit",
+                                    e.target.value
+                                  )
+                                }
+                                sx={{ width: 120 }}
+                              >
+                                {UNITS.map((unit) => (
+                                  <MenuItem key={unit.value} value={unit.value}>
+                                    {unit.label}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
+                              <IconButton
+                                color="error"
+                                onClick={() => removeIngredient(index)}
+                                disabled={editedDish.ingredients.length === 1}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                          );
+                        })}
+                        <Button
+                          startIcon={<AddIcon />}
+                          onClick={addIngredient}
+                          sx={{ mt: 1 }}
+                        >
+                          Dodaj składnik
+                        </Button>
+                      </Box>
                       <TextField
                         label="Parametry / Przepis"
                         variant="outlined"
