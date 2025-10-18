@@ -17,6 +17,8 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
+import { DISH_COLORS } from "../utils/colors";
+import { validateAmount } from "../utils/limits";
 
 // Stałe jednostki miary
 const UNITS = [
@@ -169,14 +171,25 @@ export default function DodajPotrawe() {
 
   // walidacja: składniki
   const validateIngredients = () => {
-    if (!ingredients.some((ing) => ing.name && ing.amount)) {
+    const errors = ingredients.flatMap((ing, i) => {
+      if (!ing.name.trim()) return [`Składnik ${i + 1}: Nazwa jest wymagana`];
+      if (!ing.amount) return [`Składnik ${i + 1}: Ilość jest wymagana`];
+
+      const error = validateAmount(ing.amount, ing.unit);
+      if (error) return [`Składnik ${i + 1}: ${error}`];
+
+      return [];
+    });
+
+    if (errors.length > 0) {
       Swal.fire({
         icon: "warning",
-        title: "Brak składników",
-        text: "Dodaj przynajmniej jeden składnik z ilością.",
+        title: "Błędne dane składników",
+        html: errors.join("<br>"),
       });
       return false;
     }
+
     return true;
   };
 
@@ -297,44 +310,6 @@ export default function DodajPotrawe() {
         Dodaj Nową Potrawę
       </Typography>
 
-      {/* List selection / create new list */}
-      <Paper sx={{ p: 2, mb: 2, width: "100%", maxWidth: 400 }}>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
-          Przypisz do list
-        </Typography>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          {availableLists.length === 0 && (
-            <Typography variant="body2">
-              Brak list. Możesz utworzyć nową.
-            </Typography>
-          )}
-          {availableLists.map((l) => (
-            <FormControlLabel
-              key={l.id}
-              control={
-                <Checkbox
-                  checked={selectedLists.includes(l.id)}
-                  onChange={() => toggleListSelection(l.id)}
-                />
-              }
-              label={l.name}
-            />
-          ))}
-          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-            <TextField
-              size="small"
-              placeholder="Utwórz nową listę..."
-              value={newListName}
-              onChange={(e) => setNewListName(e.target.value)}
-              fullWidth
-            />
-            <Button variant="contained" onClick={createAndSelectList}>
-              Dodaj
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-
       <Box
         component="form"
         sx={{
@@ -360,6 +335,82 @@ export default function DodajPotrawe() {
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
+
+        {/* Sekcja składników */}
+        <Box sx={{ width: "100%", mb: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Składniki:
+          </Typography>
+          {ingredients.map((ing, index) => {
+            const error = validateAmount(ing.amount, ing.unit);
+            return (
+              <Box
+                key={index}
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  mb: 1,
+                  alignItems: "center",
+                }}
+              >
+                <TextField
+                  label="Nazwa"
+                  size="small"
+                  value={ing.name}
+                  onChange={(e) =>
+                    updateIngredient(index, "name", e.target.value)
+                  }
+                  sx={{ flexGrow: 1 }}
+                />
+                <TextField
+                  label="Ilość"
+                  size="small"
+                  type="number"
+                  value={ing.amount}
+                  onChange={(e) =>
+                    updateIngredient(index, "amount", e.target.value)
+                  }
+                  sx={{ width: 100 }}
+                  inputProps={{ min: 0, step: 0.1 }}
+                  error={!!error}
+                  helperText={error}
+                  placeholder={!!error}
+                />
+                <TextField
+                  select
+                  label="Jednostka"
+                  size="small"
+                  value={ing.unit}
+                  onChange={(e) =>
+                    updateIngredient(index, "unit", e.target.value)
+                  }
+                  sx={{ width: 120 }}
+                >
+                  {UNITS.map((unit) => (
+                    <MenuItem key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <IconButton
+                  color="error"
+                  onClick={() => removeIngredient(index)}
+                  disabled={ingredients.length === 1}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            );
+          })}
+          <Button
+            startIcon={<AddIcon />}
+            onClick={addIngredient}
+            sx={{ mt: 1 }}
+          >
+            Dodaj składnik
+          </Button>
+        </Box>
+
         <TextField
           label="Przepis"
           variant="outlined"
@@ -369,6 +420,45 @@ export default function DodajPotrawe() {
           value={params}
           onChange={(e) => setOtherParams(e.target.value)}
         />
+
+        {/* Sekcja list */}
+        <Paper sx={{ p: 2, mb: 2, width: "100%" }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            Przypisz do list
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            {availableLists.length === 0 && (
+              <Typography variant="body2">
+                Brak list. Możesz utworzyć nową.
+              </Typography>
+            )}
+            {availableLists.map((l) => (
+              <FormControlLabel
+                key={l.id}
+                control={
+                  <Checkbox
+                    checked={selectedLists.includes(l.id)}
+                    onChange={() => toggleListSelection(l.id)}
+                  />
+                }
+                label={l.name}
+              />
+            ))}
+            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+              <TextField
+                size="small"
+                placeholder="Utwórz nową listę..."
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                fullWidth
+              />
+              <Button variant="contained" onClick={createAndSelectList}>
+                Dodaj
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+
         <Typography gutterBottom>
           Współczynnik występowania: {probability}%
         </Typography>
@@ -479,20 +569,7 @@ export default function DodajPotrawe() {
             flexWrap: "wrap",
           }}
         >
-          {[
-            { id: "", label: "Brak", color: "" },
-            { id: "#ffffff", label: "Neutralny", color: "#ffffff" },
-            { id: "#f7f7f7", label: "Jasny szary", color: "#f7f7f7" },
-            { id: "#ccffd0", label: "Jasna zieleń", color: "#ccffd0" },
-            { id: "#e6ffe6", label: "Bardzo jasna zieleń", color: "#e6ffe6" },
-            { id: "#c0deff", label: "Jasny niebieski", color: "#c0deff" },
-            { id: "#e1f5fe", label: "Bardzo jasny błękit", color: "#e1f5fe" },
-            { id: "#ffc7c7", label: "Jasny czerwony", color: "#ffc7c7" },
-            { id: "#fff6bc", label: "Jasny żółty", color: "#fff6bc" },
-            { id: "#ffefdb", label: "Kremowy", color: "#ffefdb" },
-            { id: "#ddc0ff", label: "Jasny fiolet", color: "#ddc0ff" },
-            { id: "#fce4ec", label: "Jasny róż", color: "#fce4ec" },
-          ].map((opt) => (
+          {DISH_COLORS.map((opt) => (
             <Button
               key={opt.id || "none"}
               variant={color === opt.id ? "contained" : "outlined"}
@@ -534,75 +611,6 @@ export default function DodajPotrawe() {
               sx={{ width: 120 }}
             />
           </Box>
-        </Box>
-
-        {/* Składniki */}
-        <Box sx={{ width: "100%", mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Składniki:
-          </Typography>
-          {ingredients.map((ing, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: "flex",
-                gap: 1,
-                mb: 1,
-                alignItems: "center",
-              }}
-            >
-              <TextField
-                label="Nazwa"
-                size="small"
-                value={ing.name}
-                onChange={(e) =>
-                  updateIngredient(index, "name", e.target.value)
-                }
-                sx={{ flexGrow: 1 }}
-              />
-              <TextField
-                label="Ilość"
-                size="small"
-                type="number"
-                value={ing.amount}
-                onChange={(e) =>
-                  updateIngredient(index, "amount", e.target.value)
-                }
-                sx={{ width: 100 }}
-                inputProps={{ min: 0, step: 0.1 }}
-              />
-              <TextField
-                select
-                label="Jednostka"
-                size="small"
-                value={ing.unit}
-                onChange={(e) =>
-                  updateIngredient(index, "unit", e.target.value)
-                }
-                sx={{ width: 120 }}
-              >
-                {UNITS.map((unit) => (
-                  <MenuItem key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <IconButton
-                color="error"
-                onClick={() => removeIngredient(index)}
-                disabled={ingredients.length === 1}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-          <Button
-            startIcon={<AddIcon />}
-            onClick={addIngredient}
-            sx={{ mt: 1 }}
-          >
-            Dodaj składnik
-          </Button>
         </Box>
 
         <Button onClick={newDish} variant="contained" color="primary" fullWidth>

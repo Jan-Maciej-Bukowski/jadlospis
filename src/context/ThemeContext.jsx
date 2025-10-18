@@ -4,19 +4,9 @@ import {
   ThemeProvider as MuiThemeProvider,
 } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { THEME_COLORS } from "../utils/colors";
 
 export const ThemeContext = createContext(null);
-
-const PRESET_COLORS = {
-  red: "#f44336",
-  orange: "#ff9800",
-  yellow: "#ffeb3b",
-  green: "#4caf50",
-  blue: "#2196f3",
-  indigo: "#3f51b5",
-  purple: "#9c27b0",
-  dark: "#212121",
-};
 
 export function ThemeProvider({ children }) {
   // load initial settings from unified settings key first (login writes settings there)
@@ -147,7 +137,7 @@ export function ThemeProvider({ children }) {
     const primaryMain =
       themeName === "custom"
         ? customColor
-        : PRESET_COLORS[themeName] || customColor;
+        : THEME_COLORS[themeName] || customColor;
 
     const theme = createTheme({
       palette: {

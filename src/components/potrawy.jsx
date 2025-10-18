@@ -28,6 +28,8 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { Rating } from "@mui/material";
 import PublishIcon from "@mui/icons-material/Publish";
+import { DISH_COLORS } from "../utils/colors";
+import { validateAmount } from "../utils/limits";
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
   ""
@@ -46,29 +48,6 @@ const UNITS = [
   { value: "łyżeczka", label: "łyżeczka (5ml)" },
   { value: "szklanka", label: "szklanka (250ml)" },
 ];
-
-// Dodaj funkcje walidacji wartości
-const validateAmount = (amount, unit) => {
-  const val = parseFloat(amount);
-  if (isNaN(val) || val <= 0) return "Ilość musi być większa od 0";
-
-  const limits = {
-    kg: 100,
-    g: 10000,
-    l: 50,
-    ml: 5000,
-    szt: 1000,
-    łyżka: 100,
-    łyżeczka: 100,
-    szklanka: 50,
-  };
-
-  if (limits[unit] && val > limits[unit]) {
-    return `Wartość ${val} ${unit} wydaje się zbyt duża. Maksymalna wartość to ${limits[unit]} ${unit}`;
-  }
-
-  return null;
-};
 
 export default function Potrawy() {
   // Przenieś useRef na początek komponentu
@@ -903,34 +882,7 @@ export default function Potrawy() {
                           alignItems: "center",
                         }}
                       >
-                        {[
-                          { id: "", label: "Brak", color: "" },
-                          {
-                            id: "#ccffd0",
-                            label: "Jasna zieleń",
-                            color: "#ccffd0",
-                          },
-                          {
-                            id: "#c0deff",
-                            label: "Jasny niebieski",
-                            color: "#c0deff",
-                          },
-                          {
-                            id: "#ffc7c7",
-                            label: "Jasny czerwony",
-                            color: "#ffc7c7",
-                          },
-                          {
-                            id: "#fff6bc",
-                            label: "Jasny żółty",
-                            color: "#fff6bc",
-                          },
-                          {
-                            id: "#ddc0ff",
-                            label: "Jasny fiolet",
-                            color: "#ddc0ff",
-                          },
-                        ].map((opt) => (
+                        {DISH_COLORS.map((opt) => (
                           <Button
                             key={opt.id || "none"}
                             variant={
