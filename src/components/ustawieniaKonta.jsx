@@ -6,13 +6,15 @@ import {
   Avatar,
   Typography,
   Divider,
-  IconButton,
   CircularProgress,
+  Paper,
+  Stack,
 } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import SaveIcon from "@mui/icons-material/Save";
 import LockIcon from "@mui/icons-material/Lock";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import Swal from "sweetalert2";
 import { stripQuotes } from "../utils/stripQuotes";
 
@@ -20,6 +22,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export default function UstawieniaKonta() {
   const [loading, setLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "null") || {};
@@ -36,7 +39,6 @@ export default function UstawieniaKonta() {
   const [avatarPreview, setAvatarPreview] = useState(
     user?.settings?.avatar || user?.avatar || null
   );
-  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     setEmail(user.email || "");
@@ -44,112 +46,78 @@ export default function UstawieniaKonta() {
     setAvatarPreview(user?.settings?.avatar || user?.avatar || null);
   }, [user]);
 
-  // resolve avatar src: jeśli to pełny URL użyj go, jeśli relatywny (/uploads/...) dołącz API_BASE
-  const resolvedAvatarSrc = avatarPreview
-    ? avatarPreview.startsWith("http") || avatarPreview.startsWith("data:")
+  const resolvedAvatarSrc =
+    avatarPreview && (avatarPreview.startsWith("http") || avatarPreview.startsWith("data:"))
       ? avatarPreview
-      : `${API_BASE}${avatarPreview}`
-    : null;
+      : avatarPreview
+      ? `${API_BASE}${avatarPreview}`
+      : null;
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  // -------------------------------
+  // 🔹 ZAPISZ ZMIANY KONTA
+  // -------------------------------
   const saveAccountChanges = async () => {
-    // update email/username via PATCH /api/user (best-effort)
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/user`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          email: email || null,
-          username: username || null,
-        }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ email, username }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || res.statusText || "Update failed");
-      }
-      // update local copy if server accepted changes
+      if (!res.ok) throw new Error("Nie udało się zaktualizować danych.");
+
       const updated = { ...user, email, username };
       localStorage.setItem("user", JSON.stringify(updated));
       setUser(updated);
       window.dispatchEvent(new CustomEvent("userUpdated", { detail: updated }));
-      Swal.fire({
-        icon: "success",
-        title: "Zapisano",
-        text: "Dane konta zaktualizowane.",
-      });
+
+      Swal.fire({ icon: "success", title: "Zapisano", text: "Dane konta zaktualizowane." });
     } catch (err) {
-      console.error("saveAccountChanges:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: err.message || "Nie udało się zaktualizować.",
-      });
+      Swal.fire({ icon: "error", title: "Błąd", text: err.message });
     } finally {
       setLoading(false);
     }
   };
 
+  // -------------------------------
+  // 🔹 ZMIANA HASŁA
+  // -------------------------------
   const changePassword = async () => {
     if (!currentPassword || !newPassword) {
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: "Wypełnij oba pola hasła.",
-      });
-      return;
+      return Swal.fire({ icon: "error", title: "Błąd", text: "Wypełnij oba pola hasła." });
     }
     if (newPassword !== newPasswordConfirm) {
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: "Nowe hasła nie są identyczne.",
-      });
-      return;
+      return Swal.fire({ icon: "error", title: "Błąd", text: "Nowe hasła nie są identyczne." });
     }
+
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/user/password`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          err.error || res.statusText || "Password change failed"
-        );
-      }
+      if (!res.ok) throw new Error("Nie udało się zmienić hasła.");
+
       setCurrentPassword("");
       setNewPassword("");
       setNewPasswordConfirm("");
-      Swal.fire({
-        icon: "success",
-        title: "Zapisano",
-        text: "Hasło zostało zmienione.",
-      });
+      Swal.fire({ icon: "success", title: "Zmieniono", text: "Hasło zostało zmienione." });
     } catch (err) {
-      console.error("changePassword:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: err.message || "Nie udało się zmienić hasła.",
-      });
+      Swal.fire({ icon: "error", title: "Błąd", text: err.message });
     } finally {
       setLoading(false);
     }
   };
 
+  // -------------------------------
+  // 🔹 AVATAR
+  // -------------------------------
   const handleAvatarFile = async (file) => {
     if (!file) return;
     setAvatarUploading(true);
@@ -161,44 +129,24 @@ export default function UstawieniaKonta() {
         headers: { ...getAuthHeaders() },
         body: form,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || res.statusText || "Avatar upload failed");
-      }
+      if (!res.ok) throw new Error("Nie udało się przesłać avatara.");
 
       const body = await res.json();
       const path = stripQuotes(body.path);
-
-      // Zaktualizuj użytkownika z nowym avatarem
       const updated = {
         ...user,
-        avatar: path, // Dodaj avatar bezpośrednio do głównego obiektu user
-        data: {
-          ...(user.data || {}),
-          settings: { ...(user.data?.settings || {}), avatar: path },
-        },
+        avatar: path,
         settings: { ...(user.settings || {}), avatar: path },
       };
 
       localStorage.setItem("user", JSON.stringify(updated));
       setUser(updated);
       setAvatarPreview(path);
-
-      // Wyślij event z pełnym obiektem użytkownika
       window.dispatchEvent(new CustomEvent("userUpdated", { detail: updated }));
 
-      Swal.fire({
-        icon: "success",
-        title: "Zapisano",
-        text: "Avatar zapisany.",
-      });
+      Swal.fire({ icon: "success", title: "Zapisano", text: "Avatar zapisany." });
     } catch (err) {
-      console.error("handleAvatarFile:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: err.message || "Nie udało się zapisać avatara.",
-      });
+      Swal.fire({ icon: "error", title: "Błąd", text: err.message });
     } finally {
       setAvatarUploading(false);
     }
@@ -220,208 +168,216 @@ export default function UstawieniaKonta() {
         method: "DELETE",
         headers: { ...getAuthHeaders() },
       });
-    } catch {
-      // ignore network error but still clear local data
-    } finally {
+    } catch {}
+    finally {
       localStorage.clear();
       window.dispatchEvent(new CustomEvent("userLoggedOut"));
-      Swal.fire({
-        icon: "success",
-        title: "Usunięto",
-        text: "Konto zostało usunięte.",
-      }).then(() => window.location.reload());
+      Swal.fire({ icon: "success", title: "Usunięto", text: "Konto zostało usunięte." })
+        .then(() => window.location.reload());
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    // ...existing code...
-    if (response.ok) {
-      const data = await response.json();
-      // Zapisz zaktualizowane dane użytkownika
-      const updatedUser = data.user;
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      // Wyemituj event z pełnymi danymi użytkownika
-      window.dispatchEvent(
-        new CustomEvent("userUpdated", { detail: updatedUser })
+  const clearAppData = async () => {
+    const answer = await Swal.fire({
+      title: "Wyczyścić dane aplikacji?",
+      text: "Usunie zapisane potrawy, jadłospisy i listy. Konto pozostanie bez zmian.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Wyczyść",
+    });
+    if (!answer.isConfirmed) return;
+
+    try {
+      const userRaw = localStorage.getItem("user");
+      const tokenRaw = localStorage.getItem("token");
+
+      const keysToReset = [
+        "dishes",
+        "dishLists",
+        "lastMenu",
+        "savedMenus",
+        "publishedDishes",
+        "publishedMenus",
+      ];
+
+      keysToReset.forEach((k) => localStorage.removeItem(k));
+      ["dishes", "dishLists", "savedMenus"].forEach((k) =>
+        localStorage.setItem(k, JSON.stringify([]))
       );
-      // ...rest of the success handling...
+      localStorage.setItem("lastMenu", JSON.stringify(null));
+
+      if (userRaw) localStorage.setItem("user", userRaw);
+      if (tokenRaw) localStorage.setItem("token", tokenRaw);
+
+      ["dishes", "dishLists", "savedMenus", "lastMenu"].forEach((e) =>
+        window.dispatchEvent(new CustomEvent(`${e}Updated`, { detail: [] }))
+      );
+
+      Swal.fire({ icon: "success", title: "Wyczyszczono", text: "Dane aplikacji usunięte." });
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Błąd", text: "Nie udało się wyczyścić danych." });
     }
-    // ...existing code...
   };
 
+  // -------------------------------
+  // 🔹 UI
+  // -------------------------------
   return (
-    <Box sx={{ maxWidth: 720, mx: "auto", p: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>
+    <Box sx={{ maxWidth: 720, mx: "auto", p: 3 }}>
+      {/* 🔸 Nagłówek */}
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 700 }}>
         Ustawienia konta
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
-        <Avatar
-          src={resolvedAvatarSrc}
-          sx={{ width: 80, height: 80, bgcolor: "primary.main" }}
-        >
-          {!avatarPreview && (username?.charAt(0) || "U").toUpperCase()}
-        </Avatar>
-        <Box>
-          <input
-            accept="image/*"
-            id="avatar-file"
-            type="file"
-            style={{ display: "none" }}
-            onChange={(e) => handleAvatarFile(e.target.files?.[0])}
-          />
-          <label htmlFor="avatar-file">
-            <Button
-              variant="contained" // zmiana z outlined na contained
-              component="span"
-              startIcon={<PhotoCameraIcon />}
-              disabled={avatarUploading}
-            >
-              {avatarUploading ? "Wysyłanie..." : "Zmień avatar"}
-            </Button>
-          </label>
-          <Button
-            variant="contained" // zmiana z text na contained
-            color="error" // dodaj kolor error
-            sx={{ ml: 1 }}
-            onClick={() => {
-              setAvatarPreview(null);
-              // remove avatar from user data
-              (async () => {
-                setAvatarUploading(true);
-                try {
-                  // call DELETE /api/user/avatar to remove file and clear DB path
-                  const res = await fetch(`${API_BASE}/api/user/avatar`, {
-                    method: "DELETE",
-                    headers: { ...getAuthHeaders() },
-                  });
-                  if (!res.ok) throw new Error("Nie udało się usunąć avatara");
-
-                  // Zaktualizuj użytkownika bez avatara
-                  const updated = {
-                    ...user,
-                    avatar: null, // Usuń avatar z głównego obiektu
-                    settings: { ...(user.settings || {}), avatar: null },
-                  };
-
-                  localStorage.setItem("user", JSON.stringify(updated));
-                  setUser(updated);
-                  window.dispatchEvent(
-                    new CustomEvent("userUpdated", { detail: updated })
-                  );
-                } catch (err) {
-                  console.error(err);
-                  Swal.fire({
-                    icon: "error",
-                    title: "Błąd",
-                    text: "Nie udało się usunąć avatara.",
-                  });
-                } finally {
-                  setAvatarUploading(false);
-                }
-              })();
-            }}
-            disabled={avatarUploading}
+      {/* 🔸 Avatar */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Stack direction="row" spacing={3} alignItems="center">
+          <Avatar
+            src={resolvedAvatarSrc}
+            sx={{ width: 90, height: 90, bgcolor: "primary.main", fontSize: 28 }}
           >
-            Usuń
+            {!avatarPreview && (username?.charAt(0) || "U").toUpperCase()}
+          </Avatar>
+
+          <Stack spacing={1}>
+            <input
+              accept="image/*"
+              id="avatar-file"
+              type="file"
+              hidden
+              onChange={(e) => handleAvatarFile(e.target.files?.[0])}
+            />
+            <label htmlFor="avatar-file">
+              <Button
+                variant="contained"
+                startIcon={<PhotoCameraIcon />}
+                component="span"
+                disabled={avatarUploading}
+              >
+                {avatarUploading ? "Wysyłanie..." : "Zmień avatar"}
+              </Button>
+            </label>
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={avatarUploading}
+              onClick={() => handleAvatarFile(null)}
+            >
+              Usuń avatar
+            </Button>
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {/* 🔸 Dane konta */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Dane konta
+        </Typography>
+        <Stack spacing={2}>
+          <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField
+            label="Nazwa użytkownika"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon />}
+            onClick={saveAccountChanges}
+            disabled={loading}
+            sx={{ alignSelf: "flex-start", mt: 1 }}
+          >
+            {loading ? <CircularProgress size={20} color="inherit" /> : "Zapisz zmiany"}
           </Button>
-        </Box>
-      </Box>
+        </Stack>
+      </Paper>
 
-      <Divider sx={{ my: 2 }} />
+      {/* 🔸 Zmiana hasła */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Zmiana hasła
+        </Typography>
+        <Stack spacing={2}>
+          <TextField
+            label="Aktualne hasło"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+          <TextField
+            label="Nowe hasło"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <TextField
+            label="Potwierdź nowe hasło"
+            type="password"
+            value={newPasswordConfirm}
+            onChange={(e) => setNewPasswordConfirm(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<LockIcon />}
+            onClick={changePassword}
+            disabled={loading}
+            sx={{ alignSelf: "flex-start", mt: 1 }}
+          >
+            {loading ? <CircularProgress size={20} color="inherit" /> : "Zmień hasło"}
+          </Button>
+        </Stack>
+      </Paper>
 
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        Dane konta
-      </Typography>
-
-      <Box
-        sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr", mb: 2 }}
+      {/* 🔸 Groźna strefa */}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "error.main",
+          backgroundColor: "error.lighter",
+        }}
       >
-        <TextField
-          label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Nazwa użytkownika"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          fullWidth
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-        <Button
-          variant="contained"
-          startIcon={<SaveIcon />}
-          onClick={saveAccountChanges}
-          disabled={loading}
+        <Typography
+          variant="h6"
+          sx={{
+            color: "error.main",
+            fontWeight: 700,
+            mb: 2,
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+          }}
         >
-          {loading ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            "Zapisz zmiany"
-          )}
-        </Button>
-        <Button
-          color="error"
-          startIcon={<DeleteForeverIcon />}
-          onClick={handleDeleteAccount}
-          disabled={loading}
-        >
-          Usuń konto
-        </Button>
-      </Box>
+          Groźna strefa
+        </Typography>
 
-      <Divider sx={{ my: 2 }} />
+        <Divider sx={{ borderColor: "error.main", opacity: 0.4, mb: 3 }} />
 
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        Zmiana hasła
-      </Typography>
-
-      <Box
-        sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr", mb: 2 }}
-      >
-        <TextField
-          label="Aktualne hasło"
-          type="password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Nowe hasło"
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Potwierdź nowe hasło"
-          type="password"
-          value={newPasswordConfirm}
-          onChange={(e) => setNewPasswordConfirm(e.target.value)}
-          fullWidth
-          sx={{ gridColumn: "1 / 3" }}
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", gap: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<LockIcon />}
-          onClick={changePassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            "Zmień hasło"
-          )}
-        </Button>
-      </Box>
+        <Stack spacing={2}>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<DeleteForeverIcon />}
+            onClick={handleDeleteAccount}
+            disabled={loading}
+          >
+            Usuń konto
+          </Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={<DeleteSweepIcon />}
+            onClick={clearAppData}
+            disabled={loading}
+          >
+            Wyczyść dane aplikacji
+          </Button>
+        </Stack>
+      </Paper>
     </Box>
   );
 }

@@ -10,7 +10,7 @@ export const DISH_COLORS = [
   { id: "#ffb7b7", label: "Jasny czerwony", color: "#ffb7b7" },
   { id: "#fff4af", label: "Jasny żółty", color: "#fff4af" },
   { id: "#ffe8cd", label: "Kremowy", color: "#ffe8cd" },
-  { id: "#ddc0ff", label: "Jasny fiolet", color: "#dddc0ff" },
+  { id: "#ddc0ff", label: "Jasny fiolet", color: "#ddc0ff" },
   { id: "#ffcfdf", label: "Jasny róż", color: "#ffcfdf" },
 ];
 

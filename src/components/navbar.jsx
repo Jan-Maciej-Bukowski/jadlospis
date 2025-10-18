@@ -299,21 +299,6 @@ export default function Navbar() {
     closeAuthDrawer();
     window.location.reload();
   };
-  const clearData = () => {
-    Swal.fire({
-      title: "Jesteś pewien?",
-      text: "Usuniętych danych nie da się przywrócić!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Usuń",
-      cancelButtonText: "Anuluj",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.clear();
-        window.location.reload();
-      }
-    });
-  };
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -663,30 +648,6 @@ export default function Navbar() {
                     <LogoutIcon />
                   </ListItemIcon>
                   <ListItemText primary="Wyloguj" />
-                </ListItemButton>
-
-                <ListItemButton
-                  onClick={async () => {
-                    await deleteAccount();
-                    closeAuthDrawer();
-                  }}
-                >
-                  <ListItemIcon>
-                    <DeleteForeverIcon color="error" />
-                  </ListItemIcon>
-                  <ListItemText primary="Usuń konto" />
-                </ListItemButton>
-
-                <ListItemButton
-                  onClick={() => {
-                    clearData();
-                    closeAuthDrawer();
-                  }}
-                >
-                  <ListItemIcon>
-                    <DeleteSweepIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Wyczyść dane" />
                 </ListItemButton>
               </>
             )}
