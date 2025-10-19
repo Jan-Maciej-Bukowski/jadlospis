@@ -67,7 +67,8 @@ export default function Jadlospis() {
   // wykrywanie wąskich ekranów (<768px)
   const isNarrow = useMediaQuery("(max-width:768px)");
   const tableSize = ui.compactTable ? "small" : "medium";
-  const cellPadding = ui.compactTable ? "6px 8px" : undefined;
+  // Zwiększony padding dla lepszego wyglądu
+  const cellPadding = ui.compactTable ? "12px 16px" : "16px 20px";
 
   const daysOfWeek = [
     "Poniedziałek",
@@ -574,10 +575,25 @@ export default function Jadlospis() {
             type="number"
             size="small"
             value={weeksToGenerate}
-            onChange={(e) =>
-              setWeeksToGenerate(Math.max(1, Number(e.target.value) || 1))
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              // Pozwól na chwilowe czyszczenie pola
+              if (val === "") {
+                setWeeksToGenerate("");
+              } else {
+                setWeeksToGenerate(Number(val));
+              }
+            }}
+            onBlur={() => {
+              // Przy wyjściu z pola — popraw wartość, jeśli jest pusta lub < 1
+              setWeeksToGenerate((prev) => Math.max(1, Number(prev) || 1));
+            }}
             sx={{ width: 120 }}
+            slotProps={{
+              htmlInput: {
+                min: 1,
+              },
+            }}
           />
           <Button
             variant="contained"
@@ -608,12 +624,207 @@ export default function Jadlospis() {
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Tydzień {wi + 1}
                 </Typography>
-                <Box
-                  sx={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
-                >
+                {/* Mobile view - vertical cards */}
+                {isNarrow ? (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {week.map((entry, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          border: "1px solid rgba(224, 224, 224, 0.6)",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          backgroundColor: "#fff",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        {/* Day header */}
+                        <Box
+                          sx={{
+                            p: 2,
+                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            fontWeight: 600,
+                            fontSize: "1rem",
+                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                          }}
+                        >
+                          {getVisualDay(index, entry.day)}
+                        </Box>
+                        
+                        {/* Meals stacked vertically */}
+                        {["śniadanie", "obiad", "kolacja"].map((meal, mealIdx) => {
+                          const dish = entry[meal];
+                          const name =
+                            dish?.name ??
+                            dish ??
+                            settings.noDishText ??
+                            "Brak potraw";
+                          const favorite = !!dish?.favorite;
+                          const dishObj = dishesAll.find(
+                            (d) => d.name === name
+                          );
+                          const dishColor =
+                            dishObj?.color || dish?.color || "";
+                          const cellStyle = dishColor
+                            ? { backgroundColor: dishColor }
+                            : {};
+                          
+                          return (
+                            <Box
+                              key={meal}
+                              sx={{
+                                p: 2,
+                                borderBottom: mealIdx < 2 ? "1px solid rgba(224, 224, 224, 0.4)" : "none",
+                                ...cellStyle,
+                                transition: "all 0.2s ease",
+                                "&:active": {
+                                  backgroundColor: cellStyle.backgroundColor 
+                                    ? cellStyle.backgroundColor 
+                                    : "rgba(0, 0, 0, 0.03)",
+                                },
+                              }}
+                              data-drop-week={wi}
+                              data-drop-dayindex={index}
+                              data-drop-meal={meal}
+                              onTouchStart={(e) =>
+                                startTouchDragCell(e, {
+                                  week: wi,
+                                  dayIndex: index,
+                                  meal,
+                                })
+                              }
+                            >
+                              {/* Meal label */}
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: "block",
+                                  fontWeight: 600,
+                                  color: "rgba(0, 0, 0, 0.6)",
+                                  mb: 1,
+                                  textTransform: "uppercase",
+                                  fontSize: "0.7rem",
+                                  letterSpacing: "0.5px",
+                                }}
+                              >
+                                {meal}
+                              </Typography>
+                              
+                              {/* Dish content */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 1,
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    width: "100%",
+                                  }}
+                                >
+                                  <Box
+                                    onTouchStart={(e) =>
+                                      startTouchDragCell(e, {
+                                        week: wi,
+                                        dayIndex: index,
+                                        meal,
+                                      })
+                                    }
+                                    sx={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      flex: 1,
+                                      padding: "4px 8px",
+                                      borderRadius: "6px",
+                                      transition: "all 0.2s ease",
+                                      "&:active": {
+                                        backgroundColor: "rgba(0, 0, 0, 0.05)",
+                                        transform: "scale(0.98)",
+                                      },
+                                    }}
+                                  >
+                                    <Box
+                                      component="span"
+                                      sx={{
+                                        fontSize: "1.1rem",
+                                        color: "rgba(0, 0, 0, 0.3)",
+                                        lineHeight: 1,
+                                        userSelect: "none",
+                                      }}
+                                    >
+                                      ⋮⋮
+                                    </Box>
+                                    <Box
+                                      component="span"
+                                      sx={{
+                                        fontSize: "0.95rem",
+                                        lineHeight: 1.4,
+                                        fontWeight: 400,
+                                      }}
+                                    >
+                                      {name}
+                                    </Box>
+                                  </Box>
+                                  {favorite && ui.showFavoriteStar && (
+                                    <FavoriteIcon
+                                      color="error"
+                                      sx={{ fontSize: 16 }}
+                                    />
+                                  )}
+                                </Box>
+                                {ui.showTags &&
+                                  Array.isArray(dishObj?.tags) &&
+                                  dishObj.tags.length > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        gap: 0.5,
+                                        flexWrap: "wrap",
+                                        mt: 0.5,
+                                      }}
+                                    >
+                                      {dishObj.tags.map((t, i) => (
+                                        <Chip
+                                          key={i}
+                                          label={t}
+                                          size="small"
+                                          sx={{
+                                            fontSize: "0.65rem",
+                                            height: 22,
+                                          }}
+                                        />
+                                      ))}
+                                    </Box>
+                                  )}
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  /* Desktop view - table */
+                  <Box
+                    sx={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
+                  >
                   <Table
                     size={tableSize}
-                    sx={{ minWidth: 0, tableLayout: "fixed" }}
+                    sx={{ 
+                      minWidth: 0, 
+                      tableLayout: "fixed",
+                      borderCollapse: "separate",
+                      borderSpacing: 0,
+                      "& .MuiTableCell-root": {
+                        borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
+                      }
+                    }}
                   >
                     <TableHead>
                       <TableRow>
@@ -636,6 +847,10 @@ export default function Jadlospis() {
                             WebkitUserSelect: "none",
                             WebkitUserDrag: "none",
                             touchAction: "manipulation",
+                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            fontWeight: 600,
+                            fontSize: "0.95rem",
+                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                           }}
                         >
                           <strong>Dzień tygodnia</strong>
@@ -659,6 +874,10 @@ export default function Jadlospis() {
                             WebkitUserSelect: "none",
                             WebkitUserDrag: "none",
                             touchAction: "manipulation",
+                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            fontWeight: 600,
+                            fontSize: "0.95rem",
+                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                           }}
                         >
                           <strong>Śniadanie</strong>
@@ -682,6 +901,10 @@ export default function Jadlospis() {
                             WebkitUserSelect: "none",
                             WebkitUserDrag: "none",
                             touchAction: "manipulation",
+                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            fontWeight: 600,
+                            fontSize: "0.95rem",
+                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                           }}
                         >
                           <strong>Obiad</strong>
@@ -705,6 +928,10 @@ export default function Jadlospis() {
                             WebkitUserSelect: "none",
                             WebkitUserDrag: "none",
                             touchAction: "manipulation",
+                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            fontWeight: 600,
+                            fontSize: "0.95rem",
+                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                           }}
                         >
                           <strong>Kolacja</strong>
@@ -713,8 +940,22 @@ export default function Jadlospis() {
                     </TableHead>
                     <TableBody>
                       {week.map((entry, index) => (
-                        <TableRow key={index}>
-                          <TableCell sx={{ p: cellPadding }}>
+                        <TableRow 
+                          key={index}
+                          sx={{
+                            "&:hover": {
+                              backgroundColor: "rgba(0, 0, 0, 0.02)",
+                            },
+                          }}
+                        >
+                          <TableCell 
+                            sx={{ 
+                              p: cellPadding,
+                              fontWeight: 500,
+                              backgroundColor: "rgba(0, 0, 0, 0.02)",
+                              borderRight: "1px solid rgba(224, 224, 224, 0.4)",
+                            }}
+                          >
                             {getVisualDay(index, entry.day)}
                           </TableCell>
                           {["śniadanie", "obiad", "kolacja"].map((meal) => {
@@ -745,6 +986,15 @@ export default function Jadlospis() {
                                   wordBreak: "break-word",
                                   overflowWrap: "anywhere",
                                   maxWidth: { xs: 160, sm: 240, md: "auto" },
+                                  minHeight: "80px",
+                                  verticalAlign: "middle",
+                                  transition: "all 0.2s ease",
+                                  "&:hover": {
+                                    backgroundColor: cellStyle.backgroundColor 
+                                      ? cellStyle.backgroundColor 
+                                      : "rgba(0, 0, 0, 0.03)",
+                                    boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
+                                  },
                                 }}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) =>
@@ -782,7 +1032,7 @@ export default function Jadlospis() {
                                     }}
                                   >
                                     {/* draggable handle */}
-                                    <span
+                                    <Box
                                       draggable
                                       onDragStart={(e) =>
                                         handleDragStart(e, {
@@ -798,26 +1048,48 @@ export default function Jadlospis() {
                                           meal,
                                         })
                                       }
-                                      style={{
+                                      sx={{
                                         cursor: "grab",
-                                        display: "inline-block",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
                                         maxWidth: "100%",
                                         overflowWrap: "anywhere",
+                                        padding: "4px 8px",
+                                        borderRadius: "6px",
+                                        transition: "all 0.2s ease",
+                                        "&:hover": {
+                                          backgroundColor: "rgba(0, 0, 0, 0.05)",
+                                        },
+                                        "&:active": {
+                                          cursor: "grabbing",
+                                          transform: "scale(0.98)",
+                                        },
                                       }}
                                     >
-                                      <span
-                                        style={{
-                                          display: "inline-block",
-                                          fontSize: isNarrow
-                                            ? "0.85rem"
-                                            : "1rem",
-                                          lineHeight: 1.1,
+                                      <Box
+                                        component="span"
+                                        sx={{
+                                          fontSize: "1.1rem",
+                                          color: "rgba(0, 0, 0, 0.3)",
+                                          lineHeight: 1,
+                                          userSelect: "none",
+                                        }}
+                                      >
+                                        ⋮⋮
+                                      </Box>
+                                      <Box
+                                        component="span"
+                                        sx={{
+                                          fontSize: isNarrow ? "0.9rem" : "1.05rem",
+                                          lineHeight: 1.4,
                                           maxWidth: "100%",
+                                          fontWeight: 400,
                                         }}
                                       >
                                         {name}
-                                      </span>
-                                    </span>
+                                      </Box>
+                                    </Box>
                                     {favorite && ui.showFavoriteStar && (
                                       <FavoriteIcon
                                         color="error"
@@ -877,13 +1149,208 @@ export default function Jadlospis() {
                       ))}
                     </TableBody>
                   </Table>
-                </Box>
+                  </Box>
+                )}
               </Box>
             ))}
           </Box>
         ) : (
           // legacy single-week array
-          <Table size={tableSize}>
+          <>
+          {isNarrow ? (
+            /* Mobile view - vertical cards for single week */
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {menu.map((entry, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    border: "1px solid rgba(224, 224, 224, 0.6)",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    backgroundColor: "#fff",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {/* Day header */}
+                  <Box
+                    sx={{
+                      p: 2,
+                      backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      fontWeight: 600,
+                      fontSize: "1rem",
+                      borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                    }}
+                  >
+                    {getVisualDay(index, entry.day)}
+                  </Box>
+                  
+                  {/* Meals stacked vertically */}
+                  {["śniadanie", "obiad", "kolacja"].map((meal, mealIdx) => {
+                    const dish = entry[meal];
+                    const name =
+                      dish?.name ??
+                      dish ??
+                      settings.noDishText ??
+                      "Brak potraw";
+                    const favorite = !!dish?.favorite;
+                    const dishObj = dishesAll.find((d) => d.name === name);
+                    const dishColor = dishObj?.color || dish?.color || "";
+                    const cellStyle = dishColor
+                      ? { backgroundColor: dishColor }
+                      : {};
+                    
+                    return (
+                      <Box
+                        key={meal}
+                        sx={{
+                          p: 2,
+                          borderBottom: mealIdx < 2 ? "1px solid rgba(224, 224, 224, 0.4)" : "none",
+                          ...cellStyle,
+                          transition: "all 0.2s ease",
+                          "&:active": {
+                            backgroundColor: cellStyle.backgroundColor 
+                              ? cellStyle.backgroundColor 
+                              : "rgba(0, 0, 0, 0.03)",
+                          },
+                        }}
+                        data-drop-week={0}
+                        data-drop-dayindex={index}
+                        data-drop-meal={meal}
+                        onTouchStart={(e) =>
+                          startTouchDragCell(e, {
+                            week: 0,
+                            dayIndex: index,
+                            meal,
+                          })
+                        }
+                      >
+                        {/* Meal label */}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: "block",
+                            fontWeight: 600,
+                            color: "rgba(0, 0, 0, 0.6)",
+                            mb: 1,
+                            textTransform: "uppercase",
+                            fontSize: "0.7rem",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {meal}
+                        </Typography>
+                        
+                        {/* Dish content */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              width: "100%",
+                            }}
+                          >
+                            <Box
+                              onTouchStart={(e) =>
+                                startTouchDragCell(e, {
+                                  week: 0,
+                                  dayIndex: index,
+                                  meal,
+                                })
+                              }
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                                flex: 1,
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                transition: "all 0.2s ease",
+                                "&:active": {
+                                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                                  transform: "scale(0.98)",
+                                },
+                              }}
+                            >
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: "1.1rem",
+                                  color: "rgba(0, 0, 0, 0.3)",
+                                  lineHeight: 1,
+                                  userSelect: "none",
+                                }}
+                              >
+                                ⋮⋮
+                              </Box>
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: "0.95rem",
+                                  lineHeight: 1.4,
+                                  fontWeight: 400,
+                                }}
+                              >
+                                {name}
+                              </Box>
+                            </Box>
+                            {favorite && ui.showFavoriteStar && (
+                              <FavoriteIcon
+                                color="error"
+                                sx={{ fontSize: 16 }}
+                              />
+                            )}
+                          </Box>
+                          {ui.showTags &&
+                            Array.isArray(dishObj?.tags) &&
+                            dishObj.tags.length > 0 && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 0.5,
+                                  flexWrap: "wrap",
+                                  mt: 0.5,
+                                }}
+                              >
+                                {dishObj.tags.map((t, i) => (
+                                  <Chip
+                                    key={i}
+                                    label={t}
+                                    size="small"
+                                    sx={{
+                                      fontSize: "0.65rem",
+                                      height: 22,
+                                    }}
+                                  />
+                                ))}
+                              </Box>
+                            )}
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            /* Desktop view - table for single week */
+          <Table 
+            size={tableSize}
+            sx={{ 
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              "& .MuiTableCell-root": {
+                borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
+              }
+            }}
+          >
             <TableHead>
               <TableRow>
                 <TableCell
@@ -901,6 +1368,10 @@ export default function Jadlospis() {
                     WebkitUserSelect: "none",
                     WebkitUserDrag: "none",
                     touchAction: "manipulation",
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                   }}
                 >
                   <strong>Dzień tygodnia</strong>
@@ -919,6 +1390,10 @@ export default function Jadlospis() {
                     WebkitUserSelect: "none",
                     WebkitUserDrag: "none",
                     touchAction: "manipulation",
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                   }}
                 >
                   <strong>Śniadanie</strong>
@@ -937,6 +1412,10 @@ export default function Jadlospis() {
                     WebkitUserSelect: "none",
                     WebkitUserDrag: "none",
                     touchAction: "manipulation",
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                   }}
                 >
                   <strong>Obiad</strong>
@@ -955,6 +1434,10 @@ export default function Jadlospis() {
                     WebkitUserSelect: "none",
                     WebkitUserDrag: "none",
                     touchAction: "manipulation",
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
                   }}
                 >
                   <strong>Kolacja</strong>
@@ -964,8 +1447,22 @@ export default function Jadlospis() {
             <TableBody>
               {menu.map((entry, index) => {
                 return (
-                  <TableRow key={index}>
-                    <TableCell sx={{ p: cellPadding }}>
+                  <TableRow 
+                    key={index}
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                    }}
+                  >
+                    <TableCell 
+                      sx={{ 
+                        p: cellPadding,
+                        fontWeight: 500,
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                        borderRight: "1px solid rgba(224, 224, 224, 0.4)",
+                      }}
+                    >
                       {getVisualDay(index, entry.day)}
                     </TableCell>
                     {["śniadanie", "obiad", "kolacja"].map((meal) => {
@@ -984,7 +1481,19 @@ export default function Jadlospis() {
                       return (
                         <TableCell
                           key={meal}
-                          sx={{ p: cellPadding, ...cellStyle }}
+                          sx={{ 
+                            p: cellPadding, 
+                            ...cellStyle,
+                            minHeight: "80px",
+                            verticalAlign: "middle",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: cellStyle.backgroundColor 
+                                ? cellStyle.backgroundColor 
+                                : "rgba(0, 0, 0, 0.03)",
+                              boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
+                            },
+                          }}
                         >
                           <Box
                             sx={{
@@ -1001,13 +1510,16 @@ export default function Jadlospis() {
                                 gap: 1,
                               }}
                             >
-                              <span
-                                style={{
-                                  fontSize: isNarrow ? "0.85rem" : "1rem",
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: isNarrow ? "0.9rem" : "1.05rem",
+                                  fontWeight: 400,
+                                  lineHeight: 1.4,
                                 }}
                               >
                                 {name}
-                              </span>
+                              </Box>
                               {favorite && ui.showFavoriteStar && (
                                 <FavoriteIcon
                                   sx={{ fontSize: isNarrow ? 1 : 18 }}
@@ -1067,6 +1579,8 @@ export default function Jadlospis() {
               })}
             </TableBody>
           </Table>
+          )}
+          </>
         ))}
     </Box>
   );
