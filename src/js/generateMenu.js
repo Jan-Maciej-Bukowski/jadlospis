@@ -274,6 +274,6 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     }
     weeksMenus.push(weekMenu);
   }
-
+  
   return weeksMenus;
 }

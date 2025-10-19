@@ -112,7 +112,48 @@ export default function Jadlospis() {
       .filter(Boolean);
   };
 
-  const handleGenerateMenu = () => {
+  // Dodaj nową funkcję do sprawdzania dostępności potraw
+  const checkDishesAvailability = (dishes) => {
+    if (!Array.isArray(dishes) || dishes.length === 0) return false;
+
+    // Policz potrawy dostępne dla każdej pory dnia
+    const mealCounts = {
+      śniadanie: 0,
+      obiad: 0,
+      kolacja: 0,
+    };
+
+    dishes.forEach((dish) => {
+      const allowedMeals = dish.allowedMeals || [
+        "śniadanie",
+        "obiad",
+        "kolacja",
+      ];
+      allowedMeals.forEach((meal) => {
+        mealCounts[meal]++;
+      });
+    });
+
+    // Progi ostrzeżeń - dostosuj według potrzeb
+    const WARNING_THRESHOLDS = {
+      śniadanie: 5,
+      obiad: 5,
+      kolacja: 5,
+    };
+
+    const warnings = Object.entries(mealCounts)
+      .filter(([meal, count]) => count < WARNING_THRESHOLDS[meal])
+      .map(
+        ([meal, count]) =>
+          `${meal}: ${count} ${
+            count === 1 ? "potrawa" : "potrawy"
+          } (zalecane min. ${WARNING_THRESHOLDS[meal]})`
+      );
+
+    return warnings;
+  };
+
+  const handleGenerateMenu = async () => {
     const source = getDishesForGeneration();
     if (!Array.isArray(source) || source.length === 0) {
       Swal.fire({
@@ -123,23 +164,62 @@ export default function Jadlospis() {
       });
       return;
     }
+
+    // Sprawdź dostępność potraw
+    const warnings = checkDishesAvailability(source);
+    if (warnings.length > 0) {
+      const result = await Swal.fire({
+        icon: "warning",
+        title: "Mało potraw!",
+        html:
+          `Masz bardzo mało potraw w wybranym źródle:<br><br>` +
+          `${warnings.join("<br>")}<br><br>` +
+          `W wygenerowanym jadłospisie może być dużo pustych miejsc (Brak potraw).<br>` +
+          `Czy chcesz kontynuować?`,
+        showCancelButton: true,
+        confirmButtonText: "Generuj mimo to",
+        cancelButtonText: "Anuluj",
+        confirmButtonColor: "#ff9800",
+      });
+
+      if (!result.isConfirmed) return;
+    }
+
     const generated = generateMenu(
       source,
       settings,
       daysOfWeek,
       weeksToGenerate
     );
-    // generated is array of weeks
+
+    // Sprawdź ile jest pustych miejsc w wygenerowanym jadłospisie
+    const placeholder = settings.noDishText || "Brak potraw";
+    const emptySlots = generated.flat().reduce((count, day) => {
+      return (
+        count +
+        (day.śniadanie?.name === placeholder ? 1 : 0) +
+        (day.obiad?.name === placeholder ? 1 : 0) +
+        (day.kolacja?.name === placeholder ? 1 : 0)
+      );
+    }, 0);
+
+    const totalSlots = generated.flat().length * 3;
+    const emptyPercentage = Math.round((emptySlots / totalSlots) * 100);
+
     setMenu(generated);
     localStorage.setItem("lastMenu", JSON.stringify(generated));
+
+    // Pokaż informację o wygenerowanym jadłospisie
     Swal.fire({
       title: "Jadłospis gotowy!",
-      text: "Twój nowy jadłospis został wygenerowany pomyślnie.",
-      icon: "success",
-      confirmButtonText: "Super!",
-      confirmButtonColor: "#4CAF50",
-      background: "#fefefe",
-      color: "#333",
+      html:
+        emptySlots > 0
+          ? `Jadłospis został wygenerowany.<br><br>` +
+            `<small>Uwaga: ${emptyPercentage}% miejsc jest pustych (${emptySlots} z ${totalSlots}).</small>`
+          : "Twój nowy jadłospis został wygenerowany pomyślnie.",
+      icon: emptySlots > totalSlots * 0.3 ? "warning" : "success",
+      confirmButtonText: "OK",
+      confirmButtonColor: emptySlots > totalSlots * 0.3 ? "#ff9800" : "#4CAF50",
     });
   };
 
