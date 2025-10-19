@@ -10,6 +10,8 @@ import {
   List,
   ListItem,
   ListItemText,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -17,16 +19,83 @@ import UploadIcon from "@mui/icons-material/Upload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import PublishIcon from "@mui/icons-material/Publish";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PublicIcon from "@mui/icons-material/Public";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
+import html2canvas from "html2canvas";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
   ""
 );
 
+const exportToImage = async (menu, name) => {
+  // Stwórz tymczasowy element z jadłospisem
+  const temp = document.createElement("div");
+  temp.style.padding = "20px";
+  temp.style.background = "white";
+  temp.style.position = "absolute";
+  temp.style.left = "-9999px";
+
+  // Dodaj tytuł
+  const title = document.createElement("h2");
+  title.textContent = name;
+  temp.appendChild(title);
+
+  // Dodaj jadłospis
+  const content = document.createElement("div");
+  const days = Array.isArray(menu[0]) ? menu.flat() : menu;
+  days.forEach((day, i) => {
+    const dayDiv = document.createElement("div");
+    dayDiv.style.marginBottom = "10px";
+    dayDiv.innerHTML = `
+      <strong>Dzień ${i + 1}</strong><br>
+      Śniadanie: ${day.śniadanie?.name || day.śniadanie || "Brak"}<br>
+      Obiad: ${day.obiad?.name || day.obiad || "Brak"}<br>
+      Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}
+    `;
+    content.appendChild(dayDiv);
+  });
+  temp.appendChild(content);
+  document.body.appendChild(temp);
+
+  try {
+    const canvas = await html2canvas(temp);
+    const link = document.createElement("a");
+    link.download = `jadlospis_${name.replace(/\s+/g, "_")}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  } finally {
+    temp.remove();
+  }
+};
+
+const exportToText = (menu, name) => {
+  let text = `Jadłospis: ${name}\n\n`;
+  const days = Array.isArray(menu[0]) ? menu.flat() : menu;
+
+  days.forEach((day, i) => {
+    text += `Dzień ${i + 1}\n`;
+    text += `Śniadanie: ${day.śniadanie?.name || day.śniadanie || "Brak"}\n`;
+    text += `Obiad: ${day.obiad?.name || day.obiad || "Brak"}\n`;
+    text += `Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}\n\n`;
+  });
+
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `jadlospis_${name.replace(/\s+/g, "_")}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 export default function Jadlospisy() {
   const [saved, setSaved] = useState([]);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const fileRef = useRef(null);
   useEffect(() => {
     ensureLocalDefault("savedMenus", []);
@@ -388,6 +457,49 @@ export default function Jadlospisy() {
     }
   };
 
+  const handleExportClick = (event, item) => {
+    setExportMenuAnchor(event.currentTarget);
+    setSelectedItem(item);
+  };
+
+  const handleExportClose = () => {
+    setExportMenuAnchor(null);
+    setSelectedItem(null);
+  };
+
+  const handleExportFormat = async (format) => {
+    if (!selectedItem) return;
+
+    try {
+      switch (format) {
+        case "json":
+          handleExportOne(selectedItem);
+          break;
+        case "txt":
+          exportToText(selectedItem.menu, selectedItem.name);
+          break;
+        case "png":
+          await exportToImage(selectedItem.menu, selectedItem.name);
+          break;
+      }
+      Swal.fire({
+        icon: "success",
+        title: "Wyeksportowano",
+        showConfirmButton: false,
+        timer: 900,
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd eksportu",
+        text: "Nie udało się wyeksportować jadłospisu",
+      });
+    } finally {
+      handleExportClose();
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -455,54 +567,111 @@ export default function Jadlospisy() {
           {saved.map((s) => (
             <ListItem
               key={s.id}
-              secondaryAction={
-                <Box>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleLoadIntoPlanner(s)}
-                    title="Załaduj"
-                  >
-                    <UploadIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handlePublish(s)}
-                    title="Opublikuj"
-                  >
-                    <PublishIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleRename(s)}
-                    title="Zmień nazwę"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleExportOne(s)}
-                    title="Eksportuj"
-                  >
-                    <CloudDownloadIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleDelete(s.id)}
-                    title="Usuń"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              }
+              sx={{
+                flexDirection: {
+                  xs: "column", // na małych ekranach układ pionowy
+                  sm: "row", // na większych poziomy
+                },
+                alignItems: {
+                  xs: "flex-start", // wyrównaj do lewej na małych ekranach
+                  sm: "center", // wycentruj na większych
+                },
+                gap: { xs: 1 }, // odstęp między elementami w układzie pionowym
+              }}
+              secondaryAction={undefined} // usuń secondaryAction, przenosimy akcje do własnego kontenera
             >
               <ListItemText
                 primary={s.name}
                 secondary={new Date(s.createdAt).toLocaleString()}
+                sx={{
+                  mb: { xs: 1, sm: 0 }, // margines pod tekstem tylko na małych ekranach
+                  width: "100%", // pełna szerokość na małych ekranach
+                }}
               />
+
+              {/* Kontener na ikony */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "center",
+                  width: { xs: "100%", sm: "auto" }, // pełna szerokość na małych ekranach
+                  justifyContent: { xs: "flex-start", sm: "flex-end" }, // wyrównanie ikon
+                  ml: { xs: 0, sm: "auto" }, // auto margin tylko na większych ekranach
+                }}
+              >
+                {/* Group 1: Load & Export actions */}
+                <Box sx={{ display: "flex", mr: 2 }}>
+                  <IconButton
+                    onClick={() => handleLoadIntoPlanner(s)}
+                    title="Załaduj do planera"
+                    size="small"
+                  >
+                    <UploadIcon color="primary" />
+                  </IconButton>
+                  <IconButton
+                    onClick={(e) => handleExportClick(e, s)}
+                    title="Eksportuj jadłospis (JSON/TXT/PNG)"
+                    size="small"
+                  >
+                    <FileDownloadIcon color="primary" />
+                  </IconButton>
+                </Box>
+
+                {/* Group 2: Edit actions */}
+                <Box sx={{ display: "flex", mr: 2 }}>
+                  <IconButton
+                    onClick={() => handleRename(s)}
+                    title="Zmień nazwę jadłospisu"
+                    size="small"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handlePublish(s)}
+                    title="Opublikuj jadłospis dla innych użytkowników"
+                    size="small"
+                  >
+                    <PublicIcon />
+                  </IconButton>
+                </Box>
+
+                {/* Group 3: Delete action */}
+                <Box>
+                  <IconButton
+                    onClick={() => handleDelete(s.id)}
+                    title="Usuń jadłospis"
+                    size="small"
+                    sx={{
+                      "&:hover": {
+                        bgcolor: "error.light",
+                        "& .MuiSvgIcon-root": { color: "error.contrastText" },
+                      },
+                    }}
+                  >
+                    <DeleteIcon color="error" />
+                  </IconButton>
+                </Box>
+              </Box>
             </ListItem>
           ))}
         </List>
       </Paper>
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={handleExportClose}
+      >
+        <MenuItem onClick={() => handleExportFormat("json")}>
+          Eksportuj jako JSON
+        </MenuItem>
+        <MenuItem onClick={() => handleExportFormat("txt")}>
+          Eksportuj jako tekst
+        </MenuItem>
+        <MenuItem onClick={() => handleExportFormat("png")}>
+          Eksportuj jako obraz
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

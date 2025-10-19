@@ -736,9 +736,7 @@ export default function Jadlospis() {
                                       })
                                     }
                                     sx={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
+                                      display: "inline-block",
                                       flex: 1,
                                       padding: "4px 8px",
                                       borderRadius: "6px",
@@ -749,17 +747,6 @@ export default function Jadlospis() {
                                       },
                                     }}
                                   >
-                                    <Box
-                                      component="span"
-                                      sx={{
-                                        fontSize: "1.1rem",
-                                        color: "rgba(0, 0, 0, 0.3)",
-                                        lineHeight: 1,
-                                        userSelect: "none",
-                                      }}
-                                    >
-                                      ⋮⋮
-                                    </Box>
                                     <Box
                                       component="span"
                                       sx={{
@@ -851,6 +838,8 @@ export default function Jadlospis() {
                             fontWeight: 600,
                             fontSize: "0.95rem",
                             borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                            width: "120px",
+                            minWidth: "100px",
                           }}
                         >
                           <strong>Dzień tygodnia</strong>
@@ -954,6 +943,8 @@ export default function Jadlospis() {
                               fontWeight: 500,
                               backgroundColor: "rgba(0, 0, 0, 0.02)",
                               borderRight: "1px solid rgba(224, 224, 224, 0.4)",
+                              width: "120px",
+                              minWidth: "100px",
                             }}
                           >
                             {getVisualDay(index, entry.day)}
@@ -1027,8 +1018,9 @@ export default function Jadlospis() {
                                   <Box
                                     sx={{
                                       display: "flex",
-                                      alignItems: "center",
+                                      alignItems: "flex-start",
                                       gap: 1,
+                                      flexWrap: "wrap",
                                     }}
                                   >
                                     {/* draggable handle */}
@@ -1050,9 +1042,7 @@ export default function Jadlospis() {
                                       }
                                       sx={{
                                         cursor: "grab",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
+                                        display: "inline-block",
                                         maxWidth: "100%",
                                         overflowWrap: "anywhere",
                                         padding: "4px 8px",
@@ -1070,20 +1060,8 @@ export default function Jadlospis() {
                                       <Box
                                         component="span"
                                         sx={{
-                                          fontSize: "1.1rem",
-                                          color: "rgba(0, 0, 0, 0.3)",
-                                          lineHeight: 1,
-                                          userSelect: "none",
-                                        }}
-                                      >
-                                        ⋮⋮
-                                      </Box>
-                                      <Box
-                                        component="span"
-                                        sx={{
                                           fontSize: isNarrow ? "0.9rem" : "1.05rem",
                                           lineHeight: 1.4,
-                                          maxWidth: "100%",
                                           fontWeight: 400,
                                         }}
                                       >
@@ -1093,7 +1071,7 @@ export default function Jadlospis() {
                                     {favorite && ui.showFavoriteStar && (
                                       <FavoriteIcon
                                         color="error"
-                                        sx={{ fontSize: isNarrow ? 14 : 18 }}
+                                        sx={{ fontSize: isNarrow ? 14 : 18, flexShrink: 0 }}
                                       />
                                     )}
                                     {/* hide rating/opinie on narrow screens */}
@@ -1105,7 +1083,7 @@ export default function Jadlospis() {
                                           size="small"
                                           readOnly
                                           precision={0.5}
-                                          sx={{ ml: 1 }}
+                                          sx={{ flexShrink: 0 }}
                                         />
                                       )}
                                   </Box>
@@ -1164,7 +1142,7 @@ export default function Jadlospis() {
                 <Box
                   key={index}
                   sx={{
-                    border: "1px solid rgba(224, 224, 224, 0.6)",
+                    border: "1px solid rgba(255, 0, 0, 0.6)",
                     borderRadius: "8px",
                     overflow: "hidden",
                     backgroundColor: "#fff",
@@ -1266,9 +1244,7 @@ export default function Jadlospis() {
                                 })
                               }
                               sx={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 0.5,
+                                display: "inline-block",
                                 flex: 1,
                                 padding: "4px 8px",
                                 borderRadius: "6px",
@@ -1279,17 +1255,6 @@ export default function Jadlospis() {
                                 },
                               }}
                             >
-                              <Box
-                                component="span"
-                                sx={{
-                                  fontSize: "1.1rem",
-                                  color: "rgba(0, 0, 0, 0.3)",
-                                  lineHeight: 1,
-                                  userSelect: "none",
-                                }}
-                              >
-                                ⋮⋮
-                              </Box>
                               <Box
                                 component="span"
                                 sx={{
@@ -1372,6 +1337,8 @@ export default function Jadlospis() {
                     fontWeight: 600,
                     fontSize: "0.95rem",
                     borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                    width: "120px",
+                    minWidth: "100px",
                   }}
                 >
                   <strong>Dzień tygodnia</strong>
@@ -1461,6 +1428,8 @@ export default function Jadlospis() {
                         fontWeight: 500,
                         backgroundColor: "rgba(0, 0, 0, 0.02)",
                         borderRight: "1px solid rgba(224, 224, 224, 0.4)",
+                        width: "120px",
+                        minWidth: "100px",
                       }}
                     >
                       {getVisualDay(index, entry.day)}
@@ -1506,8 +1475,9 @@ export default function Jadlospis() {
                             <Box
                               sx={{
                                 display: "flex",
-                                alignItems: "center",
+                                alignItems: "flex-start",
                                 gap: 1,
+                                flexWrap: "wrap",
                               }}
                             >
                               <Box
@@ -1522,7 +1492,7 @@ export default function Jadlospis() {
                               </Box>
                               {favorite && ui.showFavoriteStar && (
                                 <FavoriteIcon
-                                  sx={{ fontSize: isNarrow ? 1 : 18 }}
+                                  sx={{ fontSize: isNarrow ? 1 : 18, flexShrink: 0 }}
                                   color="error"
                                 />
                               )}
@@ -1534,7 +1504,7 @@ export default function Jadlospis() {
                                     size="small"
                                     readOnly
                                     precision={0.5}
-                                    sx={{ ml: 1 }}
+                                    sx={{ flexShrink: 0 }}
                                   />
                                 )}
                             </Box>
