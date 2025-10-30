@@ -20,6 +20,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
+import ReportIcon from "@mui/icons-material/Report";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -283,6 +284,75 @@ export default function PublicJadlospisy({ onLoad }) {
     }
   };
 
+  const handleReport = async (item) => {
+    const { value: reason } = await Swal.fire({
+      title: `Zgłoś jadłospis "${item.title}"`,
+      input: "textarea",
+      inputLabel: "Powód zgłoszenia",
+      inputPlaceholder: "Wpisz powód zgłoszenia...",
+      showCancelButton: true,
+      confirmButtonText: "Wyślij zgłoszenie",
+      cancelButtonText: "Anuluj",
+      inputAttributes: {
+        "aria-label": "Wpisz powód zgłoszenia",
+      },
+    });
+
+    if (reason) {
+      const { value: details } = await Swal.fire({
+        title: "Szczegóły zgłoszenia (opcjonalnie)",
+        input: "textarea",
+        inputPlaceholder: "Dodatkowe szczegóły...",
+        showCancelButton: true,
+        confirmButtonText: "Wyślij zgłoszenie",
+        cancelButtonText: "Anuluj",
+        inputAttributes: {
+          "aria-label": "Wpisz dodatkowe szczegóły zgłoszenia",
+        },
+      });
+
+      // Send report
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          Swal.fire({
+            icon: "warning",
+            title: "Zaloguj się",
+            text: "Musisz być zalogowany aby zgłosić jadłospis",
+          });
+          return;
+        }
+
+        await fetch(`${API_BASE}/api/report`, {
+          // zmień /api/reports na /api/report
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            type: "menu",
+            id: item._id,
+            reason,
+            details,
+          }),
+        });
+        Swal.fire({
+          icon: "success",
+          title: "Zgłoszenie wysłane",
+          text: "Dziękujemy za zgłoszenie. Zajmiemy się tym jak najszybciej.",
+        });
+      } catch (err) {
+        console.error("reportMenu error:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Błąd zgłoszenia",
+          text: "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
+        });
+      }
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -319,27 +389,13 @@ export default function PublicJadlospisy({ onLoad }) {
                   <Button size="small" onClick={() => importPublicMenu(it)}>
                     importuj
                   </Button>
-                  {/*
-                  just simple alert (ugly :<)
-                  
                   <Button
                     size="small"
-                    onClick={() =>
-                      Swal.fire({
-                        title: it.title,
-                        html: `<pre style="text-align:left">${JSON.stringify(
-                          it.menu,
-                          null,
-                          2
-                        )}</pre>`,
-                        width: 800,
-                      })
-                    }
+                    onClick={() => handleReport(it)}
+                    startIcon={<ReportIcon />}
                   >
-                    Podgląd
-                    
+                    Zgłoś
                   </Button>
-                  */}
                   <IconButton
                     onClick={() => togglePreview(idx)}
                     aria-expanded={openIndex === idx}

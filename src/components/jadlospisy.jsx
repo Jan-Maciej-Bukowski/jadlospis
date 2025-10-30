@@ -596,12 +596,12 @@ export default function Jadlospisy() {
                   gap: 1,
                   alignItems: "center",
                   width: { xs: "100%", sm: "auto" }, // pełna szerokość na małych ekranach
-                  justifyContent: { xs: "flex-start", sm: "flex-end" }, // wyrównanie ikon
+                  justifyContent: { xs: "flex-start", sm: "flex-start" }, // wyrównanie ikon
                   ml: { xs: 0, sm: "auto" }, // auto margin tylko na większych ekranach
                 }}
               >
                 {/* Group 1: Load & Export actions */}
-                <Box sx={{ display: "flex", mr: 2 }}>
+                <Box sx={{ display: "flex", mr: 0 }}>
                   <IconButton
                     onClick={() => handleLoadIntoPlanner(s)}
                     title="Załaduj do planera"
@@ -619,7 +619,7 @@ export default function Jadlospisy() {
                 </Box>
 
                 {/* Group 2: Edit actions */}
-                <Box sx={{ display: "flex", mr: 2 }}>
+                <Box sx={{ display: "flex", mr: 0 }}>
                   <IconButton
                     onClick={() => handleRename(s)}
                     title="Zmień nazwę jadłospisu"

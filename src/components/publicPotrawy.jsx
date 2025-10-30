@@ -14,6 +14,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
+import ReportIcon from "@mui/icons-material/Report";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -102,6 +103,78 @@ export default function PublicPotrawy() {
     }
   };
 
+  const handleReport = async (item) => {
+    try {
+      const { value: reason } = await Swal.fire({
+        title: `Zgłoś potrawę "${item.name}"`,
+        input: "select",
+        inputOptions: {
+          spam: "Spam",
+          offensive: "Obraźliwa treść",
+          inappropriate: "Nieodpowiednia zawartość",
+          other: "Inny powód",
+        },
+        inputPlaceholder: "Wybierz powód",
+        showCancelButton: true,
+        cancelButtonText: "Anuluj",
+        inputValidator: (value) => {
+          if (!value) {
+            return "Musisz wybrać powód!";
+          }
+        },
+      });
+
+      if (!reason) return;
+
+      const { value: details } = await Swal.fire({
+        title: "Dodatkowe informacje",
+        input: "textarea",
+        inputPlaceholder: "Opcjonalnie możesz dodać szczegóły...",
+        showCancelButton: true,
+        cancelButtonText: "Anuluj",
+      });
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        Swal.fire({
+          icon: "warning",
+          title: "Zaloguj się",
+          text: "Musisz być zalogowany aby zgłosić potrawę",
+        });
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: "dish",
+          id: item._id,
+          reason,
+          details,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Report failed");
+
+      Swal.fire({
+        icon: "success",
+        title: "Zgłoszono",
+        text: "Dziękujemy za zgłoszenie. Sprawdzimy tę potrawę.",
+      });
+    } catch (err) {
+      console.error("report dish:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: "Nie udało się zgłosić potrawy",
+      });
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -149,6 +222,13 @@ export default function PublicPotrawy() {
                     }
                   >
                     Szczegóły
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<ReportIcon />}
+                    onClick={() => handleReport(it)}
+                  >
+                    Zgłoś
                   </Button>
                   <IconButton
                     onClick={() => toggle(idx)}

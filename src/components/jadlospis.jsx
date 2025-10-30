@@ -566,7 +566,7 @@ export default function Jadlospis() {
       weekRefs.current.forEach((ref, index) => {
         if (!ref) return;
         const rect = ref.getBoundingClientRect();
-        const distance = Math.abs(rect.top - 0)//viewportMiddle); gura, a nie środek ekranu!
+        const distance = Math.abs(rect.top - 0); //viewportMiddle); gura, a nie środek ekranu!
         //console.log(`tydzień ${index + 1}: ${distance}`)
         if (distance < closest.distance) {
           closest = { week: index + 1, distance };
@@ -1687,62 +1687,69 @@ export default function Jadlospis() {
       </Box>
 
       {/* Slider po prawej stronie */}
-      <Box
-        sx={{
-          width: 100,
-          ml: 2,
-          display: { xs: "none", md: "flex" }, // ukryj na małych ekranach
-          flexDirection: "column",
-          alignItems: "center",
-          pt: 8,
-        }}
-      >
-        <Slider
-          value={currentWeek}
-          onChange={handleWeekChange}
-          min={1}
-          max={menu.length}
-          step={1}
-          marks={Array.from({ length: menu.length }, (_, i) => ({
-            value: i + 1,
-            label: `Tydz. ${i + 1}`,
-          }))}
-          track={false}
-          orientation="vertical"
-          sx={{
-            height: "30%",
-            position: "fixed",
-            "& .MuiSlider-mark": {
-              width: 4,
-              height: 4,
-              backgroundColor: "primary.main",
-              borderRadius: "50%",
-            },
-            "& .MuiSlider-markLabel": {
-              fontSize: "0.75rem",
-              marginLeft: "10px",
-            },
-            "& .MuiSlider-rail": {
-              backgroundColor: "grey.300",
-              width: 4,
-              borderRadius: 2,
-            },
-            "& .MuiSlider-thumb": {
-              width: 24,
-              height: 24,
-              backgroundColor: "primary.main",
-              "&:hover, &.Mui-focusVisible": {
-                boxShadow: "0 0 0 8px rgba(25, 118, 210, 0.16)",
-              },
-            },
-            "& .MuiSlider-valueLabel": {
-              backgroundColor: "primary.main",
-            },
-          }}
-          valueLabelDisplay="auto"
-          valueLabelFormat={(value) => `Tydzień ${value}`}
-        />
-      </Box>
+      {menu &&
+        menu.length > 1 && ( // Dodaj warunek menu && menu.length > 1
+          <Box
+            sx={{
+              width: 100,
+              ml: 2,
+              display: { xs: "none", md: "flex" },
+              flexDirection: "column",
+              alignItems: "center",
+              pt: 8,
+            }}
+          >
+            <Slider
+              value={currentWeek}
+              onChange={handleWeekChange}
+              min={1}
+              max={menu?.length || 1} // Dodaj fallback do max
+              step={1}
+              marks={
+                menu
+                  ? Array.from({ length: menu.length }, (_, i) => ({
+                      value: i + 1,
+                      label: `Tydz. ${i + 1}`,
+                    }))
+                  : []
+              }
+              track={false}
+              orientation="vertical"
+              sx={{
+                height: "30%",
+                position: "fixed",
+                "& .MuiSlider-mark": {
+                  width: 4,
+                  height: 4,
+                  backgroundColor: "primary.main",
+                  borderRadius: "50%",
+                },
+                "& .MuiSlider-markLabel": {
+                  fontSize: "0.75rem",
+                  marginLeft: "10px",
+                },
+                "& .MuiSlider-rail": {
+                  backgroundColor: "grey.300",
+                  width: 4,
+                  borderRadius: 2,
+                },
+                "& .MuiSlider-thumb": {
+                  width: 24,
+                  height: 24,
+                  backgroundColor: "primary.main",
+                  "&:hover, &.Mui-focusVisible": {
+                    boxShadow: "0 0 0 8px rgba(25, 118, 210, 0.16)",
+                  },
+                },
+                "& .MuiSlider-valueLabel": {
+                  backgroundColor: "primary.main",
+                },
+              }}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(value) => `Tydzień ${value}`}
+            />
+          </Box>
+        )}
     </Box>
   );
 }

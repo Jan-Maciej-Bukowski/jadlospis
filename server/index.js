@@ -8,6 +8,7 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const User = require("./models/User");
@@ -811,6 +812,68 @@ app.post(
     }
   }
 );
+
+// konfiguracja mailera
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "janmaciej.bukowski@gmail.com",
+    pass: process.env.GMAIL_APP_PASSWORD, // dodaj to do .env
+  },
+});
+
+// zgłoszenie potrawy/jadłospisu (chronione)
+app.post("/api/report", auth, async (req, res) => {
+  try {
+    const { type, id, reason, details } = req.body;
+    if (!type || !id || !reason) {
+      return res.status(400).json({ error: "Brak wymaganych danych" });
+    }
+
+    const reporter = req.user.username;
+    let item;
+
+    // Pobierz zgłaszany element
+    if (type === "dish") {
+      item = await PublicDish.findById(id).lean();
+    } else if (type === "menu") {
+      item = await PublicMenu.findById(id).lean();
+    }
+
+    if (!item) {
+      return res.status(404).json({ error: "Nie znaleziono elementu" });
+    }
+
+    // Wyślij email
+    await transporter.sendMail({
+      from: "janmaciej.bukowski@gmail.com",
+      to: "janmaciej.bukowski@gmail.com",
+      subject: `[Jadłospis] Zgłoszenie ${
+        type === "dish" ? "potrawy" : "jadłospisu"
+      }`,
+      html: `
+        <h3>Nowe zgłoszenie</h3>
+        <p><strong>Typ:</strong> ${
+          type === "dish" ? "Potrawa" : "Jadłospis"
+        }</p>
+        <p><strong>Zgłaszający:</strong> ${reporter}</p>
+        <p><strong>Zgłoszony element:</strong> ${item.name || item.title}</p>
+        <p><strong>ID:</strong> ${id}</p>
+        <p><strong>query:</strong>{"_id": ObjectId("${id}")}</p>
+        <p><strong>Powód:</strong> ${reason}</p>
+        ${details ? `<p><strong>Szczegóły:</strong> ${details}</p>` : ""}
+        <p><strong>Autor:</strong> ${item.author?.username || "brak"}</p>
+        <hr>
+        <p>Link do panelu admina: ${process.env.FRONTEND_URL}/admin</p>
+      `,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Report error:", err);
+    res.status(500).json({ error: "Nie udało się wysłać zgłoszenia" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

@@ -503,28 +503,18 @@ export default function Potrawy() {
               <ListItem
                 button
                 onClick={() => handleToggle(index)}
-                secondaryAction={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Rating
-                      name={`rating-${index}`}
-                      size="small"
-                      value={dish.rating || 0}
-                      onChange={(e, val) => setDishRating(index, val || 0)}
-                    />
-                    <IconButton
-                      edge="end"
-                      aria-label="favorite"
-                      onClick={(e) => toggleFavorite(index, e)} // Dodaj event jako parametr
-                      sx={{ zIndex: 2 }} // Dodaj zIndex aby upewnić się, że przycisk jest klikalny
-                    >
-                      {dish.favorite ? (
-                        <FavoriteIcon color="error" />
-                      ) : (
-                        <FavoriteBorderIcon />
-                      )}
-                    </IconButton>
-                  </Box>
-                }
+                sx={{
+                  flexDirection: {
+                    xs: "column", // na małych ekranach układ pionowy
+                    sm: "row", // na większych poziomy
+                  },
+                  alignItems: {
+                    xs: "flex-start", // wyrównaj do lewej na małych ekranach
+                    sm: "center", // wycentruj na większych
+                  },
+                  gap: { xs: 1 }, // odstęp między elementami w układzie pionowym
+                  paddingRight: { xs: 2, sm: 16 }, // mniejszy padding na małych ekranach
+                }}
               >
                 <ListItemText
                   primary={dish.name}
@@ -535,7 +525,40 @@ export default function Potrawy() {
                         : dish.tags}
                     </span>
                   }
+                  sx={{
+                    mb: { xs: 1, sm: 0 }, // margines pod tekstem tylko na małych ekranach
+                    width: "100%", // pełna szerokość na małych ekranach
+                  }}
                 />
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    width: { xs: "100%", sm: "auto" },
+                    position: { xs: "relative", sm: "absolute" },
+                    right: { sm: 8 },
+                  }}
+                >
+                  <Rating
+                    name={`rating-${index}`}
+                    size="small"
+                    value={dish.rating || 0}
+                    onChange={(e, val) => setDishRating(index, val || 0)}
+                  />
+                  <IconButton
+                    edge="end"
+                    aria-label="favorite"
+                    onClick={(e) => toggleFavorite(index, e)}
+                  >
+                    {dish.favorite ? (
+                      <FavoriteIcon color="error" />
+                    ) : (
+                      <FavoriteBorderIcon />
+                    )}
+                  </IconButton>
+                </Box>
               </ListItem>
 
               <Collapse in={openIndex === index} timeout="auto" unmountOnExit>

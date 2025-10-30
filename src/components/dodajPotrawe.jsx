@@ -172,11 +172,12 @@ export default function DodajPotrawe() {
   // walidacja: składniki
   const validateIngredients = () => {
     const errors = ingredients.flatMap((ing, i) => {
-      if (!ing.name.trim()) return [`Składnik ${i + 1}: Nazwa jest wymagana`];
-      if (!ing.amount) return [`Składnik ${i + 1}: Ilość jest wymagana`];
+      //console.log(ing,i)
+      if (!ing.name.trim()) return [`${ing.name ?? "Składnik "+i+1}: Nazwa jest wymagana`];
+      if (!ing.amount) return [`${ing.name ?? "Składnik "+i+1}: Ilość jest wymagana`];
 
       const error = validateAmount(ing.amount, ing.unit);
-      if (error) return [`Składnik ${i + 1}: ${error}`];
+      if (error) return [`${ing.name ?? "Składnik "+i+1}: ${error}`];
 
       return [];
     });
@@ -373,7 +374,7 @@ export default function DodajPotrawe() {
                   sx={{ width: 100 }}
                   inputProps={{ min: 0, step: 0.1 }}
                   error={!!error}
-                  helperText={error}
+                  //helperText={error}
                   placeholder={!!error}
                 />
                 <TextField
