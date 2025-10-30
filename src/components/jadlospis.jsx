@@ -13,9 +13,11 @@ import {
   TableRow,
   Typography,
   TextField,
+  Slider,
 } from "@mui/material";
 import { generateMenu } from "../js/generateMenu";
 import { settings } from "../js/settings.js";
+import { useTheme } from "@mui/material/styles";
 
 // ensure storage keys (safe: does not use hooks)
 ensureLocalDefault("dishes", []);
@@ -192,6 +194,8 @@ export default function Jadlospis() {
       daysOfWeek,
       weeksToGenerate
     );
+
+    console.log(generated);
 
     // Sprawdź ile jest pustych miejsc w wygenerowanym jadłospisie
     const placeholder = settings.noDishText || "Brak potraw";
@@ -442,21 +446,22 @@ export default function Jadlospis() {
       try {
         if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
       } catch (err) {}
-      window.__touchDrag = null;
-      document.body.style.touchAction = "";
+      //window.__touchDrag = null;
+      //document.body.style.touchAction = "";
     };
-    window.addEventListener("pagehide", cleanupGlobal);
+    //window.addEventListener("pagehide", cleanupGlobal);
     return () => {
-      window.removeEventListener("pagehide", cleanupGlobal);
-      cleanupGlobal();
+      //window.removeEventListener("pagehide", cleanupGlobal);
+      //cleanupGlobal();
     };
   }, []);
 
   const startTouchDragCell = (e, src) => {
     const t = e.touches && e.touches[0];
     if (!t) return;
-    const prevTouchAction = document.body.style.touchAction;
-    document.body.style.touchAction = "none";
+
+    // Pozwól na naturalne scrollowanie, jeśli nie przeciągamy
+    e.stopPropagation();
 
     window.__touchDrag = {
       payload: src,
@@ -538,121 +543,728 @@ export default function Jadlospis() {
     return img;
   })();
 
+  const sliderWeeks = [];
+
+  function getSliderText(value) {
+    return `tydzień ${value}`;
+  }
+
+  // Na początku komponentu dodaj ref do przechowywania referencji do tygodni
+  const weekRefs = useRef([]);
+  const theme = useTheme();
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+
+  // Dodaj funkcję do śledzenia scrollowania
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!weekRefs.current || !menu?.length || isAutoScrolling) return;
+
+      const viewportMiddle = window.innerHeight / 2;
+      let closest = { week: 1, distance: Infinity };
+
+      weekRefs.current.forEach((ref, index) => {
+        if (!ref) return;
+        const rect = ref.getBoundingClientRect();
+        const distance = Math.abs(rect.top - 0)//viewportMiddle); gura, a nie środek ekranu!
+        //console.log(`tydzień ${index + 1}: ${distance}`)
+        if (distance < closest.distance) {
+          closest = { week: index + 1, distance };
+        }
+      });
+
+      setCurrentWeek(closest.week);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [menu?.length, isAutoScrolling]);
+
+  // Zmodyfikuj handleWeekChange aby ustawiał flagę
+  const handleWeekChange = (_, value) => {
+    setCurrentWeek(value);
+    setIsAutoScrolling(true); // Ustaw flagę przed scrollowaniem
+
+    const weekEl = weekRefs.current[value - 1];
+    if (weekEl) {
+      weekEl.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Reset flagi po zakończeniu scrollowania (po 1s)
+      setTimeout(() => {
+        setIsAutoScrolling(false);
+      }, 1000);
+    }
+  };
+
+  // Usuń style blokujące scrollowanie na telefonie
+  useEffect(() => {
+    return () => {
+      // Upewnij się, że po odmontowaniu komponentu przywracamy możliwość scrollowania
+      document.body.style.touchAction = "";
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Jadłospis
-      </Typography>
+    <Box sx={{ p: 3, display: "flex" }}>
+      {/* Główna zawartość */}
+      <Box sx={{ flex: 1 }}>
+        <Typography variant="h4" sx={{ mb: 3 }}>
+          Jadłospis
+        </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          gap: 2,
-          mb: 2,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          select
-          SelectProps={{ native: true }}
-          label="Źródło potraw"
-          value={selectedListId}
-          onChange={(e) => setSelectedListId(e.target.value)}
-          size="small"
+        {/* Przyciski i kontrolki */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            mb: 2,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
         >
-          <option value="all">Wszystkie potrawy</option>
-          {availableLists.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name} ({l.dishes.length})
-            </option>
-          ))}
-        </TextField>
-
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <TextField
-            label="Ile tygodni?"
-            type="number"
+            select
+            SelectProps={{ native: true }}
+            label="Źródło potraw"
+            value={selectedListId}
+            onChange={(e) => setSelectedListId(e.target.value)}
             size="small"
-            value={weeksToGenerate}
-            onChange={(e) => {
-              const val = e.target.value;
-              // Pozwól na chwilowe czyszczenie pola
-              if (val === "") {
-                setWeeksToGenerate("");
-              } else {
-                setWeeksToGenerate(Number(val));
-              }
-            }}
-            onBlur={() => {
-              // Przy wyjściu z pola — popraw wartość, jeśli jest pusta lub < 1
-              setWeeksToGenerate((prev) => Math.max(1, Number(prev) || 1));
-            }}
-            sx={{ width: 120 }}
-            slotProps={{
-              htmlInput: {
-                min: 1,
-              },
-            }}
-          />
+          >
+            <option value="all">Wszystkie potrawy</option>
+            {availableLists.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name} ({l.dishes.length})
+              </option>
+            ))}
+          </TextField>
+
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <TextField
+              label="Ile tygodni?"
+              type="number"
+              size="small"
+              value={weeksToGenerate}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Pozwól na chwilowe czyszczenie pola
+                if (val === "") {
+                  setWeeksToGenerate("");
+                } else {
+                  setWeeksToGenerate(Number(val));
+                }
+              }}
+              onBlur={() => {
+                // Przy wyjściu z pola — popraw wartość, jeśli jest pusta lub < 1
+                setWeeksToGenerate((prev) => Math.max(1, Number(prev) || 1));
+              }}
+              sx={{ width: 120 }}
+              slotProps={{
+                htmlInput: {
+                  min: 1,
+                },
+              }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleGenerateMenu}
+            >
+              Generuj jadłospis
+            </Button>
+          </Box>
+
           <Button
             variant="contained"
             color="primary"
-            onClick={handleGenerateMenu}
+            onClick={handleSaveCurrentMenu}
           >
-            Generuj jadłospis
+            Zapisz jadłospis
           </Button>
         </Box>
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSaveCurrentMenu}
-        >
-          Zapisz jadłospis
-        </Button>
-      </Box>
-
-      {menu &&
-        Array.isArray(menu) &&
-        menu.length > 0 &&
-        // detect multi-week: if first element is an array -> multiweek
-        (Array.isArray(menu[0]) ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {menu.map((week, wi) => (
-              <Box key={wi}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Tydzień {wi + 1}
-                </Typography>
-                {/* Mobile view - vertical cards */}
-                {isNarrow ? (
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {week.map((entry, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          border: "1px solid rgba(224, 224, 224, 0.6)",
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          backgroundColor: "#fff",
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                        }}
-                      >
-                        {/* Day header */}
+        {menu &&
+          Array.isArray(menu) &&
+          menu.length > 0 &&
+          // detect multi-week: if first element is an array -> multiweek
+          (Array.isArray(menu[0]) ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {menu.map((week, wi) => (
+                <Box
+                  key={wi}
+                  ref={(el) => (weekRefs.current[wi] = el)}
+                  sx={{ scrollMargin: "20px" }} // dodaj margines dla lepszego scrollowania
+                >
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Tydzień {wi + 1}
+                  </Typography>
+                  {/* Mobile view - vertical cards */}
+                  {isNarrow ? (
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                    >
+                      {week.map((entry, index) => (
                         <Box
+                          key={index}
                           sx={{
-                            p: 2,
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                            fontWeight: 600,
-                            fontSize: "1rem",
-                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                            border: "1px solid rgba(224, 224, 224, 0.6)",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            backgroundColor: "#fff",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                           }}
                         >
-                          {getVisualDay(index, entry.day)}
+                          {/* Day header */}
+                          <Box
+                            sx={{
+                              p: 2,
+                              backgroundColor: "rgba(0, 0, 0, 0.04)",
+                              fontWeight: 600,
+                              fontSize: "1rem",
+                              borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                            }}
+                          >
+                            {getVisualDay(index, entry.day)}
+                          </Box>
+
+                          {/* Meals stacked vertically */}
+                          {["śniadanie", "obiad", "kolacja"].map(
+                            (meal, mealIdx) => {
+                              const dish = entry[meal];
+                              const name =
+                                dish?.name ??
+                                dish ??
+                                settings.noDishText ??
+                                "Brak potraw";
+                              const favorite = !!dish?.favorite;
+                              const dishObj = dishesAll.find(
+                                (d) => d.name === name
+                              );
+                              const dishColor =
+                                dishObj?.color || dish?.color || "";
+                              const cellStyle = dishColor
+                                ? { backgroundColor: dishColor }
+                                : {};
+
+                              return (
+                                <Box
+                                  key={meal}
+                                  sx={{
+                                    p: 2,
+                                    borderBottom:
+                                      mealIdx < 2
+                                        ? "1px solid rgba(224, 224, 224, 0.4)"
+                                        : "none",
+                                    ...cellStyle,
+                                    transition: "all 0.2s ease",
+                                    "&:active": {
+                                      backgroundColor: cellStyle.backgroundColor
+                                        ? cellStyle.backgroundColor
+                                        : "rgba(0, 0, 0, 0.03)",
+                                    },
+                                  }}
+                                  data-drop-week={wi}
+                                  data-drop-dayindex={index}
+                                  data-drop-meal={meal}
+                                  onTouchStart={(e) =>
+                                    startTouchDragCell(e, {
+                                      week: wi,
+                                      dayIndex: index,
+                                      meal,
+                                    })
+                                  }
+                                >
+                                  {/* Meal label */}
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      display: "block",
+                                      fontWeight: 600,
+                                      color: "rgba(0, 0, 0, 0.6)",
+                                      mb: 1,
+                                      textTransform: "uppercase",
+                                      fontSize: "0.7rem",
+                                      letterSpacing: "0.5px",
+                                    }}
+                                  >
+                                    {meal}
+                                  </Typography>
+
+                                  {/* Dish content */}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      gap: 1,
+                                      flexDirection: "column",
+                                      alignItems: "flex-start",
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        width: "100%",
+                                      }}
+                                    >
+                                      <Box
+                                        onTouchStart={(e) =>
+                                          startTouchDragCell(e, {
+                                            week: wi,
+                                            dayIndex: index,
+                                            meal,
+                                          })
+                                        }
+                                        sx={{
+                                          display: "inline-block",
+                                          flex: 1,
+                                          padding: "4px 8px",
+                                          borderRadius: "6px",
+                                          transition: "all 0.2s ease",
+                                          "&:active": {
+                                            backgroundColor:
+                                              "rgba(0, 0, 0, 0.05)",
+                                            transform: "scale(0.98)",
+                                          },
+                                        }}
+                                      >
+                                        <Box
+                                          component="span"
+                                          sx={{
+                                            fontSize: "0.95rem",
+                                            lineHeight: 1.4,
+                                            fontWeight: 400,
+                                          }}
+                                        >
+                                          {name}
+                                        </Box>
+                                      </Box>
+                                      {favorite && ui.showFavoriteStar && (
+                                        <FavoriteIcon
+                                          color="error"
+                                          sx={{ fontSize: 16 }}
+                                        />
+                                      )}
+                                    </Box>
+                                    {ui.showTags &&
+                                      Array.isArray(dishObj?.tags) &&
+                                      dishObj.tags.length > 0 && (
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            gap: 0.5,
+                                            flexWrap: "wrap",
+                                            mt: 0.5,
+                                          }}
+                                        >
+                                          {dishObj.tags.map((t, i) => (
+                                            <Chip
+                                              key={i}
+                                              label={t}
+                                              size="small"
+                                              sx={{
+                                                fontSize: "0.65rem",
+                                                height: 22,
+                                              }}
+                                            />
+                                          ))}
+                                        </Box>
+                                      )}
+                                  </Box>
+                                </Box>
+                              );
+                            }
+                          )}
                         </Box>
-                        
-                        {/* Meals stacked vertically */}
-                        {["śniadanie", "obiad", "kolacja"].map((meal, mealIdx) => {
+                      ))}
+                    </Box>
+                  ) : (
+                    /* Desktop view - table */
+                    <Box
+                      sx={{
+                        width: "100%",
+                        maxWidth: "100%",
+                        overflowX: "auto",
+                      }}
+                    >
+                      <Table
+                        size={tableSize}
+                        sx={{
+                          minWidth: 0,
+                          tableLayout: "fixed",
+                          borderCollapse: "separate",
+                          borderSpacing: 0,
+                          "& .MuiTableCell-root": {
+                            borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
+                          },
+                        }}
+                      >
+                        <TableHead>
+                          <TableRow>
+                            <TableCell
+                              draggable={false}
+                              onDragStart={(e) => {
+                                // uniemożliwiamy domyślny preview/drag nagłówka
+                                try {
+                                  e.dataTransfer.setDragImage(
+                                    transparentDragImage,
+                                    0,
+                                    0
+                                  );
+                                } catch (err) {}
+                                if (e.preventDefault) e.preventDefault();
+                              }}
+                              sx={{
+                                p: cellPadding,
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                WebkitUserDrag: "none",
+                                touchAction: "manipulation",
+                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                                width: "120px",
+                                minWidth: "100px",
+                              }}
+                            >
+                              <strong>Dzień tygodnia</strong>
+                            </TableCell>
+
+                            <TableCell
+                              draggable={false}
+                              onDragStart={(e) => {
+                                try {
+                                  e.dataTransfer.setDragImage(
+                                    transparentDragImage,
+                                    0,
+                                    0
+                                  );
+                                } catch (err) {}
+                                if (e.preventDefault) e.preventDefault();
+                              }}
+                              sx={{
+                                p: cellPadding,
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                WebkitUserDrag: "none",
+                                touchAction: "manipulation",
+                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                              }}
+                            >
+                              <strong>Śniadanie</strong>
+                            </TableCell>
+
+                            <TableCell
+                              draggable={false}
+                              onDragStart={(e) => {
+                                try {
+                                  e.dataTransfer.setDragImage(
+                                    transparentDragImage,
+                                    0,
+                                    0
+                                  );
+                                } catch (err) {}
+                                if (e.preventDefault) e.preventDefault();
+                              }}
+                              sx={{
+                                p: cellPadding,
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                WebkitUserDrag: "none",
+                                touchAction: "manipulation",
+                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                              }}
+                            >
+                              <strong>Obiad</strong>
+                            </TableCell>
+
+                            <TableCell
+                              draggable={false}
+                              onDragStart={(e) => {
+                                try {
+                                  e.dataTransfer.setDragImage(
+                                    transparentDragImage,
+                                    0,
+                                    0
+                                  );
+                                } catch (err) {}
+                                if (e.preventDefault) e.preventDefault();
+                              }}
+                              sx={{
+                                p: cellPadding,
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                WebkitUserDrag: "none",
+                                touchAction: "manipulation",
+                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                              }}
+                            >
+                              <strong>Kolacja</strong>
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {week.map((entry, index) => (
+                            <TableRow
+                              key={index}
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: "rgba(0, 0, 0, 0.02)",
+                                },
+                              }}
+                            >
+                              <TableCell
+                                sx={{
+                                  p: cellPadding,
+                                  fontWeight: 500,
+                                  backgroundColor: "rgba(0, 0, 0, 0.02)",
+                                  borderRight:
+                                    "1px solid rgba(224, 224, 224, 0.4)",
+                                  width: "120px",
+                                  minWidth: "100px",
+                                }}
+                              >
+                                {getVisualDay(index, entry.day)}
+                              </TableCell>
+                              {["śniadanie", "obiad", "kolacja"].map((meal) => {
+                                const dish = entry[meal];
+                                const name =
+                                  dish?.name ??
+                                  dish ??
+                                  settings.noDishText ??
+                                  "Brak potraw";
+                                const favorite = !!dish?.favorite;
+                                const dishObj = dishesAll.find(
+                                  (d) => d.name === name
+                                );
+                                // safe: don't access dishObj.tags when dishObj is undefined
+                                const dishColor =
+                                  dishObj?.color || dish?.color || "";
+                                const cellStyle = dishColor
+                                  ? { backgroundColor: dishColor }
+                                  : {};
+                                return (
+                                  <TableCell
+                                    key={meal}
+                                    sx={{
+                                      p: cellPadding,
+                                      ...cellStyle,
+                                      // make cells able to wrap and not force horizontal scroll
+                                      whiteSpace: "normal",
+                                      wordBreak: "break-word",
+                                      overflowWrap: "anywhere",
+                                      maxWidth: {
+                                        xs: 160,
+                                        sm: 240,
+                                        md: "auto",
+                                      },
+                                      minHeight: "80px",
+                                      verticalAlign: "middle",
+                                      transition: "all 0.2s ease",
+                                      "&:hover": {
+                                        backgroundColor:
+                                          cellStyle.backgroundColor
+                                            ? cellStyle.backgroundColor
+                                            : "rgba(0, 0, 0, 0.03)",
+                                        boxShadow:
+                                          "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
+                                      },
+                                    }}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) =>
+                                      handleDrop(e, {
+                                        week: wi,
+                                        dayIndex: index,
+                                        meal,
+                                      })
+                                    }
+                                    data-drop-week={wi}
+                                    data-drop-dayindex={index}
+                                    data-drop-meal={meal}
+                                    // touch start for moving cell contents
+                                    onTouchStart={(e) =>
+                                      startTouchDragCell(e, {
+                                        week: wi,
+                                        dayIndex: index,
+                                        meal,
+                                      })
+                                    }
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        gap: 1,
+                                        flexDirection: "column",
+                                        alignItems: "flex-start",
+                                      }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "flex-start",
+                                          gap: 1,
+                                          flexWrap: "wrap",
+                                        }}
+                                      >
+                                        {/* draggable handle */}
+                                        <Box
+                                          draggable
+                                          onDragStart={(e) =>
+                                            handleDragStart(e, {
+                                              week: wi,
+                                              dayIndex: index,
+                                              meal,
+                                            })
+                                          }
+                                          onTouchStart={(e) =>
+                                            startTouchDragCell(e, {
+                                              week: wi,
+                                              dayIndex: index,
+                                              meal,
+                                            })
+                                          }
+                                          sx={{
+                                            cursor: "grab",
+                                            display: "inline-block",
+                                            maxWidth: "100%",
+                                            overflowWrap: "anywhere",
+                                            padding: "4px 8px",
+                                            borderRadius: "6px",
+                                            transition: "all 0.2s ease",
+                                            "&:hover": {
+                                              backgroundColor:
+                                                "rgba(0, 0, 0, 0.05)",
+                                            },
+                                            "&:active": {
+                                              cursor: "grabbing",
+                                              transform: "scale(0.98)",
+                                            },
+                                          }}
+                                        >
+                                          <Box
+                                            component="span"
+                                            sx={{
+                                              fontSize: isNarrow
+                                                ? "0.9rem"
+                                                : "1.05rem",
+                                              lineHeight: 1.4,
+                                              fontWeight: 400,
+                                            }}
+                                          >
+                                            {name}
+                                          </Box>
+                                        </Box>
+                                        {favorite && ui.showFavoriteStar && (
+                                          <FavoriteIcon
+                                            color="error"
+                                            sx={{
+                                              fontSize: isNarrow ? 14 : 18,
+                                              flexShrink: 0,
+                                            }}
+                                          />
+                                        )}
+                                        {/* hide rating/opinie on narrow screens */}
+                                        {!isNarrow &&
+                                          ui.showRating &&
+                                          dishObj?.rating != null && (
+                                            <Rating
+                                              value={dishObj.rating}
+                                              size="small"
+                                              readOnly
+                                              precision={0.5}
+                                              sx={{ flexShrink: 0 }}
+                                            />
+                                          )}
+                                      </Box>
+                                      {ui.showTags &&
+                                        Array.isArray(dishObj?.tags) &&
+                                        dishObj.tags.length > 0 && (
+                                          <Box
+                                            sx={{
+                                              display: "flex",
+                                              gap: isNarrow ? 0.25 : 0.5,
+                                              flexWrap: "wrap",
+                                              mt: 0.5,
+                                            }}
+                                          >
+                                            {dishObj.tags.map((t, i) => (
+                                              <Chip
+                                                key={i}
+                                                label={t}
+                                                size={
+                                                  isNarrow
+                                                    ? "small"
+                                                    : ui.compactTable
+                                                    ? "small"
+                                                    : "medium"
+                                                }
+                                                sx={{
+                                                  fontSize: isNarrow
+                                                    ? "0.65rem"
+                                                    : undefined,
+                                                  height: isNarrow
+                                                    ? 22
+                                                    : undefined,
+                                                }}
+                                              />
+                                            ))}
+                                          </Box>
+                                        )}
+                                    </Box>
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            // legacy single-week array
+            <>
+              {isNarrow ? (
+                /* Mobile view - vertical cards for single week */
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {menu.map((entry, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        border: "1px solid rgba(255, 0, 0, 0.6)",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        backgroundColor: "#fff",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      {/* Day header */}
+                      <Box
+                        sx={{
+                          p: 2,
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                          fontWeight: 600,
+                          fontSize: "1rem",
+                          borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                        }}
+                      >
+                        {getVisualDay(index, entry.day)}
+                      </Box>
+
+                      {/* Meals stacked vertically */}
+                      {["śniadanie", "obiad", "kolacja"].map(
+                        (meal, mealIdx) => {
                           const dish = entry[meal];
                           const name =
                             dish?.name ??
@@ -663,32 +1275,34 @@ export default function Jadlospis() {
                           const dishObj = dishesAll.find(
                             (d) => d.name === name
                           );
-                          const dishColor =
-                            dishObj?.color || dish?.color || "";
+                          const dishColor = dishObj?.color || dish?.color || "";
                           const cellStyle = dishColor
                             ? { backgroundColor: dishColor }
                             : {};
-                          
+
                           return (
                             <Box
                               key={meal}
                               sx={{
                                 p: 2,
-                                borderBottom: mealIdx < 2 ? "1px solid rgba(224, 224, 224, 0.4)" : "none",
+                                borderBottom:
+                                  mealIdx < 2
+                                    ? "1px solid rgba(224, 224, 224, 0.4)"
+                                    : "none",
                                 ...cellStyle,
                                 transition: "all 0.2s ease",
                                 "&:active": {
-                                  backgroundColor: cellStyle.backgroundColor 
-                                    ? cellStyle.backgroundColor 
+                                  backgroundColor: cellStyle.backgroundColor
+                                    ? cellStyle.backgroundColor
                                     : "rgba(0, 0, 0, 0.03)",
                                 },
                               }}
-                              data-drop-week={wi}
+                              data-drop-week={0}
                               data-drop-dayindex={index}
                               data-drop-meal={meal}
                               onTouchStart={(e) =>
                                 startTouchDragCell(e, {
-                                  week: wi,
+                                  week: 0,
                                   dayIndex: index,
                                   meal,
                                 })
@@ -709,7 +1323,7 @@ export default function Jadlospis() {
                               >
                                 {meal}
                               </Typography>
-                              
+
                               {/* Dish content */}
                               <Box
                                 sx={{
@@ -730,7 +1344,7 @@ export default function Jadlospis() {
                                   <Box
                                     onTouchStart={(e) =>
                                       startTouchDragCell(e, {
-                                        week: wi,
+                                        week: 0,
                                         dayIndex: index,
                                         meal,
                                       })
@@ -792,144 +1406,138 @@ export default function Jadlospis() {
                               </Box>
                             </Box>
                           );
-                        })}
-                      </Box>
-                    ))}
-                  </Box>
-                ) : (
-                  /* Desktop view - table */
-                  <Box
-                    sx={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
-                  >
-                  <Table
-                    size={tableSize}
-                    sx={{ 
-                      minWidth: 0, 
-                      tableLayout: "fixed",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      "& .MuiTableCell-root": {
-                        borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
-                      }
-                    }}
-                  >
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          draggable={false}
-                          onDragStart={(e) => {
-                            // uniemożliwiamy domyślny preview/drag nagłówka
-                            try {
-                              e.dataTransfer.setDragImage(
-                                transparentDragImage,
-                                0,
-                                0
-                              );
-                            } catch (err) {}
-                            if (e.preventDefault) e.preventDefault();
-                          }}
-                          sx={{
-                            p: cellPadding,
-                            userSelect: "none",
-                            WebkitUserSelect: "none",
-                            WebkitUserDrag: "none",
-                            touchAction: "manipulation",
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                            width: "120px",
-                            minWidth: "100px",
-                          }}
-                        >
-                          <strong>Dzień tygodnia</strong>
-                        </TableCell>
-
-                        <TableCell
-                          draggable={false}
-                          onDragStart={(e) => {
-                            try {
-                              e.dataTransfer.setDragImage(
-                                transparentDragImage,
-                                0,
-                                0
-                              );
-                            } catch (err) {}
-                            if (e.preventDefault) e.preventDefault();
-                          }}
-                          sx={{
-                            p: cellPadding,
-                            userSelect: "none",
-                            WebkitUserSelect: "none",
-                            WebkitUserDrag: "none",
-                            touchAction: "manipulation",
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                          }}
-                        >
-                          <strong>Śniadanie</strong>
-                        </TableCell>
-
-                        <TableCell
-                          draggable={false}
-                          onDragStart={(e) => {
-                            try {
-                              e.dataTransfer.setDragImage(
-                                transparentDragImage,
-                                0,
-                                0
-                              );
-                            } catch (err) {}
-                            if (e.preventDefault) e.preventDefault();
-                          }}
-                          sx={{
-                            p: cellPadding,
-                            userSelect: "none",
-                            WebkitUserSelect: "none",
-                            WebkitUserDrag: "none",
-                            touchAction: "manipulation",
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                          }}
-                        >
-                          <strong>Obiad</strong>
-                        </TableCell>
-
-                        <TableCell
-                          draggable={false}
-                          onDragStart={(e) => {
-                            try {
-                              e.dataTransfer.setDragImage(
-                                transparentDragImage,
-                                0,
-                                0
-                              );
-                            } catch (err) {}
-                            if (e.preventDefault) e.preventDefault();
-                          }}
-                          sx={{
-                            p: cellPadding,
-                            userSelect: "none",
-                            WebkitUserSelect: "none",
-                            WebkitUserDrag: "none",
-                            touchAction: "manipulation",
-                            backgroundColor: "rgba(0, 0, 0, 0.04)",
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                          }}
-                        >
-                          <strong>Kolacja</strong>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {week.map((entry, index) => (
-                        <TableRow 
+                        }
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                /* Desktop view - table for single week */
+                <Table
+                  size={tableSize}
+                  sx={{
+                    borderCollapse: "separate",
+                    borderSpacing: 0,
+                    "& .MuiTableCell-root": {
+                      borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
+                    },
+                  }}
+                >
+                  <TableHead>
+                    <TableRow>
+                      <TableCell
+                        draggable={false}
+                        onDragStart={(e) => {
+                          // uniemożliwiamy domyślny preview/drag nagłówka
+                          try {
+                            e.dataTransfer.setDragImage(
+                              transparentDragImage,
+                              0,
+                              0
+                            );
+                          } catch (err) {}
+                          if (e.preventDefault) e.preventDefault();
+                        }}
+                        sx={{
+                          p: cellPadding,
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitUserDrag: "none",
+                          touchAction: "manipulation",
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                          width: "120px",
+                          minWidth: "100px",
+                        }}
+                      >
+                        <strong>Dzień tygodnia</strong>
+                      </TableCell>
+                      <TableCell
+                        draggable={false}
+                        onDragStart={(e) => {
+                          try {
+                            e.dataTransfer.setDragImage(
+                              transparentDragImage,
+                              0,
+                              0
+                            );
+                          } catch (err) {}
+                          if (e.preventDefault) e.preventDefault();
+                        }}
+                        sx={{
+                          p: cellPadding,
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitUserDrag: "none",
+                          touchAction: "manipulation",
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                        }}
+                      >
+                        <strong>Śniadanie</strong>
+                      </TableCell>
+                      <TableCell
+                        draggable={false}
+                        onDragStart={(e) => {
+                          try {
+                            e.dataTransfer.setDragImage(
+                              transparentDragImage,
+                              0,
+                              0
+                            );
+                          } catch (err) {}
+                          if (e.preventDefault) e.preventDefault();
+                        }}
+                        sx={{
+                          p: cellPadding,
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitUserDrag: "none",
+                          touchAction: "manipulation",
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                        }}
+                      >
+                        <strong>Obiad</strong>
+                      </TableCell>
+                      <TableCell
+                        draggable={false}
+                        onDragStart={(e) => {
+                          try {
+                            e.dataTransfer.setDragImage(
+                              transparentDragImage,
+                              0,
+                              0
+                            );
+                          } catch (err) {}
+                          if (e.preventDefault) e.preventDefault();
+                        }}
+                        sx={{
+                          p: cellPadding,
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitUserDrag: "none",
+                          touchAction: "manipulation",
+                          backgroundColor: "rgba(0, 0, 0, 0.04)",
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
+                        }}
+                      >
+                        <strong>Kolacja</strong>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {menu.map((entry, index) => {
+                      return (
+                        <TableRow
                           key={index}
                           sx={{
                             "&:hover": {
@@ -937,8 +1545,8 @@ export default function Jadlospis() {
                             },
                           }}
                         >
-                          <TableCell 
-                            sx={{ 
+                          <TableCell
+                            sx={{
                               p: cellPadding,
                               fontWeight: 500,
                               backgroundColor: "rgba(0, 0, 0, 0.02)",
@@ -960,7 +1568,6 @@ export default function Jadlospis() {
                             const dishObj = dishesAll.find(
                               (d) => d.name === name
                             );
-                            // safe: don't access dishObj.tags when dishObj is undefined
                             const dishColor =
                               dishObj?.color || dish?.color || "";
                             const cellStyle = dishColor
@@ -972,40 +1579,17 @@ export default function Jadlospis() {
                                 sx={{
                                   p: cellPadding,
                                   ...cellStyle,
-                                  // make cells able to wrap and not force horizontal scroll
-                                  whiteSpace: "normal",
-                                  wordBreak: "break-word",
-                                  overflowWrap: "anywhere",
-                                  maxWidth: { xs: 160, sm: 240, md: "auto" },
                                   minHeight: "80px",
                                   verticalAlign: "middle",
                                   transition: "all 0.2s ease",
                                   "&:hover": {
-                                    backgroundColor: cellStyle.backgroundColor 
-                                      ? cellStyle.backgroundColor 
+                                    backgroundColor: cellStyle.backgroundColor
+                                      ? cellStyle.backgroundColor
                                       : "rgba(0, 0, 0, 0.03)",
-                                    boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
+                                    boxShadow:
+                                      "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
                                   },
                                 }}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) =>
-                                  handleDrop(e, {
-                                    week: wi,
-                                    dayIndex: index,
-                                    meal,
-                                  })
-                                }
-                                data-drop-week={wi}
-                                data-drop-dayindex={index}
-                                data-drop-meal={meal}
-                                // touch start for moving cell contents
-                                onTouchStart={(e) =>
-                                  startTouchDragCell(e, {
-                                    week: wi,
-                                    dayIndex: index,
-                                    meal,
-                                  })
-                                }
                               >
                                 <Box
                                   sx={{
@@ -1023,58 +1607,27 @@ export default function Jadlospis() {
                                       flexWrap: "wrap",
                                     }}
                                   >
-                                    {/* draggable handle */}
                                     <Box
-                                      draggable
-                                      onDragStart={(e) =>
-                                        handleDragStart(e, {
-                                          week: wi,
-                                          dayIndex: index,
-                                          meal,
-                                        })
-                                      }
-                                      onTouchStart={(e) =>
-                                        startTouchDragCell(e, {
-                                          week: wi,
-                                          dayIndex: index,
-                                          meal,
-                                        })
-                                      }
+                                      component="span"
                                       sx={{
-                                        cursor: "grab",
-                                        display: "inline-block",
-                                        maxWidth: "100%",
-                                        overflowWrap: "anywhere",
-                                        padding: "4px 8px",
-                                        borderRadius: "6px",
-                                        transition: "all 0.2s ease",
-                                        "&:hover": {
-                                          backgroundColor: "rgba(0, 0, 0, 0.05)",
-                                        },
-                                        "&:active": {
-                                          cursor: "grabbing",
-                                          transform: "scale(0.98)",
-                                        },
+                                        fontSize: isNarrow
+                                          ? "0.9rem"
+                                          : "1.05rem",
+                                        fontWeight: 400,
+                                        lineHeight: 1.4,
                                       }}
                                     >
-                                      <Box
-                                        component="span"
-                                        sx={{
-                                          fontSize: isNarrow ? "0.9rem" : "1.05rem",
-                                          lineHeight: 1.4,
-                                          fontWeight: 400,
-                                        }}
-                                      >
-                                        {name}
-                                      </Box>
+                                      {name}
                                     </Box>
                                     {favorite && ui.showFavoriteStar && (
                                       <FavoriteIcon
+                                        sx={{
+                                          fontSize: isNarrow ? 1 : 18,
+                                          flexShrink: 0,
+                                        }}
                                         color="error"
-                                        sx={{ fontSize: isNarrow ? 14 : 18, flexShrink: 0 }}
                                       />
                                     )}
-                                    {/* hide rating/opinie on narrow screens */}
                                     {!isNarrow &&
                                       ui.showRating &&
                                       dishObj?.rating != null && (
@@ -1093,7 +1646,7 @@ export default function Jadlospis() {
                                       <Box
                                         sx={{
                                           display: "flex",
-                                          gap: isNarrow ? 0.25 : 0.5,
+                                          gap: 0.5,
                                           flexWrap: "wrap",
                                           mt: 0.5,
                                         }}
@@ -1124,434 +1677,72 @@ export default function Jadlospis() {
                             );
                           })}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Box>
-        ) : (
-          // legacy single-week array
-          <>
-          {isNarrow ? (
-            /* Mobile view - vertical cards for single week */
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {menu.map((entry, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    border: "1px solid rgba(255, 0, 0, 0.6)",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    backgroundColor: "#fff",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                  }}
-                >
-                  {/* Day header */}
-                  <Box
-                    sx={{
-                      p: 2,
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                    }}
-                  >
-                    {getVisualDay(index, entry.day)}
-                  </Box>
-                  
-                  {/* Meals stacked vertically */}
-                  {["śniadanie", "obiad", "kolacja"].map((meal, mealIdx) => {
-                    const dish = entry[meal];
-                    const name =
-                      dish?.name ??
-                      dish ??
-                      settings.noDishText ??
-                      "Brak potraw";
-                    const favorite = !!dish?.favorite;
-                    const dishObj = dishesAll.find((d) => d.name === name);
-                    const dishColor = dishObj?.color || dish?.color || "";
-                    const cellStyle = dishColor
-                      ? { backgroundColor: dishColor }
-                      : {};
-                    
-                    return (
-                      <Box
-                        key={meal}
-                        sx={{
-                          p: 2,
-                          borderBottom: mealIdx < 2 ? "1px solid rgba(224, 224, 224, 0.4)" : "none",
-                          ...cellStyle,
-                          transition: "all 0.2s ease",
-                          "&:active": {
-                            backgroundColor: cellStyle.backgroundColor 
-                              ? cellStyle.backgroundColor 
-                              : "rgba(0, 0, 0, 0.03)",
-                          },
-                        }}
-                        data-drop-week={0}
-                        data-drop-dayindex={index}
-                        data-drop-meal={meal}
-                        onTouchStart={(e) =>
-                          startTouchDragCell(e, {
-                            week: 0,
-                            dayIndex: index,
-                            meal,
-                          })
-                        }
-                      >
-                        {/* Meal label */}
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            display: "block",
-                            fontWeight: 600,
-                            color: "rgba(0, 0, 0, 0.6)",
-                            mb: 1,
-                            textTransform: "uppercase",
-                            fontSize: "0.7rem",
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          {meal}
-                        </Typography>
-                        
-                        {/* Dish content */}
-                        <Box
-                          sx={{
-                            display: "flex",
-                            gap: 1,
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              width: "100%",
-                            }}
-                          >
-                            <Box
-                              onTouchStart={(e) =>
-                                startTouchDragCell(e, {
-                                  week: 0,
-                                  dayIndex: index,
-                                  meal,
-                                })
-                              }
-                              sx={{
-                                display: "inline-block",
-                                flex: 1,
-                                padding: "4px 8px",
-                                borderRadius: "6px",
-                                transition: "all 0.2s ease",
-                                "&:active": {
-                                  backgroundColor: "rgba(0, 0, 0, 0.05)",
-                                  transform: "scale(0.98)",
-                                },
-                              }}
-                            >
-                              <Box
-                                component="span"
-                                sx={{
-                                  fontSize: "0.95rem",
-                                  lineHeight: 1.4,
-                                  fontWeight: 400,
-                                }}
-                              >
-                                {name}
-                              </Box>
-                            </Box>
-                            {favorite && ui.showFavoriteStar && (
-                              <FavoriteIcon
-                                color="error"
-                                sx={{ fontSize: 16 }}
-                              />
-                            )}
-                          </Box>
-                          {ui.showTags &&
-                            Array.isArray(dishObj?.tags) &&
-                            dishObj.tags.length > 0 && (
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  gap: 0.5,
-                                  flexWrap: "wrap",
-                                  mt: 0.5,
-                                }}
-                              >
-                                {dishObj.tags.map((t, i) => (
-                                  <Chip
-                                    key={i}
-                                    label={t}
-                                    size="small"
-                                    sx={{
-                                      fontSize: "0.65rem",
-                                      height: 22,
-                                    }}
-                                  />
-                                ))}
-                              </Box>
-                            )}
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            /* Desktop view - table for single week */
-          <Table 
-            size={tableSize}
-            sx={{ 
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              "& .MuiTableCell-root": {
-                borderBottom: "1px solid rgba(224, 224, 224, 0.4)",
-              }
-            }}
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  draggable={false}
-                  onDragStart={(e) => {
-                    // uniemożliwiamy domyślny preview/drag nagłówka
-                    try {
-                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
-                    } catch (err) {}
-                    if (e.preventDefault) e.preventDefault();
-                  }}
-                  sx={{
-                    p: cellPadding,
-                    userSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitUserDrag: "none",
-                    touchAction: "manipulation",
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                    width: "120px",
-                    minWidth: "100px",
-                  }}
-                >
-                  <strong>Dzień tygodnia</strong>
-                </TableCell>
-                <TableCell
-                  draggable={false}
-                  onDragStart={(e) => {
-                    try {
-                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
-                    } catch (err) {}
-                    if (e.preventDefault) e.preventDefault();
-                  }}
-                  sx={{
-                    p: cellPadding,
-                    userSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitUserDrag: "none",
-                    touchAction: "manipulation",
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                  }}
-                >
-                  <strong>Śniadanie</strong>
-                </TableCell>
-                <TableCell
-                  draggable={false}
-                  onDragStart={(e) => {
-                    try {
-                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
-                    } catch (err) {}
-                    if (e.preventDefault) e.preventDefault();
-                  }}
-                  sx={{
-                    p: cellPadding,
-                    userSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitUserDrag: "none",
-                    touchAction: "manipulation",
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                  }}
-                >
-                  <strong>Obiad</strong>
-                </TableCell>
-                <TableCell
-                  draggable={false}
-                  onDragStart={(e) => {
-                    try {
-                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
-                    } catch (err) {}
-                    if (e.preventDefault) e.preventDefault();
-                  }}
-                  sx={{
-                    p: cellPadding,
-                    userSelect: "none",
-                    WebkitUserSelect: "none",
-                    WebkitUserDrag: "none",
-                    touchAction: "manipulation",
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
-                  }}
-                >
-                  <strong>Kolacja</strong>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {menu.map((entry, index) => {
-                return (
-                  <TableRow 
-                    key={index}
-                    sx={{
-                      "&:hover": {
-                        backgroundColor: "rgba(0, 0, 0, 0.02)",
-                      },
-                    }}
-                  >
-                    <TableCell 
-                      sx={{ 
-                        p: cellPadding,
-                        fontWeight: 500,
-                        backgroundColor: "rgba(0, 0, 0, 0.02)",
-                        borderRight: "1px solid rgba(224, 224, 224, 0.4)",
-                        width: "120px",
-                        minWidth: "100px",
-                      }}
-                    >
-                      {getVisualDay(index, entry.day)}
-                    </TableCell>
-                    {["śniadanie", "obiad", "kolacja"].map((meal) => {
-                      const dish = entry[meal];
-                      const name =
-                        dish?.name ??
-                        dish ??
-                        settings.noDishText ??
-                        "Brak potraw";
-                      const favorite = !!dish?.favorite;
-                      const dishObj = dishesAll.find((d) => d.name === name);
-                      const dishColor = dishObj?.color || dish?.color || "";
-                      const cellStyle = dishColor
-                        ? { backgroundColor: dishColor }
-                        : {};
-                      return (
-                        <TableCell
-                          key={meal}
-                          sx={{ 
-                            p: cellPadding, 
-                            ...cellStyle,
-                            minHeight: "80px",
-                            verticalAlign: "middle",
-                            transition: "all 0.2s ease",
-                            "&:hover": {
-                              backgroundColor: cellStyle.backgroundColor 
-                                ? cellStyle.backgroundColor 
-                                : "rgba(0, 0, 0, 0.03)",
-                              boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.08)",
-                            },
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: 1,
-                              flexDirection: "column",
-                              alignItems: "flex-start",
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: 1,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <Box
-                                component="span"
-                                sx={{
-                                  fontSize: isNarrow ? "0.9rem" : "1.05rem",
-                                  fontWeight: 400,
-                                  lineHeight: 1.4,
-                                }}
-                              >
-                                {name}
-                              </Box>
-                              {favorite && ui.showFavoriteStar && (
-                                <FavoriteIcon
-                                  sx={{ fontSize: isNarrow ? 1 : 18, flexShrink: 0 }}
-                                  color="error"
-                                />
-                              )}
-                              {!isNarrow &&
-                                ui.showRating &&
-                                dishObj?.rating != null && (
-                                  <Rating
-                                    value={dishObj.rating}
-                                    size="small"
-                                    readOnly
-                                    precision={0.5}
-                                    sx={{ flexShrink: 0 }}
-                                  />
-                                )}
-                            </Box>
-                            {ui.showTags &&
-                              Array.isArray(dishObj?.tags) &&
-                              dishObj.tags.length > 0 && (
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    gap: 0.5,
-                                    flexWrap: "wrap",
-                                    mt: 0.5,
-                                  }}
-                                >
-                                  {dishObj.tags.map((t, i) => (
-                                    <Chip
-                                      key={i}
-                                      label={t}
-                                      size={
-                                        isNarrow
-                                          ? "small"
-                                          : ui.compactTable
-                                          ? "small"
-                                          : "medium"
-                                      }
-                                      sx={{
-                                        fontSize: isNarrow
-                                          ? "0.65rem"
-                                          : undefined,
-                                        height: isNarrow ? 22 : undefined,
-                                      }}
-                                    />
-                                  ))}
-                                </Box>
-                              )}
-                          </Box>
-                        </TableCell>
                       );
                     })}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          )}
-          </>
-        ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          ))}
+      </Box>
+
+      {/* Slider po prawej stronie */}
+      <Box
+        sx={{
+          width: 100,
+          ml: 2,
+          display: { xs: "none", md: "flex" }, // ukryj na małych ekranach
+          flexDirection: "column",
+          alignItems: "center",
+          pt: 8,
+        }}
+      >
+        <Slider
+          value={currentWeek}
+          onChange={handleWeekChange}
+          min={1}
+          max={menu.length}
+          step={1}
+          marks={Array.from({ length: menu.length }, (_, i) => ({
+            value: i + 1,
+            label: `Tydz. ${i + 1}`,
+          }))}
+          track={false}
+          orientation="vertical"
+          sx={{
+            height: "30%",
+            position: "fixed",
+            "& .MuiSlider-mark": {
+              width: 4,
+              height: 4,
+              backgroundColor: "primary.main",
+              borderRadius: "50%",
+            },
+            "& .MuiSlider-markLabel": {
+              fontSize: "0.75rem",
+              marginLeft: "10px",
+            },
+            "& .MuiSlider-rail": {
+              backgroundColor: "grey.300",
+              width: 4,
+              borderRadius: 2,
+            },
+            "& .MuiSlider-thumb": {
+              width: 24,
+              height: 24,
+              backgroundColor: "primary.main",
+              "&:hover, &.Mui-focusVisible": {
+                boxShadow: "0 0 0 8px rgba(25, 118, 210, 0.16)",
+              },
+            },
+            "& .MuiSlider-valueLabel": {
+              backgroundColor: "primary.main",
+            },
+          }}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `Tydzień ${value}`}
+        />
+      </Box>
     </Box>
   );
 }
