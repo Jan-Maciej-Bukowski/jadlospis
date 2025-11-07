@@ -18,16 +18,7 @@ import {
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import log from "../utils/log";
-
-const DAYS = [
-  "Poniedziałek",
-  "Wtorek",
-  "Środa",
-  "Czwartek",
-  "Piątek",
-  "Sobota",
-  "Niedziela",
-];
+import DAYS from "../utils/days.js";
 
 export default function ListDishesConfig({ dishes, onDishChange }) {
   // Upewnij się, że dishes jest tablicą i ma elementy
@@ -35,10 +26,10 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
     return null;
   }
 
-  console.log(dishes);
+  console.log("DISHES", dishes)
   dishes.map((dish) => {
     DAYS.map((day) => {
-      console.log((dish.allowedDays))// || DAYS).includes(day));
+      console.log("dni: "+dish.allowedDays)// || DAYS).includes(day));
     });
   });
 
@@ -71,6 +62,7 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
         </TableHead>
         <TableBody>
           {dishes.map((dish) => (
+            
             <TableRow key={dish.name}>
               <TableCell>{dish.name}</TableCell>
 

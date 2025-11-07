@@ -20,6 +20,7 @@ import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
 import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
+import DAYS from "../utils/days.js";
 
 // Stałe jednostki miary
 const UNITS = [
@@ -33,15 +34,6 @@ const UNITS = [
   { value: "szklanka", label: "szklanka (250ml)" },
 ];
 
-const DAYS = [
-  "poniedziałek",
-  "wtorek",
-  "środa",
-  "czwartek",
-  "piątek",
-  "sobota",
-  "niedziela",
-];
 
 export default function DodajPotrawe() {
   const [name, setName] = useState("");

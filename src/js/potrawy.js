@@ -1,14 +1,5 @@
 import log from "../utils/log";
-
-const DAYS = [
-  "poniedziałek",
-  "wtorek",
-  "środa",
-  "czwartek",
-  "piątek",
-  "sobota",
-  "niedziela",
-];
+import DAYS from "../utils/days.js";
 
 const stripHtml = (html = "") =>
   html

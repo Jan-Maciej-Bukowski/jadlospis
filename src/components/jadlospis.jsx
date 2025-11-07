@@ -20,22 +20,13 @@ import { settings } from "../js/settings.js";
 import { useTheme } from "@mui/material/styles";
 import ListDishesConfig from "./ListDishesConfig";
 import log from "../utils/log";
+import DAYS from "../utils/days.js";
 
 // ensure storage keys (safe: does not use hooks)
 ensureLocalDefault("dishes", []);
 ensureLocalDefault("dishLists", []);
 ensureLocalDefault("savedMenus", []);
 ensureLocalDefault("lastMenu", null);
-
-const DAYS = [
-  "Poniedziałek",
-  "Wtorek",
-  "Środa",
-  "Czwartek",
-  "Piątek",
-  "Sobota",
-  "Niedziela",
-];
 
 export default function Jadlospis() {
   // read available dishes from localStorage (live)

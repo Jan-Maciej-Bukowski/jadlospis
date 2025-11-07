@@ -10,7 +10,7 @@ import {
   Typography,
   TextField,
   Button,
-  Slider,
+  Sslider,
   FormGroup,
   FormControlLabel,
   Checkbox,
@@ -31,6 +31,7 @@ import PublishIcon from "@mui/icons-material/Publish";
 import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
 import log from "../utils/log";
+import DAYS from "../utils/days.js";
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
   ""
@@ -49,16 +50,6 @@ const UNITS = [
   { value: "łyżka", label: "łyżka (15ml)" },
   { value: "łyżeczka", label: "łyżeczka (5ml)" },
   { value: "szklanka", label: "szklanka (250ml)" },
-];
-
-const DAYS = [
-  "Poniedziałek",
-  "Wtorek",
-  "Środa",
-  "Czwartek",
-  "Piątek",
-  "Sobota",
-  "Niedziela",
 ];
 
 export default function Potrawy() {
