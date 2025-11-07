@@ -192,8 +192,9 @@ export default function PublicPotrawy() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Szukaj..."
           size="small"
+          
         />
-        <Button variant="contained" onClick={fetchList} disabled={loading}>
+        <Button variant="contained" className="primary" onClick={fetchList} disabled={loading}>
           Szukaj
         </Button>
       </Box>

@@ -251,6 +251,7 @@ export default function UstawieniaKonta() {
             <label htmlFor="avatar-file">
               <Button
                 variant="contained"
+                className="primary"
                 startIcon={<PhotoCameraIcon />}
                 component="span"
                 disabled={avatarUploading}
@@ -284,6 +285,7 @@ export default function UstawieniaKonta() {
           />
           <Button
             variant="contained"
+            className="primary"
             startIcon={<SaveIcon />}
             onClick={saveAccountChanges}
             disabled={loading}
@@ -320,6 +322,7 @@ export default function UstawieniaKonta() {
           />
           <Button
             variant="contained"
+            className="primary"
             color="primary"
             startIcon={<LockIcon />}
             onClick={changePassword}

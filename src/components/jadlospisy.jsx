@@ -518,6 +518,7 @@ export default function Jadlospisy() {
       >
         <Button
           variant="contained"
+          className="primary"
           onClick={() => {
             // quick export all saved menus
             const blob = new Blob([JSON.stringify(saved, null, 2)], {
@@ -545,7 +546,8 @@ export default function Jadlospisy() {
         </Button>
 
         <Button
-          variant="contained" // zmiana z outlined na contained
+          variant="contained"
+          className="primary"
           startIcon={<UploadFileIcon />}
           onClick={() => fileRef.current?.click()}
         >

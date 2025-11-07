@@ -164,6 +164,7 @@ export default function Ustawienia() {
               <Switch
                 checked={!!uiSettings.showFavoriteStar}
                 onChange={() => toggleUi("showFavoriteStar")}
+                
               />
             }
             label="Pokaż serce obok ulubionych"
@@ -218,7 +219,7 @@ export default function Ustawienia() {
       <Divider />
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-        <Button variant="contained" onClick={handleSaveAll}>
+        <Button variant="contained" className="primary" onClick={handleSaveAll}>
           Zapisz ustawienia
         </Button>
       </Box>

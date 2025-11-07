@@ -10,6 +10,7 @@ import {
   Typography,
   TextField,
   Button,
+  Slider,
   FormGroup,
   FormControlLabel,
   Checkbox,
@@ -35,7 +36,6 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
   ""
 );
-
 
 // ensure key exists (do not overwrite existing data)
 ensureLocalDefault("dishes", defaultDishes || []);
@@ -167,8 +167,8 @@ export default function Potrawy() {
       maxAcrossWeeks: dish.maxAcrossWeeks ?? "",
       allowedDays: dish.allowedDays || DAYS,
     };
-    setEditedDish(newSettings)
-    log("nowe ustawienia potrawy",newSettings);
+    setEditedDish(newSettings);
+    log("nowe ustawienia potrawy", newSettings);
   };
 
   const handleSave = (index) => {
@@ -463,6 +463,7 @@ export default function Potrawy() {
         />
         <Button
           variant="contained" // zmiana z outlined na contained
+          className="primary"
           onClick={() => {
             setFilterRating(0);
             setOnlyFavorites(false);
@@ -796,7 +797,7 @@ export default function Potrawy() {
                         <Button
                           startIcon={<AddIcon />}
                           onClick={addIngredient}
-                          sx={{ mt: 1 }}
+                          sx={{ mt: 1, color: "var(--color-primary)" }}
                         >
                           Dodaj składnik
                         </Button>
@@ -972,6 +973,7 @@ export default function Potrawy() {
                                   : undefined,
                             }}
                             title={opt.label}
+                            className=""
                           >
                             {opt.id === "" ? "Brak" : ""}
                           </Button>
@@ -1022,13 +1024,20 @@ export default function Potrawy() {
                       </Box>
                       <Button
                         variant="contained"
-                        color="primary"
+                        className="primary"
                         onClick={() => handleSave(index)}
                         sx={{ mr: 2 }}
                       >
                         Zapisz
                       </Button>
-                      <Button variant="outlined" onClick={handleCancel}>
+                      <Button
+                        variant="outlined"
+                        sx={{
+                          borderColor: "var(--color-primary)",
+                          color: "var(--color-primary)",
+                        }}
+                        onClick={handleCancel}
+                      >
                         Anuluj
                       </Button>
                     </Box>

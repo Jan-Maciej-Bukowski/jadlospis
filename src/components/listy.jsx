@@ -262,7 +262,7 @@ export default function Listy() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
         />
-        <Button variant="contained" onClick={createList}>
+        <Button variant="contained" className="primary" onClick={createList}>
           Dodaj listę
         </Button>
       </Box>

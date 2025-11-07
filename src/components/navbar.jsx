@@ -418,7 +418,7 @@ export default function Navbar() {
             sm: 70, // 600 - 900
             md: 75, // 900 - 1200
           },
-          width: '100vw',
+          width: "100vw",
           backgroundColor: "#024059",
           boxShadow: "none",
         }}
@@ -429,10 +429,6 @@ export default function Navbar() {
             edge="start"
             color="inherit"
             onClick={() => setOpen(true)}
-            sx={{
-              width: 80,
-              height: 80,
-            }}
           >
             <MenuIcon />
           </IconButton>
@@ -491,7 +487,8 @@ export default function Navbar() {
               </List>
               {gi < menuGroups.length - 1 && <Divider />}
             </Box>
-          ))};
+          ))}
+          ;
         </Box>
       </Drawer>
 

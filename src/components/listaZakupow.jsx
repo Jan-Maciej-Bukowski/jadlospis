@@ -269,6 +269,7 @@ export default function ListaZakupow() {
           variant="contained"
           startIcon={<ShoppingCartIcon />}
           onClick={generate}
+          className="primary"
         >
           Generuj listę zakupów
         </Button>

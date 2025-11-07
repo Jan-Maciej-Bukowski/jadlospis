@@ -376,7 +376,7 @@ export default function PublicJadlospisy({ onLoad }) {
           placeholder="Szukaj po tytule..."
           size="small"
         />
-        <Button variant="contained" onClick={fetchList} disabled={loading}>
+        <Button variant="contained" className="primary" onClick={fetchList} disabled={loading}>
           Szukaj
         </Button>
       </Box>

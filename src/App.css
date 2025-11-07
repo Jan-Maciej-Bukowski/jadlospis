@@ -25,7 +25,7 @@ body {
 #navbar {
   color: var(--color-text-on-dark);
   width: 100vw !important;
-  position: fixed;
+  /* position: fixed; */
 
   z-index: 2;
 }
