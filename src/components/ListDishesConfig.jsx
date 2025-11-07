@@ -26,18 +26,25 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
     return null;
   }
 
-  console.log("DISHES", dishes)
+  console.log("DISHES", dishes);
   dishes.map((dish) => {
     DAYS.map((day) => {
-      console.log("dni: "+dish.allowedDays)// || DAYS).includes(day));
+      console.log("dni: " + dish.allowedDays); // || DAYS).includes(day));
     });
   });
 
   return (
-    <TableContainer component={Paper} sx={{ mt: 2, mb: 2 }}>
+    <TableContainer
+      component={Paper}
+      sx={{ mt: 2, mb: 2 }}
+      className="config-table"
+      id="temporary-meals-config"
+    >
       <Typography
         variant="h6"
-        sx={{ p: 2, borderBottom: "1px solid rgba(0,0,0,0.12)", color: 'var(--color-bg-dark)'}}
+        className="config-header"
+        id="temporary-meals-config-header"
+        sx={{ p: 2 }}
       >
         Tymczasowa konfiguracja potraw
         <Tooltip title="Te ustawienia działają tylko dla następnie wygenerowanego jadłospisu. Nie zmieniają oryginalnych ustawień potraw.">
@@ -49,31 +56,42 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
 
       <Table size="small">
         <TableHead>
-          <TableRow>
-            <TableCell>Potrawa</TableCell>
-            <TableCell>Dozwolone dni</TableCell>
-            <TableCell align="center" sx={{ width: 160 }}>
+          <TableRow className="config-table-header">
+            <TableCell className="config-column-header">Potrawa</TableCell>
+            <TableCell className="config-column-header">
+              Dozwolone dni
+            </TableCell>
+            <TableCell
+              className="config-column-header"
+              align="center"
+              sx={{ width: 160 }}
+            >
               Max. na tydzień
             </TableCell>
-            <TableCell align="center" sx={{ width: 160 }}>
+            <TableCell
+              className="config-column-header"
+              align="center"
+              sx={{ width: 160 }}
+            >
               Max. w jadłospisie
             </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {dishes.map((dish) => (
-            
-            <TableRow key={dish.name}>
-              <TableCell>{dish.name}</TableCell>
+            <TableRow key={dish.name} className="config-row">
+              <TableCell className="config-meal-name">{dish.name}</TableCell>
 
-              <TableCell>
-                <FormGroup row>
+              <TableCell className="config-days">
+                <FormGroup row className="config-days-group">
                   {DAYS.map((day) => (
                     <FormControlLabel
                       key={day}
+                      className="config-day-checkbox"
                       control={
                         <Checkbox
                           size="small"
+                          className="config-checkbox"
                           checked={(dish.allowedDays || DAYS).includes(day)}
                           onChange={(e) => {
                             const currentDays = dish.allowedDays || DAYS;
@@ -97,10 +115,11 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                 </FormGroup>
               </TableCell>
 
-              <TableCell align="center">
+              <TableCell align="center" className="config-max-week">
                 <TextField
                   type="number"
                   size="small"
+                  className="config-number-input"
                   value={dish.maxRepeats || 1}
                   onChange={(e) =>
                     onDishChange(dish.name, {
@@ -117,10 +136,11 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                 />
               </TableCell>
 
-              <TableCell align="center">
+              <TableCell align="center" className="config-max-total">
                 <TextField
                   type="number"
                   size="small"
+                  className="config-number-input"
                   value={dish.maxAcrossWeeks || ""}
                   onChange={(e) =>
                     onDishChange(dish.name, {

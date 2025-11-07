@@ -70,7 +70,7 @@ body {
 }
 
 .table-meal:hover {
-  /* background-color: black !important; */
+  scale: 0.95;
   cursor: grab;
 }
 
@@ -89,4 +89,50 @@ body {
 html.dragging,
 body.dragging {
   cursor: grabbing !important;
+}
+
+#temporary-meals-config-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--color-bg-dark);
+}
+
+/* ListDishesConfig styles */
+.config-table {
+  background-color: var(--color-bg-light);
+  border-radius: 8px;
+}
+
+.config-header {
+  color: var(--color-bg-dark);
+  font-weight: 500;
+}
+
+.config-table-header {
+  /* background-color: var(--color-surface-dark); */
+  color: var(--color-text-main);
+}
+
+.config-column-header {
+  font-weight: 600;
+  color: var(--color-bg-dark);
+}
+
+.config-row:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.config-meal-name {
+  font-weight: 500;
+}
+
+.config-days-group {
+  gap: 8px;
+}
+
+.config-day-checkbox {
+  margin-right: 0;
+}
+
+.config-number-input input {
+  font-size: 0.9rem;
 }

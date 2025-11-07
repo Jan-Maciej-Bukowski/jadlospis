@@ -10,7 +10,6 @@ import {
   Typography,
   TextField,
   Button,
-  Sslider,
   FormGroup,
   FormControlLabel,
   Checkbox,
