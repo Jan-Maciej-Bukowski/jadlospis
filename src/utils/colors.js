@@ -13,16 +13,3 @@ export const DISH_COLORS = [
   { id: "#ddc0ff", label: "Jasny fiolet", color: "#ddc0ff" },
   { id: "#ffcfdf", label: "Jasny róż", color: "#ffcfdf" },
 ];
-
-// Kolory motywu aplikacji
-export const THEME_COLORS = {
-  red: "#f44336",
-  orange: "#ff9800",
-  yellow: "#ffeb3b",
-  green: "#4caf50",
-  blue: "#2196f3",
-  indigo: "#3f51b5",
-  purple: "#9c27b0",
-  dark: "#212121",
-  defaultCustom: "#1976d2", // domyślny kolor dla customowego
-};

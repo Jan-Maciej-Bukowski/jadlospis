@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Box,
@@ -51,11 +51,9 @@ import UstawieniaKonta from "./ustawieniaKonta";
 import Ustawienia from "./ustawienia";
 import Logowanie from "./logowanie";
 import Swal from "sweetalert2";
-import { ThemeContext } from "../context/ThemeContext";
+import logoImg from "../assets/logo.png";
 
 export default function Navbar() {
-  const { changeTheme, updateCustomColor } = useContext(ThemeContext);
-
   // podstawowe stany komponentu
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -235,29 +233,6 @@ export default function Navbar() {
     setAuthOpen(false);
   };
 
-  // fallbackowa paleta kolorów używana przy renderowaniu przycisków/pepytków
-  const customHex = [
-    "#F44336",
-    "#E91E63",
-    "#9C27B0",
-    "#673AB7",
-    "#3F51B5",
-    "#2196F3",
-    "#03A9F4",
-    "#00BCD4",
-    "#009688",
-    "#4CAF50",
-    "#8BC34A",
-    "#CDDC39",
-    "#FFEB3B",
-    "#FFC107",
-    "#FF9800",
-    "#FF5722",
-    "#795548",
-    "#9E9E9E",
-    "#607D8B",
-  ];
-
   // auth panel actions
   const goToLogin = () => {
     setAuthMode("login");
@@ -433,16 +408,40 @@ export default function Navbar() {
 
   return (
     <>
-      <AppBar position="static">
+      <AppBar
+        position="static"
+        elevation={0}
+        id="navbar"
+        sx={{
+          height: {
+            xs: 60, // 0 - 600
+            sm: 70, // 600 - 900
+            md: 75, // 900 - 1200
+          },
+          width: '100vw',
+          backgroundColor: "#024059",
+          boxShadow: "none",
+        }}
+      >
         <Toolbar>
           <IconButton
             size="large"
             edge="start"
             color="inherit"
             onClick={() => setOpen(true)}
+            sx={{
+              width: 80,
+              height: 80,
+            }}
           >
             <MenuIcon />
           </IconButton>
+          <Box
+            component="img"
+            src={logoImg}
+            alt="logo"
+            sx={{ width: 80, height: 80, borderRadius: 2, marginRight: 1 }}
+          />
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6" component="div">
               Planer Jadłospisów
@@ -460,7 +459,6 @@ export default function Navbar() {
               )}
             </Typography>
           </Box>
-
           {/* przycisk otwierający prawy auth-panel */}
           <IconButton
             color="inherit"
@@ -493,68 +491,7 @@ export default function Navbar() {
               </List>
               {gi < menuGroups.length - 1 && <Divider />}
             </Box>
-          ))}
-
-          {/* Sekcja zmiany motywu */}
-          <List>
-            <ListItem>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                Zmień motyw
-              </Typography>
-            </ListItem>
-          </List>
-
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, p: 2 }}>
-            {[
-              { name: "red", color: "#f44336" },
-              { name: "orange", color: "#ff9800" },
-              { name: "yellow", color: "#ffeb3b" },
-              { name: "green", color: "#4caf50" },
-              { name: "blue", color: "#2196f3" },
-              { name: "indigo", color: "#3f51b5" },
-              { name: "purple", color: "#9c27b0" },
-              { name: "dark", color: "#212121" },
-            ].map((theme) => (
-              <Box
-                key={theme.name}
-                onClick={() => changeTheme(theme.name)}
-                sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  backgroundColor: theme.color,
-                  cursor: "pointer",
-                  border: "2px solid #fff",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-                }}
-              />
-            ))}
-          </Box>
-
-          {/* Pole do wpisania własnego koloru */}
-          <Box sx={{ p: 2 }}>
-            <TextField
-              label="Własny kolor HEX"
-              variant="outlined"
-              fullWidth
-              value={customHexInput}
-              onChange={(e) => setCustomHexInput(e.target.value)}
-              sx={{ mb: 2 }}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCustomColorApply();
-              }}
-            >
-              Zastosuj
-            </Button>
-          </Box>
+          ))};
         </Box>
       </Drawer>
 

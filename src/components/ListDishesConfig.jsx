@@ -46,7 +46,7 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
     <TableContainer component={Paper} sx={{ mt: 2, mb: 2 }}>
       <Typography
         variant="h6"
-        sx={{ p: 2, borderBottom: "1px solid rgba(0,0,0,0.12)" }}
+        sx={{ p: 2, borderBottom: "1px solid rgba(0,0,0,0.12)", color: 'var(--color-bg-dark)'}}
       >
         Tymczasowa konfiguracja potraw
         <Tooltip title="Te ustawienia działają tylko dla następnie wygenerowanego jadłospisu. Nie zmieniają oryginalnych ustawień potraw.">
