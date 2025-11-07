@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import log from "../utils/log";
 import {
   Box,
   TextField,
@@ -32,6 +33,16 @@ const UNITS = [
   { value: "szklanka", label: "szklanka (250ml)" },
 ];
 
+const DAYS = [
+  "poniedziałek",
+  "wtorek",
+  "środa",
+  "czwartek",
+  "piątek",
+  "sobota",
+  "niedziela",
+];
+
 export default function DodajPotrawe() {
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
@@ -46,6 +57,7 @@ export default function DodajPotrawe() {
     obiad: true,
     kolacja: true,
   });
+  const [allowedDays, setAllowedDays] = useState([...DAYS]);
   // lists management
   const [availableLists, setAvailableLists] = useState(() => {
     try {
@@ -172,12 +184,13 @@ export default function DodajPotrawe() {
   // walidacja: składniki
   const validateIngredients = () => {
     const errors = ingredients.flatMap((ing, i) => {
-      //console.log(ing,i)
-      if (!ing.name.trim()) return [`${ing.name ?? "Składnik "+i+1}: Nazwa jest wymagana`];
-      if (!ing.amount) return [`${ing.name ?? "Składnik "+i+1}: Ilość jest wymagana`];
+      if (!ing.name.trim())
+        return [`${ing.name ?? "Składnik " + i + 1}: Nazwa jest wymagana`];
+      if (!ing.amount)
+        return [`${ing.name ?? "Składnik " + i + 1}: Ilość jest wymagana`];
 
       const error = validateAmount(ing.amount, ing.unit);
-      if (error) return [`${ing.name ?? "Składnik "+i+1}: ${error}`];
+      if (error) return [`${ing.name ?? "Składnik " + i + 1}: ${error}`];
 
       return [];
     });
@@ -261,8 +274,8 @@ export default function DodajPotrawe() {
       favorite: favorite,
       color: color,
       maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
+      allowedDays: allowedDays.length ? allowedDays : DAYS,
     };
-    console.log("dodano potrawę: ", data);
     addDish(data);
 
     // przypisz potrawę do wybranych list (jeśli wybrano)
@@ -288,7 +301,12 @@ export default function DodajPotrawe() {
     setMaxAcrossWeeks("");
     setMaxPerDay("");
     setSelectedLists([]);
+    setAllowedDays([...DAYS]);
   }
+
+  useEffect(() => {
+    log("current allowedDays:", allowedDays);
+  }, [allowedDays]);
 
   return (
     <Box
@@ -545,6 +563,28 @@ export default function DodajPotrawe() {
             label="Kolacja"
           />
         </FormGroup>
+        <Typography gutterBottom>Dozwolone dni:</Typography>
+        <FormGroup row>
+          {DAYS.map((day) => (
+            <FormControlLabel
+              key={day}
+              control={
+                <Checkbox
+                  checked={allowedDays.includes(day)}
+                  onChange={() => {
+                    setAllowedDays((prev) =>
+                      prev.includes(day)
+                        ? prev.filter((d) => d !== day)
+                        : [...prev, day]
+                    );
+                  }}
+                  size="small"
+                />
+              }
+              label={day}
+            />
+          ))}
+        </FormGroup>
         <Typography gutterBottom>Ocena początkowa:</Typography>
         <Rating value={rating} onChange={(e, val) => setRating(val || 0)} />
 
@@ -621,3 +661,38 @@ export default function DodajPotrawe() {
     </Box>
   );
 }
+
+// W komponencie Jadlospis, zmień funkcję startTouchDragCell:
+
+const startTouchDragCell = (e, src) => {
+  const t = e.touches && e.touches[0];
+  if (!t) return;
+
+  // Zachowaj poprzedni stan touchAction
+  const prevTouchAction = document.body.style.touchAction;
+
+  e.stopPropagation();
+
+  window.__touchDrag = {
+    payload: src,
+    ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
+    prevTouchAction, // zapisz poprzedni stan
+  };
+
+  // ...rest of the function...
+
+  const cleanup = () => {
+    try {
+      if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
+    } catch (err) {}
+    window.__touchDrag = null;
+    // Przywróć poprzedni stan touchAction
+    document.body.style.touchAction = window.__touchDrag?.prevTouchAction || "";
+    window.removeEventListener("touchmove", onMove, { passive: false });
+    window.removeEventListener("touchend", onEnd);
+    window.removeEventListener("touchcancel", onEnd);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
+
+  // ...rest of the function...
+};

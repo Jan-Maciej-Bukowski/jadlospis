@@ -30,10 +30,12 @@ import { Rating } from "@mui/material";
 import PublishIcon from "@mui/icons-material/Publish";
 import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
+import log from "../utils/log";
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
   ""
 );
+
 
 // ensure key exists (do not overwrite existing data)
 ensureLocalDefault("dishes", defaultDishes || []);
@@ -47,6 +49,16 @@ const UNITS = [
   { value: "łyżka", label: "łyżka (15ml)" },
   { value: "łyżeczka", label: "łyżeczka (5ml)" },
   { value: "szklanka", label: "szklanka (250ml)" },
+];
+
+const DAYS = [
+  "Poniedziałek",
+  "Wtorek",
+  "Środa",
+  "Czwartek",
+  "Piątek",
+  "Sobota",
+  "Niedziela",
 ];
 
 export default function Potrawy() {
@@ -86,12 +98,16 @@ export default function Potrawy() {
     favorite: false,
     color: "",
     maxAcrossWeeks: "",
+    allowedDays: DAYS,
   });
 
   // dishes state: load from localStorage or fallback to defaultDishes
   const [dishes, setDishes] = useState(() =>
     safeParse(localStorage.getItem("dishes"), defaultDishes || [])
   );
+
+  // nowy stan dla dozwolonych dni
+  const [allowedDays, setAllowedDays] = useState(DAYS);
 
   useEffect(() => {
     // listen for external updates (other tabs / sync)
@@ -134,7 +150,7 @@ export default function Potrawy() {
   const handleEdit = (index) => {
     const dish = dishes[index] || {};
     setEditIndex(index);
-    setEditedDish({
+    const newSettings = {
       name: dish.name || "",
       tags: Array.isArray(dish.tags) ? dish.tags.join(", ") : dish.tags || "",
       params: dish.params || "",
@@ -159,7 +175,10 @@ export default function Potrawy() {
       favorite: !!dish.favorite,
       color: dish.color || "",
       maxAcrossWeeks: dish.maxAcrossWeeks ?? "",
-    });
+      allowedDays: dish.allowedDays || DAYS,
+    };
+    setEditedDish(newSettings)
+    log("nowe ustawienia potrawy",newSettings);
   };
 
   const handleSave = (index) => {
@@ -211,6 +230,8 @@ export default function Potrawy() {
           editedDish.maxAcrossWeeks === "" || editedDish.maxAcrossWeeks == null
             ? null
             : Number(editedDish.maxAcrossWeeks),
+        allowedDays:
+          editedDish.allowedDays.length > 0 ? editedDish.allowedDays : DAYS,
       };
       saveLocal(copy);
       return copy;
@@ -233,6 +254,7 @@ export default function Potrawy() {
       favorite: false,
       color: "",
       maxAcrossWeeks: "",
+      allowedDays: DAYS,
     });
   };
 
@@ -247,7 +269,6 @@ export default function Potrawy() {
   };
 
   const toggleFavorite = (index, event) => {
-    console.log("toggled");
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -403,6 +424,15 @@ export default function Potrawy() {
       newIngredients[index] = { ...newIngredients[index], [field]: value };
       return { ...prev, ingredients: newIngredients };
     });
+  };
+
+  const handleDayChange = (day) => {
+    setEditedDish((prev) => ({
+      ...prev,
+      allowedDays: prev.allowedDays.includes(day)
+        ? prev.allowedDays.filter((d) => d !== day)
+        : [...prev.allowedDays, day],
+    }));
   };
 
   return (
@@ -894,6 +924,29 @@ export default function Potrawy() {
                           label="Kolacja"
                         />
                       </FormGroup>
+
+                      {/* NOWA SEKCJA: Dozwolone dni tygodnia */}
+                      <Typography gutterBottom sx={{ mt: 2 }}>
+                        Dozwolone dni tygodnia:
+                      </Typography>
+                      <FormGroup row>
+                        {DAYS.map((day) => (
+                          <FormControlLabel
+                            key={day}
+                            control={
+                              <Checkbox
+                                checked={(
+                                  editedDish.allowedDays || []
+                                ).includes(day)}
+                                onChange={() => handleDayChange(day)}
+                                size="small"
+                              />
+                            }
+                            label={day}
+                          />
+                        ))}
+                      </FormGroup>
+
                       <Typography gutterBottom sx={{ mt: 2 }}>
                         Kolor tła w jadłospisie:
                       </Typography>

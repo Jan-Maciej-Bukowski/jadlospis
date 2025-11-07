@@ -18,12 +18,24 @@ import {
 import { generateMenu } from "../js/generateMenu";
 import { settings } from "../js/settings.js";
 import { useTheme } from "@mui/material/styles";
+import ListDishesConfig from "./ListDishesConfig";
+import log from "../utils/log";
 
 // ensure storage keys (safe: does not use hooks)
 ensureLocalDefault("dishes", []);
 ensureLocalDefault("dishLists", []);
 ensureLocalDefault("savedMenus", []);
 ensureLocalDefault("lastMenu", null);
+
+const DAYS = [
+  "Poniedziałek",
+  "Wtorek",
+  "Środa",
+  "Czwartek",
+  "Piątek",
+  "Sobota",
+  "Niedziela",
+];
 
 export default function Jadlospis() {
   // read available dishes from localStorage (live)
@@ -156,8 +168,49 @@ export default function Jadlospis() {
     return warnings;
   };
 
+  // temporary per-dish overrides for the currently selected source (only for generation)
+  const [tempConfigs, setTempConfigs] = useState({}); // tymczasowe konfiguracje
+
+  // helper: return base dishes for selected list (unchanged), used by other code
+  const baseDishesForList = () => {
+    return getDishesForGeneration(); // unchanged function above
+  };
+
+  // merged dishes: base dish objects merged with tempConfigs (do NOT persist)
+  const mergedDishesForList = () => {
+    const base = baseDishesForList();
+    if (!Array.isArray(base) || base.length === 0) return [];
+
+    return base
+      .map((dish) => {
+        if (!dish || !dish.name) return dish;
+
+        const tempConfig = tempConfigs[dish.name];
+        if (!tempConfig) return dish;
+
+        return {
+          ...dish,
+          ...tempConfig,
+        };
+      })
+      .filter(Boolean);
+  };
+
+  // when user edits per-dish config in the UI, update tempConfigs only
+  const handleDishConfigChange = (dishName, updatedDish) => {
+    setTempConfigs((prev) => ({
+      ...prev,
+      [dishName]: {
+        ...prev[dishName], // zachowaj poprzednie ustawienia tej potrawy
+        ...updatedDish, // nadpisz nowymi ustawieniami
+      },
+    }));
+  };
+
+  // use mergedDishesForList() when generating menu
   const handleGenerateMenu = async () => {
-    const source = getDishesForGeneration();
+    const source = mergedDishesForList(); // Użyj merged dishes zamiast mapowania
+
     if (!Array.isArray(source) || source.length === 0) {
       Swal.fire({
         icon: "warning",
@@ -194,8 +247,6 @@ export default function Jadlospis() {
       daysOfWeek,
       weeksToGenerate
     );
-
-    console.log(generated);
 
     // Sprawdź ile jest pustych miejsc w wygenerowanym jadłospisie
     const placeholder = settings.noDishText || "Brak potraw";
@@ -460,12 +511,15 @@ export default function Jadlospis() {
     const t = e.touches && e.touches[0];
     if (!t) return;
 
-    // Pozwól na naturalne scrollowanie, jeśli nie przeciągamy
+    // Zachowaj poprzedni stan touchAction
+    const prevTouchAction = document.body.style.touchAction;
+
     e.stopPropagation();
 
     window.__touchDrag = {
       payload: src,
       ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
+      prevTouchAction, // zapisz poprzedni stan
     };
 
     window.__touchDrag.ghost.style.top = t.clientY + 6 + "px";
@@ -476,7 +530,9 @@ export default function Jadlospis() {
         if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
       } catch (err) {}
       window.__touchDrag = null;
-      document.body.style.touchAction = prevTouchAction || "";
+      // Przywróć poprzedni stan touchAction
+      document.body.style.touchAction =
+        window.__touchDrag?.prevTouchAction || "";
       window.removeEventListener("touchmove", onMove, { passive: false });
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
@@ -567,7 +623,6 @@ export default function Jadlospis() {
         if (!ref) return;
         const rect = ref.getBoundingClientRect();
         const distance = Math.abs(rect.top - 0); //viewportMiddle); gura, a nie środek ekranu!
-        //console.log(`tydzień ${index + 1}: ${distance}`)
         if (distance < closest.distance) {
           closest = { week: index + 1, distance };
         }
@@ -605,6 +660,37 @@ export default function Jadlospis() {
     };
   }, []);
 
+  // Najpierw dodaj useEffect, który będzie inicjalizował tempConfigs gdy zmienia się selectedListId
+  useEffect(() => {
+    if (selectedListId === "all") {
+      setTempConfigs({});
+      return;
+    }
+
+    const dishes = getDishesForGeneration();
+    if (!Array.isArray(dishes) || dishes.length === 0) return;
+
+    // Stwórz obiekt z domyślnymi wartościami dla każdej potrawy
+    const initialConfigs = {};
+    dishes.forEach((dish) => {
+      if (!dish || !dish.name) return; // Upewnij się że dish jest poprawny
+
+      initialConfigs[dish.name] = {
+        allowedDays: dish.allowedDays || DAYS,
+        maxRepeats: dish.maxRepeats || 1,
+        maxAcrossWeeks: dish.maxAcrossWeeks || null,
+        maxPerDay: dish.maxPerDay || null,
+        probability: dish.probability || 100,
+        allowedMeals: dish.allowedMeals || ["śniadanie", "obiad", "kolacja"],
+      };
+    });
+
+    // Ustaw tylko jeśli są jakieś konfiguracje
+    if (Object.keys(initialConfigs).length > 0) {
+      setTempConfigs(initialConfigs);
+    }
+  }, [selectedListId]);
+
   return (
     <Box sx={{ p: 3, display: "flex" }}>
       {/* Główna zawartość */}
@@ -628,7 +714,10 @@ export default function Jadlospis() {
             SelectProps={{ native: true }}
             label="Źródło potraw"
             value={selectedListId}
-            onChange={(e) => setSelectedListId(e.target.value)}
+            onChange={(e) => {
+              setSelectedListId(e.target.value);
+              setTempConfigs({}); // Reset temp configs when source changes
+            }}
             size="small"
           >
             <option value="all">Wszystkie potrawy</option>
@@ -1684,6 +1773,13 @@ export default function Jadlospis() {
               )}
             </>
           ))}
+        {/* Dodaj tabelę konfiguracji jeśli wybrano konkretną listę */}
+        {selectedListId !== "all" && mergedDishesForList().length > 0 && (
+          <ListDishesConfig
+            dishes={mergedDishesForList()}
+            onDishChange={handleDishConfigChange}
+          />
+        )}
       </Box>
 
       {/* Slider po prawej stronie */}

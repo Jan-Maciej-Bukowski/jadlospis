@@ -25,6 +25,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
 import html2canvas from "html2canvas";
+import log from "../utils/log";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,

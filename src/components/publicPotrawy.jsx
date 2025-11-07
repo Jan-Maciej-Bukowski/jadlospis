@@ -105,7 +105,7 @@ export default function PublicPotrawy() {
 
   const handleReport = async (item) => {
     try {
-      const { value: reason } = await Swal.fire({
+      const { value: reason, isConfirmed } = await Swal.fire({
         title: `Zgłoś potrawę "${item.name}"`,
         input: "select",
         inputOptions: {
@@ -116,6 +116,7 @@ export default function PublicPotrawy() {
         },
         inputPlaceholder: "Wybierz powód",
         showCancelButton: true,
+        confirmButtonText: "Dalej",
         cancelButtonText: "Anuluj",
         inputValidator: (value) => {
           if (!value) {
@@ -124,15 +125,20 @@ export default function PublicPotrawy() {
         },
       });
 
-      if (!reason) return;
+      if (!isConfirmed || !reason) return;
 
-      const { value: details } = await Swal.fire({
-        title: "Dodatkowe informacje",
-        input: "textarea",
-        inputPlaceholder: "Opcjonalnie możesz dodać szczegóły...",
-        showCancelButton: true,
-        cancelButtonText: "Anuluj",
-      });
+      const { value: details, isConfirmed: detailsConfirmed } = await Swal.fire(
+        {
+          title: "Szczegóły zgłoszenia (opcjonalnie)",
+          input: "textarea",
+          inputPlaceholder: "Opcjonalnie możesz dodać szczegóły...",
+          showCancelButton: true,
+          confirmButtonText: "Wyślij zgłoszenie",
+          cancelButtonText: "Anuluj",
+        }
+      );
+
+      if (!detailsConfirmed) return;
 
       const token = localStorage.getItem("token");
       if (!token) {

@@ -1,3 +1,15 @@
+import log from "../utils/log";
+
+const DAYS = [
+  "poniedziałek",
+  "wtorek",
+  "środa",
+  "czwartek",
+  "piątek",
+  "sobota",
+  "niedziela",
+];
+
 const stripHtml = (html = "") =>
   html
     .replace(/<[^>]+>/g, "")
@@ -101,6 +113,12 @@ const normalizeDish = (dish) => {
       normalized = true;
     }
   }
+
+  // Dodaj normalizację allowedDays
+  if (!Array.isArray(dish.allowedDays)) {
+    dish.allowedDays = DAYS;
+    normalized = true;
+  }
 };
 
 dishes.forEach(normalizeDish);
@@ -110,6 +128,7 @@ if (normalized) {
 
 // addDish: merge with existing localStorage instead of using a static list
 export function addDish(dish) {
+  log("nowa potrawa została dodana", dish);
   if (!dish || !dish.name) return null;
   const existing = readDishes();
 
@@ -158,6 +177,14 @@ export function addDish(dish) {
           ? null
           : Number(dish.maxAcrossWeeks)
         : null,
+    allowedDays: Array.isArray(dish.allowedDays)
+      ? dish.allowedDays
+      : dish.allowedDays
+      ? String(dish.allowedDays)
+          .split(",")
+          .map((d) => d.trim())
+          .filter(Boolean)
+      : DAYS,
   };
 
   // if exact name exists, append unique suffix to avoid accidental replace
@@ -194,7 +221,3 @@ export function replaceAllDishes(arr) {
 }
 
 export default getAllDishes;
-
-window.dane = () => {
-  console.log(dishes);
-};

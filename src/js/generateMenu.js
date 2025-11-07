@@ -1,6 +1,6 @@
+import log from "../utils/log";
+
 export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
-  // returns array of weeks: [ week0DaysArray, week1DaysArray, ... ]
-  console.log(dishes)
   const W = Math.max(1, Number(weeks) || 1);
   const { excludedTags = {}, specialDishes = {} } = settings || {};
   const placeholder = settings?.noDishText || "Brak potraw";
@@ -17,43 +17,31 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
           dayIndex: di,
           dayName,
           meal,
-          assigned: null, // { name, favorite?, color? } or placeholder
+          assigned: null,
           special: false,
         });
       }
     }
   }
 
-  // Apply specialDishes: if defined for a specific day+meal, assign one of them
-  // specialDishes structure is expected: { "Poniedziałek": { śniadanie: "Dish A, Dish B", ... }, ... }
-  slots.forEach((slot) => {
-    const sdRaw = specialDishes?.[slot.dayName]?.[slot.meal];
-    if (sdRaw) {
-      const list = ("" + sdRaw)
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (list.length > 0) {
-        const choice = list[Math.floor(Math.random() * list.length)];
-        slot.assigned = { name: choice, favorite: false };
-        slot.special = true;
-      }
-    }
-  });
-
   // Helpers to check if dish can go to slot (tags/allowedMeals/per-week/per-global checks done externally)
   const slotAllowsDish = (slot, dish, globalCounts, weekCountsForWeek) => {
     if (!dish) return false;
+
+    // allowedDays: if provided use it, otherwise allow all days (use daysOfWeek param)
+    const allowedDays = Array.isArray(dish.allowedDays)
+      ? dish.allowedDays
+      : daysOfWeek;
+    if (!allowedDays.includes(slot.dayName)) return false;
+
     const allowedMeals = dish.allowedMeals || ["śniadanie", "obiad", "kolacja"];
     if (!allowedMeals.includes(slot.meal)) return false;
-    const excl = excludedTags[slot.dayName]?.[slot.meal] || [];
+    const excl = settings?.excludedTags?.[slot.dayName]?.[slot.meal] || [];
     if (Array.isArray(dish.tags) && dish.tags.some((t) => excl.includes(t)))
       return false;
-    // weekCountsForWeek is an object mapping dish.name -> count in that week
     const currentWeekCount = weekCountsForWeek[dish.name] || 0;
     const maxPerWeek = dish.maxRepeats ?? Infinity;
     if (currentWeekCount >= maxPerWeek) return false;
-    // per-day limit: count already placed occurrences of this dish in same week & day
     const currentDayCount = slots.filter(
       (x) =>
         x.week === slot.week &&
@@ -69,7 +57,7 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     return true;
   };
 
-  // Pre-calc available slots per dish (unassigned and matching allowedMeals/tags)
+  // Pre-calc available slots per dish (unassigned and matching allowedMeals/tags/allowedDays)
   const availableSlotsForDish = (dish) =>
     slots.filter(
       (s) =>
@@ -78,9 +66,12 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
         (dish.allowedMeals || ["śniadanie", "obiad", "kolacja"]).includes(
           s.meal
         ) &&
+        (Array.isArray(dish.allowedDays)
+          ? dish.allowedDays.includes(s.dayName)
+          : true) &&
         !(
           Array.isArray(dish.tags) &&
-          (excludedTags[s.dayName]?.[s.meal] || []).some((t) =>
+          (settings?.excludedTags?.[s.dayName]?.[s.meal] || []).some((t) =>
             dish.tags.includes(t)
           )
         )
@@ -196,7 +187,12 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
         "kolacja",
       ];
       if (!allowedMeals.includes(slot.meal)) return false;
-      const excl = excludedTags[slot.dayName]?.[slot.meal] || [];
+      if (
+        Array.isArray(dish.allowedDays) &&
+        !dish.allowedDays.includes(slot.dayName)
+      )
+        return false;
+      const excl = settings?.excludedTags?.[slot.dayName]?.[slot.meal] || [];
       if (Array.isArray(dish.tags) && dish.tags.some((t) => excl.includes(t)))
         return false;
       // week/local counts
@@ -274,6 +270,6 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     }
     weeksMenus.push(weekMenu);
   }
-  
+
   return weeksMenus;
 }

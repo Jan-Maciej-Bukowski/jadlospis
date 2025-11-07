@@ -18,6 +18,18 @@ const PublicDishSchema = new mongoose.Schema({
   },
   public: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
+  allowedDays: {
+    type: [String],
+    default: [
+      "Poniedziałek",
+      "Wtorek",
+      "Środa",
+      "Czwartek",
+      "Piątek",
+      "Sobota",
+      "Niedziela",
+    ],
+  },
 });
 
 module.exports = mongoose.model("PublicDish", PublicDishSchema);

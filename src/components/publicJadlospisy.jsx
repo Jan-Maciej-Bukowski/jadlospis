@@ -285,71 +285,81 @@ export default function PublicJadlospisy({ onLoad }) {
   };
 
   const handleReport = async (item) => {
-    const { value: reason } = await Swal.fire({
-      title: `Zgłoś jadłospis "${item.title}"`,
-      input: "textarea",
-      inputLabel: "Powód zgłoszenia",
-      inputPlaceholder: "Wpisz powód zgłoszenia...",
-      showCancelButton: true,
-      confirmButtonText: "Wyślij zgłoszenie",
-      cancelButtonText: "Anuluj",
-      inputAttributes: {
-        "aria-label": "Wpisz powód zgłoszenia",
-      },
-    });
-
-    if (reason) {
-      const { value: details } = await Swal.fire({
-        title: "Szczegóły zgłoszenia (opcjonalnie)",
-        input: "textarea",
-        inputPlaceholder: "Dodatkowe szczegóły...",
+    try {
+      const { value: reason, isConfirmed } = await Swal.fire({
+        title: `Zgłoś jadłospis "${item.title}"`,
+        input: "select",
+        inputOptions: {
+          spam: "Spam",
+          offensive: "Obraźliwa treść",
+          inappropriate: "Nieodpowiednia zawartość",
+          other: "Inny powód",
+        },
+        inputPlaceholder: "Wybierz powód",
         showCancelButton: true,
-        confirmButtonText: "Wyślij zgłoszenie",
+        confirmButtonText: "Dalej",
         cancelButtonText: "Anuluj",
-        inputAttributes: {
-          "aria-label": "Wpisz dodatkowe szczegóły zgłoszenia",
+        inputValidator: (value) => {
+          if (!value) {
+            return "Musisz wybrać powód!";
+          }
         },
       });
 
-      // Send report
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          Swal.fire({
-            icon: "warning",
-            title: "Zaloguj się",
-            text: "Musisz być zalogowany aby zgłosić jadłospis",
-          });
-          return;
-        }
+      if (!isConfirmed || !reason) return;
 
-        await fetch(`${API_BASE}/api/report`, {
-          // zmień /api/reports na /api/report
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            type: "menu",
-            id: item._id,
-            reason,
-            details,
-          }),
-        });
+      const { value: details, isConfirmed: detailsConfirmed } = await Swal.fire(
+        {
+          title: "Szczegóły zgłoszenia (opcjonalnie)",
+          input: "textarea",
+          inputPlaceholder: "Dodatkowe szczegóły...",
+          showCancelButton: true,
+          confirmButtonText: "Wyślij zgłoszenie",
+          cancelButtonText: "Anuluj",
+        }
+      );
+
+      if (!detailsConfirmed) return;
+
+      // Send report only if both steps were confirmed
+      const token = localStorage.getItem("token");
+      if (!token) {
         Swal.fire({
-          icon: "success",
-          title: "Zgłoszenie wysłane",
-          text: "Dziękujemy za zgłoszenie. Zajmiemy się tym jak najszybciej.",
+          icon: "warning",
+          title: "Zaloguj się",
+          text: "Musisz być zalogowany aby zgłosić jadłospis",
         });
-      } catch (err) {
-        console.error("reportMenu error:", err);
-        Swal.fire({
-          icon: "error",
-          title: "Błąd zgłoszenia",
-          text: "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
-        });
+        return;
       }
+
+      const res = await fetch(`${API_BASE}/api/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: "menu",
+          id: item._id,
+          reason,
+          details,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Report failed");
+
+      Swal.fire({
+        icon: "success",
+        title: "Zgłoszenie wysłane",
+        text: "Dziękujemy za zgłoszenie. Zajmiemy się tym jak najszybciej.",
+      });
+    } catch (err) {
+      console.error("reportMenu error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd zgłoszenia",
+        text: "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
+      });
     }
   };
 
