@@ -1,0 +1,9 @@
+.primary {
+  // użyj Sass-owej zmiennej (nie var(...))
+  @include button-style($color-primary);
+  transition: all 0.5s ease;
+
+  &:hover {
+    @include button-style(darken($color-primary, 5%));
+  }
+}
