@@ -1,5 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap");
 @import "_vars";
 @import "_mixins";
+@import "components/primary";
 
 body {
   margin: 0;
@@ -18,10 +20,7 @@ body {
   z-index: 2;
 }
 
-.primary {
-  // użyj Sass-owej zmiennej (nie var(...))
-  @include button-style($color-primary);
-}
+
 
 .table {
   background-color: var(--color-primary) !important;
