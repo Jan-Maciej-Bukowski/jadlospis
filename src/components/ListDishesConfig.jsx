@@ -40,20 +40,6 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
       className="config-table"
       id="temporary-meals-config"
     >
-      <Typography
-        variant="h6"
-        className="config-header"
-        id="temporary-meals-config-header"
-        sx={{ p: 2 }}
-      >
-        Tymczasowa konfiguracja potraw
-        <Tooltip title="Te ustawienia działają tylko dla następnie wygenerowanego jadłospisu. Nie zmieniają oryginalnych ustawień potraw.">
-          <IconButton size="small" sx={{ ml: 1 }}>
-            <InfoIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Typography>
-
       <Table size="small">
         <TableHead>
           <TableRow className="config-table-header">

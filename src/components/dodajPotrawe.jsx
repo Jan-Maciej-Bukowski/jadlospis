@@ -34,7 +34,6 @@ const UNITS = [
   { value: "szklanka", label: "szklanka (250ml)" },
 ];
 
-
 export default function DodajPotrawe() {
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
@@ -268,6 +267,7 @@ export default function DodajPotrawe() {
       maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
       allowedDays: allowedDays.length ? allowedDays : DAYS,
     };
+    console.log("new dish: ", data);
     addDish(data);
 
     // przypisz potrawę do wybranych list (jeśli wybrano)
@@ -291,7 +291,7 @@ export default function DodajPotrawe() {
     setFavorite(false);
     setColor("");
     setMaxAcrossWeeks("");
-    setMaxPerDay("");
+    setMaxPerDay(3);
     setSelectedLists([]);
     setAllowedDays([...DAYS]);
   }
@@ -416,7 +416,7 @@ export default function DodajPotrawe() {
           <Button
             startIcon={<AddIcon />}
             onClick={addIngredient}
-            sx={{ mt: 1 }}
+            sx={{ mt: 1, color: "var(--color-primary)" }}
           >
             Dodaj składnik
           </Button>
@@ -448,6 +448,11 @@ export default function DodajPotrawe() {
                 key={l.id}
                 control={
                   <Checkbox
+                    sx={{
+                      "&.Mui-checked": {
+                        color: "var(--color-primary)", // kolor gdy zaznaczony
+                      },
+                    }}
                     checked={selectedLists.includes(l.id)}
                     onChange={() => toggleListSelection(l.id)}
                   />
@@ -463,7 +468,11 @@ export default function DodajPotrawe() {
                 onChange={(e) => setNewListName(e.target.value)}
                 fullWidth
               />
-              <Button variant="contained" onClick={createAndSelectList}>
+              <Button
+                variant="contained"
+                onClick={createAndSelectList}
+                className="primary"
+              >
                 Dodaj
               </Button>
             </Box>
@@ -479,6 +488,9 @@ export default function DodajPotrawe() {
           min={0}
           max={100}
           valueLabelDisplay="auto"
+          sx={{
+            color: "var(--color-primary)", // kolor gdy zaznaczony
+          }}
         />
         <TextField
           label="Maks wystąpień w dniu"
@@ -530,6 +542,11 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
+                sx={{
+                  "&.Mui-checked": {
+                    color: "var(--color-primary)", // kolor gdy zaznaczony
+                  },
+                }}
                 checked={allowedMeals.śniadanie}
                 onChange={() => handleMealChange("śniadanie")}
               />
@@ -539,6 +556,11 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
+                sx={{
+                  "&.Mui-checked": {
+                    color: "var(--color-primary)", // kolor gdy zaznaczony
+                  },
+                }}
                 checked={allowedMeals.obiad}
                 onChange={() => handleMealChange("obiad")}
               />
@@ -548,6 +570,11 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
+                sx={{
+                  "&.Mui-checked": {
+                    color: "var(--color-primary)", // kolor gdy zaznaczony
+                  },
+                }}
                 checked={allowedMeals.kolacja}
                 onChange={() => handleMealChange("kolacja")}
               />
@@ -562,6 +589,11 @@ export default function DodajPotrawe() {
               key={day}
               control={
                 <Checkbox
+                  sx={{
+                    "&.Mui-checked": {
+                      color: "var(--color-primary)", // kolor gdy zaznaczony
+                    },
+                  }}
                   checked={allowedDays.includes(day)}
                   onChange={() => {
                     setAllowedDays((prev) =>
@@ -583,6 +615,11 @@ export default function DodajPotrawe() {
         <FormControlLabel
           control={
             <Checkbox
+              sx={{
+                "&.Mui-checked": {
+                  color: "var(--color-primary)", // kolor gdy zaznaczony
+                },
+              }}
               checked={favorite}
               onChange={() => setFavorite((s) => !s)}
             />
@@ -646,7 +683,12 @@ export default function DodajPotrawe() {
           </Box>
         </Box>
 
-        <Button onClick={newDish} variant="contained" color="primary" fullWidth>
+        <Button
+          onClick={newDish}
+          variant="contained"
+          className="primary"
+          fullWidth
+        >
           Dodaj
         </Button>
       </Box>

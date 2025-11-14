@@ -39,7 +39,7 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   ""
 );
 
-import Jadlospis from "./jadlospis";
+import Jadlospis from "./jadlospis/jadlospis";
 import Jadlospisy from "./jadlospisy";
 import PublicJadlospisy from "./publicJadlospisy";
 import PublicPotrawy from "./publicPotrawy";
