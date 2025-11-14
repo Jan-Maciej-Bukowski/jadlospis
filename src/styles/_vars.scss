@@ -1,0 +1,19 @@
+$color-primary: #04bf8a;
+$color-primary-dark: #026873;
+$color-secondary: #03a64a;
+$color-bg-dark: #024059;
+$color-surface-dark: #025940;
+$color-text-on-dark: #ffffff;
+$color-text-main: #222222;
+$color-bg-light: #ffffff;
+
+:root {
+  --color-primary: #{$color-primary};
+  --color-primary-dark: #{$color-primary-dark};
+  --color-secondary: #{$color-secondary};
+  --color-bg-dark: #{$color-bg-dark};
+  --color-surface-dark: #{$color-surface-dark};
+  --color-text-on-dark: #{$color-text-on-dark};
+  --color-text-main: #{$color-text-main};
+  --color-bg-light: #{$color-bg-light};
+}

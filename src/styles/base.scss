@@ -1,0 +1,123 @@
+@import "_vars";
+@import "_mixins";
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: auto;
+  background: var(--color-bg-light);
+}
+
+.not-scrollable {
+  overscroll-behavior: none;
+}
+
+#navbar {
+  color: var(--color-text-on-dark);
+  width: 100vw !important;
+  z-index: 2;
+}
+
+.primary {
+  // użyj Sass-owej zmiennej (nie var(...))
+  @include button-style($color-primary);
+}
+
+.table {
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-on-dark);
+  user-select: none;
+}
+
+.table-header {
+  font-family: "Luckiest Guy";
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+}
+
+.table-meal {
+  background-color: white;
+  color: var(--color-text-main);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin: 10px;
+}
+
+.table-week {
+  color: var(--color-text-main);
+  text-align: center;
+  user-select: none;
+}
+
+.table-meal:hover {
+  scale: 0.95;
+  cursor: grab;
+}
+
+/* Przyjazny kursor dla elementów przeciąganych */
+.draggable {
+  cursor: grab;
+  -webkit-grab: grab;
+}
+
+.draggable:active,
+.draggable.grabbing {
+  cursor: grabbing !important;
+  -webkit-grabbing: grabbing !important;
+}
+
+html.dragging,
+body.dragging {
+  cursor: grabbing !important;
+}
+
+#temporary-meals-config-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--color-bg-dark);
+}
+
+/* ListDishesConfig styles */
+.config-table {
+  background-color: var(--color-bg-light);
+  border-radius: 8px;
+}
+
+.config-header {
+  color: var(--color-bg-dark);
+  font-weight: 500;
+}
+
+.config-table-header {
+  color: var(--color-text-main);
+}
+
+.config-column-header {
+  font-weight: 600;
+  color: var(--color-bg-dark);
+}
+
+.config-row:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.config-meal-name {
+  font-weight: 500;
+}
+
+.config-days-group {
+  gap: 8px;
+}
+
+.config-day-checkbox {
+  margin-right: 0;
+}
+
+.config-number-input input {
+  font-size: 0.9rem;
+}
