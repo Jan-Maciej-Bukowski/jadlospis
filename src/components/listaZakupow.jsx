@@ -273,6 +273,7 @@ export default function ListaZakupow() {
           Generuj listę zakupów
         </Button>
         <Button
+          className="primary"
           variant="contained" // zmiana z outlined na contained
           startIcon={<ContentCopyIcon />}
           onClick={copyToClipboard}
@@ -281,6 +282,7 @@ export default function ListaZakupow() {
           Kopiuj
         </Button>
         <Button
+          className="primary"
           variant="contained" // zmiana z outlined na contained
           startIcon={<DownloadIcon />}
           onClick={exportTxt}
@@ -289,6 +291,7 @@ export default function ListaZakupow() {
           Eksportuj .txt
         </Button>
         <Button
+          className="primary"
           variant="contained" // zmiana z outlined na contained
           startIcon={<PrintIcon />}
           onClick={printList}
@@ -296,7 +299,7 @@ export default function ListaZakupow() {
         >
           Drukuj
         </Button>
-        <Button variant="text" onClick={clearChecks} disabled={!items.length}>
+        <Button variant="text" onClick={clearChecks} disabled={!items.length} className="text-primary">
           Wyczyść zaznaczenia
         </Button>
       </Box>
@@ -322,6 +325,7 @@ export default function ListaZakupow() {
               >
                 <ListItemIcon>
                   <Checkbox
+                    className="checkbox"
                     edge="start"
                     checked={!!it.checked}
                     onChange={() => toggleChecked(i)}
@@ -336,7 +340,7 @@ export default function ListaZakupow() {
         {missing.length > 0 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2">
-              Uwaga — brak składników dla potraw:
+              Uwaga - brak składników dla potraw:
             </Typography>
             <Typography variant="body2">{missing.join(", ")}</Typography>
           </Box>

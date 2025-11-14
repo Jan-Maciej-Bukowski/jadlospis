@@ -69,15 +69,13 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                       control={
                         <Checkbox
                           size="small"
-                          className="config-checkbox"
+                          className="checkbox"
                           checked={(dish.allowedDays || DAYS).includes(day)}
                           onChange={(e) => {
                             const currentDays = dish.allowedDays || DAYS;
                             const newDays = e.target.checked
                               ? [...currentDays, day]
                               : currentDays.filter((d) => d !== day);
-
-                            log("current/new", currentDays, newDays);
 
                             onDishChange(dish.name, {
                               ...dish,

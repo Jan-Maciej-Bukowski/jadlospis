@@ -443,11 +443,7 @@ export default function DodajPotrawe() {
                 key={l.id}
                 control={
                   <Checkbox
-                    sx={{
-                      "&.Mui-checked": {
-                        color: "var(--color-primary)", // kolor gdy zaznaczony
-                      },
-                    }}
+                    className="checkbox"
                     checked={selectedLists.includes(l.id)}
                     onChange={() => toggleListSelection(l.id)}
                   />
@@ -537,11 +533,7 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
-                sx={{
-                  "&.Mui-checked": {
-                    color: "var(--color-primary)", // kolor gdy zaznaczony
-                  },
-                }}
+                className="checkbox"
                 checked={allowedMeals.śniadanie}
                 onChange={() => handleMealChange("śniadanie")}
               />
@@ -551,11 +543,7 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
-                sx={{
-                  "&.Mui-checked": {
-                    color: "var(--color-primary)", // kolor gdy zaznaczony
-                  },
-                }}
+                className="checkbox"
                 checked={allowedMeals.obiad}
                 onChange={() => handleMealChange("obiad")}
               />
@@ -565,11 +553,7 @@ export default function DodajPotrawe() {
           <FormControlLabel
             control={
               <Checkbox
-                sx={{
-                  "&.Mui-checked": {
-                    color: "var(--color-primary)", // kolor gdy zaznaczony
-                  },
-                }}
+                className="checkbox"
                 checked={allowedMeals.kolacja}
                 onChange={() => handleMealChange("kolacja")}
               />
@@ -584,11 +568,7 @@ export default function DodajPotrawe() {
               key={day}
               control={
                 <Checkbox
-                  sx={{
-                    "&.Mui-checked": {
-                      color: "var(--color-primary)", // kolor gdy zaznaczony
-                    },
-                  }}
+                  className="checkbox"
                   checked={allowedDays.includes(day)}
                   onChange={() => {
                     setAllowedDays((prev) =>
@@ -610,11 +590,7 @@ export default function DodajPotrawe() {
         <FormControlLabel
           control={
             <Checkbox
-              sx={{
-                "&.Mui-checked": {
-                  color: "var(--color-primary)", // kolor gdy zaznaczony
-                },
-              }}
+              className="checkbox"
               checked={favorite}
               onChange={() => setFavorite((s) => !s)}
             />

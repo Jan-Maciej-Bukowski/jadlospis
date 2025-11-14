@@ -2,6 +2,7 @@
 @import "_vars";
 @import "_mixins";
 @import "components/primary";
+@import "components/checkbox";
 
 body {
   margin: 0;
@@ -119,4 +120,8 @@ body.dragging {
 
 .config-number-input input {
   font-size: 0.9rem;
+}
+
+.text-primary {
+  color: $color-primary !important;
 }

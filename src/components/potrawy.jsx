@@ -453,6 +453,7 @@ export default function Potrawy() {
         <FormControlLabel
           control={
             <Checkbox
+              className="checkbox"
               checked={onlyFavorites}
               onChange={(e) => setOnlyFavorites(e.target.checked)}
             />
@@ -888,6 +889,7 @@ export default function Potrawy() {
                         <FormControlLabel
                           control={
                             <Checkbox
+                              className="checkbox"
                               checked={editedDish.allowedMeals.śniadanie}
                               onChange={() => handleMealChange("śniadanie")}
                             />
@@ -897,6 +899,7 @@ export default function Potrawy() {
                         <FormControlLabel
                           control={
                             <Checkbox
+                              className="checkbox"
                               checked={editedDish.allowedMeals.obiad}
                               onChange={() => handleMealChange("obiad")}
                             />
@@ -906,6 +909,7 @@ export default function Potrawy() {
                         <FormControlLabel
                           control={
                             <Checkbox
+                              className="checkbox"
                               checked={editedDish.allowedMeals.kolacja}
                               onChange={() => handleMealChange("kolacja")}
                             />
@@ -924,6 +928,7 @@ export default function Potrawy() {
                             key={day}
                             control={
                               <Checkbox
+                                className="checkbox"
                                 checked={(
                                   editedDish.allowedDays || []
                                 ).includes(day)}
