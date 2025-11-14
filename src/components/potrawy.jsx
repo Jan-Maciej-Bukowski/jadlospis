@@ -30,7 +30,6 @@ import { Rating } from "@mui/material";
 import PublishIcon from "@mui/icons-material/Publish";
 import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
-import log from "../utils/log";
 import DAYS from "../utils/days.js";
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
@@ -168,7 +167,6 @@ export default function Potrawy() {
       allowedDays: dish.allowedDays || DAYS,
     };
     setEditedDish(newSettings);
-    log("nowe ustawienia potrawy", newSettings);
   };
 
   const handleSave = (index) => {

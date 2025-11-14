@@ -22,7 +22,6 @@ import { useTheme } from "@mui/material/styles";
 import ListDishesConfig from "../ListDishesConfig.jsx";
 import DesktopJadlospis from "./desktop.jsx";
 import MobileJadlospis from "./mobile.jsx";
-import log from "../../utils/log.js";
 import DAYS from "../../utils/days.js";
 
 // ensure storage keys (safe: does not use hooks)
@@ -76,7 +75,7 @@ export default function Jadlospis() {
   const ui = settings.ui || {};
   // wykrywanie wąskich ekranów (<768px)
   const isNarrow = useMediaQuery("(max-width:768px)");
-  
+
   const tableSize = ui.compactTable ? "small" : "medium";
   // Zwiększony padding dla lepszego wyglądu
   const cellPadding = ui.compactTable ? "12px 16px" : "16px 20px";

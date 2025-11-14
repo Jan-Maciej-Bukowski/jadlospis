@@ -1,5 +1,3 @@
-import log from "../utils/log";
-
 export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
   const W = Math.max(1, Number(weeks) || 1);
   const { excludedTags = {}, specialDishes = {} } = settings || {};
@@ -24,15 +22,18 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     }
   }
 
+  // helper to normalize day names for comparisons (case-insensitive)
+  const norm = (s) => String(s || "").toLowerCase();
+
   // Helpers to check if dish can go to slot (tags/allowedMeals/per-week/per-global checks done externally)
   const slotAllowsDish = (slot, dish, globalCounts, weekCountsForWeek) => {
     if (!dish) return false;
 
     // allowedDays: if provided use it, otherwise allow all days (use daysOfWeek param)
     const allowedDays = Array.isArray(dish.allowedDays)
-      ? dish.allowedDays
-      : daysOfWeek;
-    if (!allowedDays.includes(slot.dayName)) return false;
+      ? dish.allowedDays.map(norm)
+      : daysOfWeek.map(norm);
+    if (!allowedDays.includes(norm(slot.dayName))) return false;
 
     const allowedMeals = dish.allowedMeals || ["śniadanie", "obiad", "kolacja"];
     if (!allowedMeals.includes(slot.meal)) return false;
@@ -67,7 +68,7 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
           s.meal
         ) &&
         (Array.isArray(dish.allowedDays)
-          ? dish.allowedDays.includes(s.dayName)
+          ? dish.allowedDays.map(norm).includes(norm(s.dayName))
           : true) &&
         !(
           Array.isArray(dish.tags) &&
@@ -180,7 +181,6 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
   for (const slot of remainingSlots) {
     // build candidate list for this slot
     const candidates = dishes.filter((dish) => {
-      // respect allowedMeals and tags
       const allowedMeals = dish.allowedMeals || [
         "śniadanie",
         "obiad",
@@ -189,7 +189,7 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
       if (!allowedMeals.includes(slot.meal)) return false;
       if (
         Array.isArray(dish.allowedDays) &&
-        !dish.allowedDays.includes(slot.dayName)
+        !dish.allowedDays.map(norm).includes(norm(slot.dayName))
       )
         return false;
       const excl = settings?.excludedTags?.[slot.dayName]?.[slot.meal] || [];

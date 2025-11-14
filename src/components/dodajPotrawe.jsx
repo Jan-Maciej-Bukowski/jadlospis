@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import log from "../utils/log";
 import {
   Box,
   TextField,
@@ -295,10 +294,6 @@ export default function DodajPotrawe() {
     setSelectedLists([]);
     setAllowedDays([...DAYS]);
   }
-
-  useEffect(() => {
-    log("current allowedDays:", allowedDays);
-  }, [allowedDays]);
 
   return (
     <Box

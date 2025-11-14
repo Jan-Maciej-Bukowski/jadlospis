@@ -17,7 +17,6 @@ import {
   IconButton,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
-import log from "../utils/log";
 import DAYS from "../utils/days.js";
 
 export default function ListDishesConfig({ dishes, onDishChange }) {
@@ -25,13 +24,6 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
   if (!Array.isArray(dishes) || dishes.length === 0) {
     return null;
   }
-
-  console.log("DISHES", dishes);
-  dishes.map((dish) => {
-    DAYS.map((day) => {
-      console.log("dni: " + dish.allowedDays); // || DAYS).includes(day));
-    });
-  });
 
   return (
     <TableContainer

@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Swal from "sweetalert2";
-import log from "../utils/log";
 
 const STORAGE_KEY = "dishLists";
 

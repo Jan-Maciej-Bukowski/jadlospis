@@ -18,7 +18,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/CloudDownload";
 import PrintIcon from "@mui/icons-material/Print";
 import { getAllDishes } from "../js/potrawy";
-import log from "../utils/log";
 
 /**
  * Lista zakupów: generuje listę składników na podstawie aktualnego jadłospisu

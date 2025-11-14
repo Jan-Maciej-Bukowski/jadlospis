@@ -1,4 +1,3 @@
-import log from "../utils/log";
 import DAYS from "../utils/days.js";
 
 const stripHtml = (html = "") =>
@@ -119,7 +118,6 @@ if (normalized) {
 
 // addDish: merge with existing localStorage instead of using a static list
 export function addDish(dish) {
-  log("nowa potrawa została dodana", dish);
   if (!dish || !dish.name) return null;
   const existing = readDishes();
 
