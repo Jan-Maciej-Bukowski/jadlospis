@@ -40,9 +40,12 @@ export default function MobileJadlospis({
           >
             {/* Day header */}
             <Box
+
+            className="primary"
               sx={{
+                
                 p: 2,
-                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                
                 fontWeight: 600,
                 fontSize: "1rem",
                 borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
@@ -94,11 +97,13 @@ export default function MobileJadlospis({
                     sx={{
                       display: "block",
                       fontWeight: 600,
-                      color: "rgba(0,0,0,0.6)",
                       mb: 1,
                       textTransform: "uppercase",
                       fontSize: "0.7rem",
                       letterSpacing: "0.5px",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      width: "fit-content",
                     }}
                   >
                     {meal}

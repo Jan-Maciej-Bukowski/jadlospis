@@ -69,6 +69,7 @@ export default function DesktopJadlospis({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              
             }}
           >
             {getVisualDay(index, entry.day)}

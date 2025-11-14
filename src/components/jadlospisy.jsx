@@ -32,7 +32,7 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
 );
 
 const exportToImage = async (menu, name) => {
-  // Stwórz tymczasowy element z jadłospisem
+  // Stwórz tymczasowy element z jdłospisem
   const temp = document.createElement("div");
   temp.style.padding = "20px";
   temp.style.background = "white";

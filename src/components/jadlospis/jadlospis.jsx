@@ -782,6 +782,7 @@ export default function Jadlospis() {
           <Box
             sx={{
               display: "flex",
+              flexDirection: "column",
               gap: 2,
               alignItems: "flex-start",
               width: "100%",
@@ -791,18 +792,19 @@ export default function Jadlospis() {
               variant="contained"
               className="primary"
               onClick={() => toggleTemporaryDishesConfig()}
+              sx={{ flexShrink: 0 }}
             >
               dodatkowa konfiguracja
             </Button>
 
-            <Collapse in={temporaryDishesConfigOpen} sx={{ flex: 1 }}>
-              {mergedDishesForList().length > 0 && (
+            {temporaryDishesConfigOpen && mergedDishesForList().length > 0 && (
+              <Box sx={{ width: "100%" }}>
                 <ListDishesConfig
                   dishes={mergedDishesForList()}
                   onDishChange={handleDishConfigChange}
                 />
-              )}
-            </Collapse>
+              </Box>
+            )}
           </Box>
         </Box>
         {menu &&
@@ -886,6 +888,9 @@ export default function Jadlospis() {
           variant="contained"
           className="primary"
           onClick={handleSaveCurrentMenu}
+          sx={{
+            marginTop: 2
+          }}
         >
           Zapisz jadłospis
         </Button>

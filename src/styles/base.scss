@@ -24,8 +24,8 @@ body {
 
 
 .table {
-  background-color: var(--color-primary) !important;
-  color: var(--color-text-on-dark);
+  background-color: white !important;
+  color: var(--color-text-main);
   user-select: none;
 }
 
@@ -38,6 +38,13 @@ body {
   align-items: center;
   justify-content: center;
   letter-spacing: 0.5px;
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-on-dark);
+}
+
+.table-day {
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-on-dark);
 }
 
 .table-meal {
@@ -123,5 +130,5 @@ body.dragging {
 }
 
 .text-primary {
-  color: $color-primary !important;
+  color: var(--color-primary) !important;
 }
