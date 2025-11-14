@@ -307,7 +307,7 @@ export default function ListaZakupow() {
       <Paper sx={{ p: 2 }}>
         <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Wygenerowano:{" "}
-          {generatedAt ? new Date(generatedAt).toLocaleString() : "—"}
+          {generatedAt ? new Date(generatedAt).toLocaleString() : "-"}
         </Typography>
 
         <Divider sx={{ mb: 1 }} />

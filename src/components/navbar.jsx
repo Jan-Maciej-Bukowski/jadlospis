@@ -156,25 +156,6 @@ export default function Navbar() {
     })();
   }, []);
 
-  const handleCustomColorApply = () => {
-    const v = (customHexInput || "").trim();
-    if (!/^#([0-9A-Fa-f]{6})$/.test(v)) {
-      Swal.fire({
-        icon: "error",
-        title: "Nieprawidłowy HEX",
-        text: "Podaj kolor w formacie #RRGGBB",
-      });
-      return;
-    }
-    updateCustomColor(v);
-    changeTheme("custom");
-    Swal.fire({
-      icon: "success",
-      title: "Zastosowano",
-      text: `Kolor ${v} ustawiony`,
-    });
-  };
-
   const menuGroups = [
     { items: ["Jadłospis", "Jadłospisy"] },
     { items: ["Potrawy", "Dodaj potrawę", "Listy potraw", "Lista zakupów"] },
