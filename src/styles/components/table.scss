@@ -1,0 +1,49 @@
+.table {
+  background-color: white !important;
+  color: var(--color-text-main);
+  user-select: none;
+  border-bottom: 20px solid $color-primary;
+  border-right: 20px solid $color-primary;
+}
+
+.table-header {
+  font-family: "Luckiest Guy";
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-on-dark);
+}
+
+.table-day {
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-on-dark);
+}
+
+.table-meal {
+  background-color: $color-primary-dark !important;
+  color: $color-text-on-dark;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin: 10px;
+}
+
+.meal-tag {
+  color: $color-text-on-dark !important;
+}
+
+.table-week {
+  color: var(--color-text-main);
+  text-align: center;
+  user-select: none;
+}
+
+.table-meal:hover {
+  scale: 0.95;
+  cursor: grab;
+}

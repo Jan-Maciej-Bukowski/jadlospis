@@ -40,12 +40,10 @@ export default function MobileJadlospis({
           >
             {/* Day header */}
             <Box
-
-            className="primary"
+              className="primary"
               sx={{
-                
                 p: 2,
-                
+
                 fontWeight: 600,
                 fontSize: "1rem",
                 borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
@@ -66,6 +64,7 @@ export default function MobileJadlospis({
 
               return (
                 <Box
+                  className="table-meal"
                   key={meal}
                   sx={{
                     p: 2,
@@ -175,6 +174,7 @@ export default function MobileJadlospis({
                         >
                           {dishObj.tags.map((t, i) => (
                             <Chip
+                              className="meal-tag"
                               key={i}
                               label={t}
                               size="small"

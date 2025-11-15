@@ -1,0 +1,39 @@
+/* ListDishesConfig styles */
+.config-table {
+  background-color: var(--color-bg-light);
+  border-radius: 8px;
+}
+
+.config-header {
+  color: var(--color-bg-dark);
+  font-weight: 500;
+}
+
+.config-table-header {
+  color: var(--color-text-main);
+}
+
+.config-column-header {
+  font-weight: 600;
+  color: var(--color-bg-dark);
+}
+
+.config-row:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.config-meal-name {
+  font-weight: 500;
+}
+
+.config-days-group {
+  gap: 8px;
+}
+
+.config-day-checkbox {
+  margin-right: 0;
+}
+
+.config-number-input input {
+  font-size: 0.9rem;
+}

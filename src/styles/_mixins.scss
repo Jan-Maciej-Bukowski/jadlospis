@@ -1,3 +1,5 @@
+@use "sass:color";
+
 @mixin button-style($bg-color) {
   background-color: $bg-color !important;
   color: var(--color-text-on-dark);
@@ -7,6 +9,6 @@
   transition: background-color 0.3s ease;
 
   &:hover {
-    background-color: darken($bg-color, 10%);
+    background-color: color.adjust($bg-color, $lightness: -10%);
   }
 }

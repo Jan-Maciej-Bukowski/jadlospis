@@ -15,6 +15,7 @@ import {
   TextField,
   Slider,
   Collapse,
+  Divider,
 } from "@mui/material";
 import { generateMenu } from "../../js/generateMenu.js";
 import { settings } from "../../js/settings.js";
@@ -701,10 +702,10 @@ export default function Jadlospis() {
       {/* Główna zawartość */}
       <Box sx={{ flex: 1 }}>
         <Typography
-          variant="h4"
+          variant="h5"
           sx={{ mb: 3, color: "var(--color-text-main)" }}
         >
-          Jadłospis
+          Konfiguracja
         </Typography>
 
         {/* Przyciski i kontrolki */}
@@ -818,6 +819,12 @@ export default function Jadlospis() {
                   ref={(el) => (weekRefs.current[wi] = el)}
                   sx={{ scrollMargin: "20px" }}
                 >
+                  <Typography
+                    variant="h4"
+                    sx={{ mb: 3, color: "var(--color-text-main)" }}
+                  >
+                    Jadłospis
+                  </Typography>
                   <Box className="table-week" sx={{ mb: 1 }}>
                     <Typography variant="h6">Tydzień {wi + 1}</Typography>
                   </Box>
@@ -889,7 +896,7 @@ export default function Jadlospis() {
           className="primary"
           onClick={handleSaveCurrentMenu}
           sx={{
-            marginTop: 2
+            marginTop: 2,
           }}
         >
           Zapisz jadłospis

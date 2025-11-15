@@ -3,11 +3,13 @@
 @import "_mixins";
 @import "components/primary";
 @import "components/checkbox";
+@import "components/table";
+@import "components/config";
 
 body {
   margin: 0;
   min-height: 100vh;
-  overflow: auto;
+  overflow-x: hidden;
   background: var(--color-bg-light);
 }
 
@@ -19,52 +21,6 @@ body {
   color: var(--color-text-on-dark);
   width: 100vw !important;
   z-index: 2;
-}
-
-
-
-.table {
-  background-color: white !important;
-  color: var(--color-text-main);
-  user-select: none;
-}
-
-.table-header {
-  font-family: "Luckiest Guy";
-  font-weight: 400;
-  font-style: normal;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.5px;
-  background-color: var(--color-primary) !important;
-  color: var(--color-text-on-dark);
-}
-
-.table-day {
-  background-color: var(--color-primary) !important;
-  color: var(--color-text-on-dark);
-}
-
-.table-meal {
-  background-color: white;
-  color: var(--color-text-main);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  margin: 10px;
-}
-
-.table-week {
-  color: var(--color-text-main);
-  text-align: center;
-  user-select: none;
-}
-
-.table-meal:hover {
-  scale: 0.95;
-  cursor: grab;
 }
 
 /* Przyjazny kursor dla elementów przeciąganych */
@@ -89,45 +45,6 @@ body.dragging {
   color: var(--color-bg-dark);
 }
 
-/* ListDishesConfig styles */
-.config-table {
-  background-color: var(--color-bg-light);
-  border-radius: 8px;
-}
-
-.config-header {
-  color: var(--color-bg-dark);
-  font-weight: 500;
-}
-
-.config-table-header {
-  color: var(--color-text-main);
-}
-
-.config-column-header {
-  font-weight: 600;
-  color: var(--color-bg-dark);
-}
-
-.config-row:hover {
-  background-color: rgba(0, 0, 0, 0.01);
-}
-
-.config-meal-name {
-  font-weight: 500;
-}
-
-.config-days-group {
-  gap: 8px;
-}
-
-.config-day-checkbox {
-  margin-right: 0;
-}
-
-.config-number-input input {
-  font-size: 0.9rem;
-}
 
 .text-primary {
   color: var(--color-primary) !important;

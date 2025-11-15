@@ -210,6 +210,7 @@ export default function DesktopJadlospis({
                                 ? "small"
                                 : "medium"
                             }
+                            className="meal-tag"
                             sx={{
                               fontSize: isNarrow ? "0.65rem" : undefined,
                               height: isNarrow ? 22 : undefined,
