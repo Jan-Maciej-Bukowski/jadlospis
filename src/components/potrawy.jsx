@@ -63,7 +63,6 @@ export default function Potrawy() {
   // bulk edit by tag
   const [tagToEdit, setTagToEdit] = useState("");
   const [bulkEdited, setBulkEdited] = useState({
-    probability: null,
     maxRepeats: "",
     maxAcrossWeeks: "",
     allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
@@ -77,7 +76,6 @@ export default function Potrawy() {
     tags: "",
     params: "",
     ingredients: "",
-    probability: 100,
     maxRepeats: 1,
     maxPerDay: "",
     allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
@@ -149,7 +147,6 @@ export default function Potrawy() {
               return ing;
             })
           : [{ name: "", amount: "", unit: "g" }],
-      probability: dish.probability || 100,
       maxRepeats: dish.maxRepeats || 1,
       maxPerDay: dish.maxPerDay ?? "",
       allowedMeals: {
@@ -197,7 +194,6 @@ export default function Potrawy() {
         ingredients: editedDish.ingredients.filter(
           (ing) => ing.name.trim() && ing.amount
         ),
-        probability: editedDish.probability,
         maxRepeats: editedDish.maxRepeats,
         maxPerDay:
           editedDish.maxPerDay === "" || editedDish.maxPerDay == null
@@ -229,7 +225,6 @@ export default function Potrawy() {
       tags: "",
       params: "",
       ingredients: "",
-      probability: 100,
       maxRepeats: 1,
       maxPerDay: "",
       allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
@@ -351,8 +346,6 @@ export default function Potrawy() {
         if (!Array.isArray(dish.tags)) return dish;
         if (!dish.tags.some((t) => ("" + t).toLowerCase() === tag)) return dish;
         const nd = { ...dish };
-        if (bulkEdited.probability != null)
-          nd.probability = Number(bulkEdited.probability);
         if (bulkEdited.maxRepeats !== "")
           nd.maxRepeats = Number(bulkEdited.maxRepeats);
         if (bulkEdited.maxAcrossWeeks !== "")
@@ -619,9 +612,6 @@ export default function Potrawy() {
                   </Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Typography variant="body2">
-                      Współczynnik występowania: {dish.probability ?? 100}%
-                    </Typography>
-                    <Typography variant="body2">
                       Maks powtórzeń w tygodniu: {dish.maxRepeats ?? 1}
                     </Typography>
                     <Typography variant="body2">
@@ -639,9 +629,7 @@ export default function Potrawy() {
                         alignItems: "center",
                         mt: 1,
                       }}
-                    >
-                      
-                    </Box>
+                    ></Box>
                     <Box
                       sx={{
                         display: "flex",
@@ -794,22 +782,7 @@ export default function Potrawy() {
                         }
                         sx={{ mb: 2 }}
                       />
-                      <Typography gutterBottom>
-                        Współczynnik występowania: {editedDish.probability}%
-                      </Typography>
-                      <Slider
-                        value={editedDish.probability}
-                        onChange={(e, newValue) =>
-                          setEditedDish({
-                            ...editedDish,
-                            probability: newValue,
-                          })
-                        }
-                        min={0}
-                        max={100}
-                        valueLabelDisplay="auto"
-                        sx={{ mb: 2 }}
-                      />
+
                       <TextField
                         label="Maksymalna liczba powtórzeń"
                         variant="outlined"

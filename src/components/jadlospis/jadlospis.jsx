@@ -686,7 +686,6 @@ export default function Jadlospis() {
         maxRepeats: dish.maxRepeats || 1,
         maxAcrossWeeks: dish.maxAcrossWeeks || null,
         maxPerDay: dish.maxPerDay || null,
-        probability: dish.probability || 100,
         allowedMeals: dish.allowedMeals || ["śniadanie", "obiad", "kolacja"],
       };
     });

@@ -176,7 +176,7 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
     }
   }
 
-  // 2) Fill remaining slots sequentially but choose dishes biased toward those used less (to keep spread)
+  // 2) Fill remaining slots sequentially — choose dishes biased toward those used less (to keep spread)
   const remainingSlots = slots.filter((s) => !s.assigned && !s.special);
   for (const slot of remainingSlots) {
     // build candidate list for this slot
@@ -211,11 +211,10 @@ export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
       continue;
     }
 
-    // compute weights: prefer dishes with higher probability and lower global usage
+    // weighted random pick: prefer dishes used less globally
     const weights = candidates.map((dish) => {
-      const prob = Math.max(1, Math.round(dish.probability ?? 100));
       const used = globalCounts[dish.name] || 0;
-      const weight = prob / (1 + used); // dish used less => higher weight
+      const weight = 1 / (1 + used); // dish used less => higher weight
       return Math.max(0.1, weight);
     });
 

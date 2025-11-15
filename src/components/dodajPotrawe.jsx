@@ -39,7 +39,6 @@ export default function DodajPotrawe() {
   const [ingredients, setIngredients] = useState([
     { name: "", amount: "", unit: "g" },
   ]); // składniki: jedna linia = jeden składnik
-  const [probability, setProbability] = useState(100);
   const [maxRepeats, setMaxRepeats] = useState(21);
   const [allowedMeals, setAllowedMeals] = useState({
     śniadanie: true,
@@ -252,7 +251,6 @@ export default function DodajPotrawe() {
       tags: tags,
       params: params,
       ingredients: ingredients.filter((ing) => ing.name && ing.amount), // tylko wypełnione
-      probability: probability,
       maxRepeats: maxRepeats,
       maxPerDay: maxPerDay === "" ? null : Number(maxPerDay),
       allowedMeals: Object.keys(allowedMeals).filter(
@@ -280,7 +278,6 @@ export default function DodajPotrawe() {
     setTags("");
     setOtherParams("");
     setIngredients([{ name: "", amount: "", unit: "g" }]);
-    setProbability(100);
     setMaxRepeats(21);
     setAllowedMeals({ śniadanie: true, obiad: true, kolacja: true });
     setRating(0);
@@ -465,20 +462,6 @@ export default function DodajPotrawe() {
             </Box>
           </Box>
         </Paper>
-
-        <Typography gutterBottom>
-          Współczynnik występowania: {probability}%
-        </Typography>
-        <Slider
-          value={probability}
-          onChange={(e, newValue) => setProbability(newValue)}
-          min={0}
-          max={100}
-          valueLabelDisplay="auto"
-          sx={{
-            color: "var(--color-primary)", // kolor gdy zaznaczony
-          }}
-        />
         <TextField
           label="Maks wystąpień w dniu"
           variant="outlined"
