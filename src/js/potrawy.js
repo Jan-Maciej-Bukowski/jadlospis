@@ -159,7 +159,6 @@ export function addDish(dish) {
       : ["śniadanie", "obiad", "kolacja"],
     rating: dish.rating != null ? Number(dish.rating) : 0,
     favorite: !!dish.favorite,
-    color: dish.color || "",
     maxAcrossWeeks:
       dish.maxAcrossWeeks != null
         ? dish.maxAcrossWeeks === ""

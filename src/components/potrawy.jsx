@@ -28,7 +28,6 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { Rating } from "@mui/material";
 import PublishIcon from "@mui/icons-material/Publish";
-import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
@@ -68,7 +67,6 @@ export default function Potrawy() {
     maxRepeats: "",
     maxAcrossWeeks: "",
     allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
-    color: "",
     favorite: null,
     rating: null,
   });
@@ -85,7 +83,6 @@ export default function Potrawy() {
     allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
     rating: 0,
     favorite: false,
-    color: "",
     maxAcrossWeeks: "",
     allowedDays: DAYS,
   });
@@ -162,7 +159,6 @@ export default function Potrawy() {
       },
       rating: dish.rating || 0,
       favorite: !!dish.favorite,
-      color: dish.color || "",
       maxAcrossWeeks: dish.maxAcrossWeeks ?? "",
       allowedDays: dish.allowedDays || DAYS,
     };
@@ -213,7 +209,6 @@ export default function Potrawy() {
         rating: editedDish.rating != null ? editedDish.rating : d.rating,
         favorite:
           editedDish.favorite != null ? editedDish.favorite : !!d.favorite,
-        color: editedDish.color || d.color || "",
         maxAcrossWeeks:
           editedDish.maxAcrossWeeks === "" || editedDish.maxAcrossWeeks == null
             ? null
@@ -240,7 +235,6 @@ export default function Potrawy() {
       allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
       rating: 0,
       favorite: false,
-      color: "",
       maxAcrossWeeks: "",
       allowedDays: DAYS,
     });
@@ -363,7 +357,6 @@ export default function Potrawy() {
           nd.maxRepeats = Number(bulkEdited.maxRepeats);
         if (bulkEdited.maxAcrossWeeks !== "")
           nd.maxAcrossWeeks = Number(bulkEdited.maxAcrossWeeks);
-        if (bulkEdited.color !== "") nd.color = bulkEdited.color;
         if (bulkEdited.favorite !== null) nd.favorite = !!bulkEdited.favorite;
         if (bulkEdited.rating != null) nd.rating = Number(bulkEdited.rating);
         nd.allowedMeals = Object.keys(bulkEdited.allowedMeals).filter(
@@ -647,20 +640,7 @@ export default function Potrawy() {
                         mt: 1,
                       }}
                     >
-                      <Typography variant="body2">Kolor tła:</Typography>
-                      {dish.color ? (
-                        <Box
-                          sx={{
-                            width: 24,
-                            height: 16,
-                            bgcolor: dish.color,
-                            border: "1px solid rgba(0,0,0,0.12)",
-                            borderRadius: 1,
-                          }}
-                        />
-                      ) : (
-                        <Typography variant="body2">Brak</Typography>
-                      )}
+                      
                     </Box>
                     <Box
                       sx={{
@@ -941,90 +921,6 @@ export default function Potrawy() {
                         ))}
                       </FormGroup>
 
-                      <Typography gutterBottom sx={{ mt: 2 }}>
-                        Kolor tła w jadłospisie:
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          mb: 2,
-                          alignItems: "center",
-                        }}
-                      >
-                        {DISH_COLORS.map((opt) => (
-                          <Button
-                            key={opt.id || "none"}
-                            variant={
-                              editedDish.color === opt.id
-                                ? "contained"
-                                : "outlined"
-                            }
-                            onClick={() =>
-                              setEditedDish((prev) => ({
-                                ...prev,
-                                color: opt.id,
-                              }))
-                            }
-                            sx={{
-                              minWidth: 36,
-                              padding: 0.5,
-                              bgcolor: opt.color || "transparent",
-                              borderColor:
-                                editedDish.color === opt.id
-                                  ? "primary.main"
-                                  : undefined,
-                            }}
-                            title={opt.label}
-                            className=""
-                          >
-                            {opt.id === "" ? "Brak" : ""}
-                          </Button>
-                        ))}
-
-                        {/* custom color picker */}
-                        <Box
-                          sx={{
-                            display: "flex",
-                            gap: 1,
-                            alignItems: "center",
-                            ml: 1,
-                          }}
-                        >
-                          <input
-                            type="color"
-                            value={editedDish.color || "#ffffff"}
-                            onChange={(e) =>
-                              setEditedDish((prev) => ({
-                                ...prev,
-                                color: e.target.value,
-                              }))
-                            }
-                            style={{
-                              width: 36,
-                              height: 36,
-                              padding: 0,
-                              border: "none",
-                              background: "transparent",
-                              cursor: "pointer",
-                            }}
-                            title="Wybierz własny kolor"
-                          />
-                          <TextField
-                            size="small"
-                            label="HEX"
-                            value={editedDish.color}
-                            onChange={(e) =>
-                              setEditedDish((prev) => ({
-                                ...prev,
-                                color: e.target.value,
-                              }))
-                            }
-                            placeholder="#rrggbb"
-                            sx={{ width: 120 }}
-                          />
-                        </Box>
-                      </Box>
                       <Button
                         variant="contained"
                         className="primary"

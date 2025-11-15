@@ -81,15 +81,12 @@ export default function DesktopJadlospis({
               dish?.name ?? dish ?? settings.noDishText ?? "Brak potraw";
             const favorite = !!dish?.favorite;
             const dishObj = dishesAll.find((d) => d.name === name);
-            const dishColor = dishObj?.color || dish?.color || "";
-            const cellStyle = dishColor ? { backgroundColor: dishColor } : {};
             return (
               <Box
                 className="table-meal"
                 key={meal}
                 sx={{
                   p: cellPadding,
-                  ...cellStyle,
                   whiteSpace: "normal",
                   wordBreak: "break-word",
                   overflowWrap: "anywhere",
@@ -97,11 +94,6 @@ export default function DesktopJadlospis({
                   display: "flex",
                   alignItems: "center",
                   transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: cellStyle.backgroundColor
-                      ? cellStyle.backgroundColor
-                      : "rgba(0, 0, 0, 0.03)",
-                  },
                 }}
                 onDragOver={handleDragOver}
                 onDrop={(e) =>

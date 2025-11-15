@@ -17,7 +17,6 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
-import { DISH_COLORS } from "../utils/colors";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
 
@@ -60,7 +59,6 @@ export default function DodajPotrawe() {
   const [newListName, setNewListName] = useState("");
   const [rating, setRating] = useState(0);
   const [favorite, setFavorite] = useState(false);
-  const [color, setColor] = useState(""); // kolor tła w jadlospisie
   const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
   const [maxPerDay, setMaxPerDay] = useState(""); // maks na dzień (opcjonalnie)
 
@@ -262,7 +260,6 @@ export default function DodajPotrawe() {
       ),
       rating: rating,
       favorite: favorite,
-      color: color,
       maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
       allowedDays: allowedDays.length ? allowedDays : DAYS,
     };
@@ -288,7 +285,6 @@ export default function DodajPotrawe() {
     setAllowedMeals({ śniadanie: true, obiad: true, kolacja: true });
     setRating(0);
     setFavorite(false);
-    setColor("");
     setMaxAcrossWeeks("");
     setMaxPerDay(3);
     setSelectedLists([]);
@@ -597,62 +593,6 @@ export default function DodajPotrawe() {
           }
           label="Ulubione"
         />
-
-        <Typography gutterBottom sx={{ mt: 1 }}>
-          Kolor tła w jadłospisie:
-        </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            mb: 2,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {DISH_COLORS.map((opt) => (
-            <Button
-              key={opt.id || "none"}
-              variant={color === opt.id ? "contained" : "outlined"}
-              onClick={() => setColor(opt.id)}
-              sx={{
-                minWidth: 36,
-                padding: 0.5,
-                bgcolor: opt.color || "transparent",
-                borderColor: color === opt.id ? "primary.main" : undefined,
-              }}
-              title={opt.label}
-            >
-              {opt.id === "" ? "Brak" : ""}
-            </Button>
-          ))}
-
-          {/* custom color picker */}
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", ml: 1 }}>
-            <input
-              type="color"
-              value={color || "#ffffff"}
-              onChange={(e) => setColor(e.target.value)}
-              style={{
-                width: 36,
-                height: 36,
-                padding: 0,
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-              }}
-              title="Wybierz własny kolor"
-            />
-            <TextField
-              size="small"
-              label="HEX"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              placeholder="#rrggbb"
-              sx={{ width: 120 }}
-            />
-          </Box>
-        </Box>
 
         <Button
           onClick={newDish}

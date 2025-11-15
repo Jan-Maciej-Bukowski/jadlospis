@@ -59,8 +59,6 @@ export default function MobileJadlospis({
                 dish?.name ?? dish ?? settings.noDishText ?? "Brak potraw";
               const favorite = !!dish?.favorite;
               const dishObj = dishesAll.find((d) => d.name === name);
-              const dishColor = dishObj?.color || dish?.color || "";
-              const cellStyle = dishColor ? { backgroundColor: dishColor } : {};
 
               return (
                 <Box
@@ -72,13 +70,7 @@ export default function MobileJadlospis({
                       mealIdx < 2
                         ? "1px solid rgba(224, 224, 224, 0.4)"
                         : "none",
-                    ...cellStyle,
                     transition: "all 0.2s ease",
-                    "&:active": {
-                      backgroundColor: cellStyle.backgroundColor
-                        ? cellStyle.backgroundColor
-                        : "rgba(0, 0, 0, 0.03)",
-                    },
                   }}
                   data-drop-week={wi}
                   data-drop-dayindex={index}
@@ -174,7 +166,6 @@ export default function MobileJadlospis({
                         >
                           {dishObj.tags.map((t, i) => (
                             <Chip
-                              className="meal-tag"
                               key={i}
                               label={t}
                               size="small"
@@ -182,6 +173,7 @@ export default function MobileJadlospis({
                                 fontSize: "0.65rem",
                                 height: 22,
                               }}
+                              className="meal-tag"
                             />
                           ))}
                         </Box>
