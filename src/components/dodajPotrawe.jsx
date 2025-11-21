@@ -20,7 +20,6 @@ import Swal from "sweetalert2";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
 
-// Stałe jednostki miary
 const UNITS = [
   { value: "g", label: "gram (g)" },
   { value: "kg", label: "kilogram (kg)" },
