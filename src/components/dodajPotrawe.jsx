@@ -15,10 +15,12 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
+import SelectFile from "./selectFile.jsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -437,40 +439,30 @@ export default function DodajPotrawe() {
       >
         {/* image uploader */}
         <Box>
-          <input
+          <SelectFile
             id="dish-image"
-            type="file"
             accept="image/*"
             onChange={onFileChange}
-            style={{ display: "block", marginBottom: 8 }}
+            onClear={() => {
+              setImageFile(null);
+              setImagePreview(null);
+            }}
+            filename={imageFile?.originalFileName}
+            previewUrl={imagePreview}
           />
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
-            <Button variant="outlined" size="small" onClick={generateAiImage}>
-              Generuj AI
-            </Button>
             <Button
-              variant="outlined"
+              variant="contained"
               size="small"
-              onClick={() => {
-                setImageFile(null);
-                setImagePreview(null);
-              }}
+              startIcon={<AutoAwesomeIcon />}
+              sx={{marginTop: 2}}
+              onClick={generateAiImage}
             >
-              Usuń obraz
+              Generuj z AI
             </Button>
+            {/* przycisk "Usuń obraz" usunięty — kosz w SelectFile go zastępuje */}
           </Box>
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="preview"
-              style={{
-                width: 80,
-                height: 80,
-                objectFit: "cover",
-                borderRadius: 6,
-              }}
-            />
-          )}
+          {/* podwójny podgląd usunięty (preview jest teraz w SelectFile) */}
         </Box>
 
         <TextField
