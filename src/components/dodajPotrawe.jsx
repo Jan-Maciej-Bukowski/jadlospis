@@ -59,7 +59,7 @@ export default function DodajPotrawe() {
   const [rating, setRating] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
-  const [maxPerDay, setMaxPerDay] = useState(""); // maks na dzień (opcjonalnie)
+  const [maxPerDay, setMaxPerDay] = useState(3); // maks na dzień (opcjonalnie)
 
   useEffect(() => {
     const handler = () => {

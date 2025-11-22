@@ -807,23 +807,38 @@ export default function Jadlospis() {
             )}
           </Box>
         </Box>
+        <Typography
+          variant="h4"
+          sx={{
+            mb: 3,
+            height: {
+              xs: 60, // 0 - 600
+              sm: 70, // 600 - 900
+              md: 75, // 900 - 1200
+            },
+          }} // usunięto color: "var(--color-text-main)"
+          className="section-title"
+        >
+          Jadłospis
+        </Typography>
         {menu &&
           Array.isArray(menu) &&
           menu.length > 0 &&
           (Array.isArray(menu[0]) ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                marginTop: "100px",
+              }}
+            >
               {menu.map((week, wi) => (
                 <Box
                   key={wi}
                   ref={(el) => (weekRefs.current[wi] = el)}
                   sx={{ scrollMargin: "20px" }}
                 >
-                  <Typography
-                    variant="h4"
-                    sx={{ mb: 3, color: "var(--color-text-main)" }}
-                  >
-                    Jadłospis
-                  </Typography>
                   <Box className="table-week" sx={{ mb: 1 }}>
                     <Typography variant="h6">Tydzień {wi + 1}</Typography>
                   </Box>
@@ -890,16 +905,18 @@ export default function Jadlospis() {
               )}
             </>
           ))}
-        <Button
-          variant="contained"
-          className="primary"
-          onClick={handleSaveCurrentMenu}
-          sx={{
-            marginTop: 2,
-          }}
-        >
-          Zapisz jadłospis
-        </Button>
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Button
+            variant="contained"
+            className="primary"
+            onClick={handleSaveCurrentMenu}
+            sx={{
+              marginTop: 2,
+            }}
+          >
+            Zapisz jadłospdis
+          </Button>
+        </Box>
       </Box>
     </Box>
   );

@@ -1,4 +1,3 @@
 .primary {
-  // użyj Sass-owej zmiennej (nie var(...))
   @include button-style($color-primary);
 }
