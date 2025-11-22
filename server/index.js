@@ -475,12 +475,24 @@ const storage = multer.diskStorage({
     cb(null, name);
   },
 });
+
 const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, path.join(__dirname, "uploads"));
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, Date.now() + ext);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
-    if (file.mimetype && file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new Error("Tylko pliki obrazkowe są dozwolone"));
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Tylko pliki graficzne"));
+    }
   },
 });
 
@@ -538,40 +550,31 @@ app.post("/api/user/avatar", auth, (req, res) => {
   });
 });
 
-// delete avatar (removes file and clears path in DB)
-app.delete("/api/user/avatar", auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user)
-      return res.status(404).json({ error: "Użytkownik nie istnieje" });
-    // remove top-level avatar file if present, and also clear any legacy settings.avatar
-    const prevTop = user.avatar;
-    const prevSettings = user.data?.settings?.avatar;
-    if (prevTop && prevTop.startsWith("/uploads/")) {
-      const prevFile = path.join(__dirname, prevTop);
-      try {
-        if (fs.existsSync(prevFile)) fs.unlinkSync(prevFile);
-      } catch (e) {
-        /* ignore */
+// --- PUBLIC image upload endpoint (returns path + full url) ---
+app.post("/api/uploads/image", (req, res) => {
+  upload.single("image")(req, res, (err) => {
+    try {
+      if (err) {
+        if (err.code === "LIMIT_FILE_SIZE")
+          return res.status(413).json({ error: "Plik za duży" });
+        return res.status(400).json({ error: err.message || "Upload error" });
       }
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "Brak pliku" });
+      const storedPath = `/uploads/${file.filename}`;
+      const baseUrl =
+        process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+      const fullUrl = `${baseUrl}${storedPath}`;
+      return res.json({ path: storedPath, url: fullUrl });
+    } catch (e) {
+      console.error("Public upload error:", e);
+      return res.status(500).json({ error: "Server error" });
     }
-    if (prevSettings && prevSettings.startsWith("/uploads/")) {
-      const prevFile2 = path.join(__dirname, prevSettings);
-      try {
-        if (fs.existsSync(prevFile2)) fs.unlinkSync(prevFile2);
-      } catch (e) {
-        /* ignore */
-      }
-    }
-    user.avatar = null;
-    // keep user.data.settings intact (do not remove other settings)
-    await user.save();
-    res.json({ ok: true, path: null });
-  } catch (e) {
-    console.error("DELETE /api/user/avatar error:", e);
-    res.status(500).json({ error: "Server error" });
-  }
+  });
 });
+
+// static files: /uploads dostępny publicznie
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // publikuj zapisany jadłospis (chronione)
 app.post("/api/public/menus", auth, async (req, res) => {
@@ -872,6 +875,95 @@ app.post("/api/report", auth, async (req, res) => {
   } catch (err) {
     console.error("Report error:", err);
     res.status(500).json({ error: "Nie udało się wysłać zgłoszenia" });
+  }
+});
+
+// --- PUBLIC image generation via AI (uses AI_KEY from .env) ---
+app.post("/api/ai/images", async (req, res) => {
+  try {
+    const {
+      prompt,
+      n = 1,
+      model = "img3",
+      size = "1024x1024",
+    } = req.body || {};
+    if (!prompt) return res.status(400).json({ error: "prompt is required" });
+
+    const aiKey = process.env.AI_KEY;
+    if (!aiKey)
+      return res.status(500).json({ error: "AI_KEY not configured on server" });
+
+    console.log("Requesting AI with:", { prompt, n, model, size });
+
+    // call infip.pro image generation
+    const aiResp = await fetch("https://api.infip.pro/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${aiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model, prompt, n, size }),
+    });
+
+    if (!aiResp.ok) {
+      const txt = await aiResp.text();
+      console.error("AI service error:", aiResp.status, txt);
+      return res.status(502).json({ error: "AI service error", detail: txt });
+    }
+
+    const aiBody = await aiResp.json();
+    console.log("Full AI response:", JSON.stringify(aiBody, null, 2));
+
+    // infip.pro zwraca { data: [{url: "...", ...}, ...], created: ..., usage: ... }
+    const imgObjects = Array.isArray(aiBody.data) ? aiBody.data : [];
+    console.log("Image objects extracted:", imgObjects);
+
+    const results = [];
+
+    for (const imgObj of imgObjects) {
+      try {
+        // każdy imgObj to { url: "...", b64_json: null, model: null }
+        const imgUrl = imgObj?.url;
+        console.log("Processing image URL:", imgUrl);
+
+        if (!imgUrl || typeof imgUrl !== "string") {
+          console.warn("Invalid image URL:", imgUrl);
+          continue;
+        }
+
+        // fetch image bytes and save locally into uploadsDir
+        const fetched = await fetch(imgUrl);
+        if (!fetched.ok) {
+          console.warn(
+            "Failed to fetch generated image:",
+            imgUrl,
+            fetched.status
+          );
+          continue;
+        }
+        const arrayBuf = await fetched.arrayBuffer();
+        const buffer = Buffer.from(arrayBuf);
+        const ext = path.extname(new URL(imgUrl).pathname) || ".png";
+        const filename =
+          Date.now() + "-" + Math.random().toString(36).slice(2, 8) + ext;
+        const outPath = path.join(uploadsDir, filename);
+        fs.writeFileSync(outPath, buffer);
+        const storedPath = `/uploads/${filename}`;
+        const baseUrl =
+          process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+        const fullUrl = `${baseUrl}${storedPath}`;
+        results.push({ path: storedPath, url: fullUrl });
+        console.log("Saved image:", storedPath);
+      } catch (e) {
+        console.error("save generated image error:", e);
+      }
+    }
+
+    console.log("Final results:", results);
+    return res.json({ images: results, seed: aiBody.created ?? null });
+  } catch (e) {
+    console.error("POST /api/ai/images error:", e);
+    return res.status(500).json({ error: "Server error", detail: e.message });
   }
 });
 

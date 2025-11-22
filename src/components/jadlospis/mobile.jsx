@@ -15,6 +15,20 @@ import {
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  ""
+);
+
+// helper to build image src
+const imgSrc = (dish) => {
+  if (!dish) return null;
+  const a = dish.avatar || dish.image || "";
+  if (!a) return null;
+  if (a.startsWith("http")) return a;
+  return `${API}${a}`;
+};
+
 export default function MobileJadlospis({
   week,
   wi,
@@ -43,7 +57,6 @@ export default function MobileJadlospis({
               className="primary"
               sx={{
                 p: 2,
-
                 fontWeight: 600,
                 fontSize: "1rem",
                 borderBottom: "2px solid rgba(0, 0, 0, 0.12)",
@@ -60,9 +73,12 @@ export default function MobileJadlospis({
               const favorite = !!dish?.favorite;
               const dishObj = dishesAll.find((d) => d.name === name);
 
+              const noDishText = settings?.noDishText ?? "Brak potraw";
+              const isEmpty = !dish || name === noDishText;
+
               return (
                 <Box
-                  className="table-meal"
+                  className={isEmpty ? "table-meal-empty" : "table-meal"}
                   key={meal}
                   sx={{
                     p: 2,
@@ -116,6 +132,30 @@ export default function MobileJadlospis({
                         width: "100%",
                       }}
                     >
+                      {/* thumbnail image */}
+                      {imgSrc(dishObj) && (ui?.showImage ?? false) ? (
+                        <img
+                          src={imgSrc(dishObj)}
+                          alt={name}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            objectFit: "cover",
+                            borderRadius: 6,
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 6,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+
                       <Box
                         onTouchStart={(e) =>
                           startTouchDragCell(e, {

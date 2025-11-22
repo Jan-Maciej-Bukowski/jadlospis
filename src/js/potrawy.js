@@ -173,6 +173,7 @@ export function addDish(dish) {
           .map((d) => d.trim())
           .filter(Boolean)
       : DAYS,
+    avatar: dish.avatar || null, // ADDED: zapisz ścieżkę do obrazu
   };
 
   // if exact name exists, append unique suffix to avoid accidental replace

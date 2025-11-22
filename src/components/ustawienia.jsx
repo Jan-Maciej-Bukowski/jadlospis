@@ -131,8 +131,8 @@ export default function Ustawienia() {
     editedSpecialDishes,
     uiSettings,
     noDishText,
-    excludedTags,
-    specialDishes,
+    // excludedTags,
+    // specialDishes,
   ]);
 
   // Sekcja ustawień wyglądu (uprzątnięta, pionowy układ)
@@ -200,6 +200,16 @@ export default function Ustawienia() {
               />
             }
             label="Pokaż tagi w jadłospisie"
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!uiSettings.showImage}
+                onChange={() => toggleUi("showImage")}
+              />
+            }
+            label="Pokaż obraz potrawy w jadłospisie"
           />
         </Stack>
 

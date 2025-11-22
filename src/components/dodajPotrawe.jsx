@@ -20,6 +20,8 @@ import Swal from "sweetalert2";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 // Stałe jednostki miary
 const UNITS = [
   { value: "g", label: "gram (g)" },
@@ -60,6 +62,8 @@ export default function DodajPotrawe() {
   const [favorite, setFavorite] = useState(false);
   const [maxAcrossWeeks, setMaxAcrossWeeks] = useState(""); // liczba (opcjonalnie)
   const [maxPerDay, setMaxPerDay] = useState(3); // maks na dzień (opcjonalnie)
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     const handler = () => {
@@ -260,7 +264,9 @@ export default function DodajPotrawe() {
       favorite: favorite,
       maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
       allowedDays: allowedDays.length ? allowedDays : DAYS,
+      avatar: imageFile?.uploadedPath || null, // ADDED: dodaj avatar z uploadowanego pliku
     };
+
     console.log("new dish: ", data);
     addDish(data);
 
@@ -286,7 +292,117 @@ export default function DodajPotrawe() {
     setMaxPerDay(3);
     setSelectedLists([]);
     setAllowedDays([...DAYS]);
+    setImageFile(null);
+    setImagePreview(null);
   }
+
+  // helper: upload image immediately and store returned path
+  const uploadImage = async (file) => {
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(
+        `${API_BASE.replace(/\/+$/, "")}/api/uploads/image`,
+        {
+          method: "POST",
+          body: fd,
+        }
+      );
+      if (!res.ok) throw new Error("Upload failed");
+      const body = await res.json();
+      return body.path; // e.g. /uploads/xxxx.jpg
+    } catch (e) {
+      console.error("uploadImage:", e);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: "Nie udało się przesłać obrazu.",
+      });
+      return null;
+    }
+  };
+
+  // file input change
+  const onFileChange = async (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) {
+      setImageFile(null);
+      setImagePreview(null);
+      return;
+    }
+    // show local preview
+    const url = URL.createObjectURL(f);
+    setImagePreview(url);
+    setImageFile(f);
+
+    // upload immediately (so we have path to save with dish)
+    const path = await uploadImage(f);
+    if (path) {
+      // store uploaded path in a temporary state variable (we'll include it in newDish)
+      setImageFile({ uploadedPath: path, originalFileName: f.name });
+    } else {
+      // reset on error
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  // generate image via server -> AI -> saved to /uploads
+  const generateAiImage = async () => {
+    const { value: prompt } = await Swal.fire({
+      title: "Generuj obraz AI",
+      input: "text",
+      inputPlaceholder: "Krótki opis obrazu (np. 'zupa pomidorowa na talerzu')",
+      showCancelButton: true,
+      inputValidator: (v) => (!v || !v.trim() ? "Wpisz prompt" : null),
+    });
+    if (!prompt) return;
+
+    Swal.fire({
+      title: "Generowanie obrazu...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    try {
+      const res = await fetch(`${API_BASE.replace(/\/+$/, "")}/api/ai/images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          n: 1,
+          model: "img3",
+          size: "1024x1024",
+        }),
+      });
+      if (!res.ok) throw new Error("AI generation failed");
+      const body = await res.json();
+      console.log("AI response:", body); // debug
+
+      // FIXED: images zawiera obiekty { path, url }, nie stringi
+      const images = Array.isArray(body.images) ? body.images : [];
+      if (images.length === 0) throw new Error("No image returned");
+
+      const img = images[0];
+      // img powinno być { path: "/uploads/...", url: "http://..." }
+      if (!img || !img.path) throw new Error("Invalid image object");
+
+      setImageFile({
+        uploadedPath: img.path,
+        originalFileName: "ai-generated.jpg",
+      });
+      setImagePreview(img.url || img.path); // użyj full URL do podglądu
+      Swal.close();
+      Swal.fire({ icon: "success", title: "Wygenerowano obraz" });
+    } catch (e) {
+      console.error("AI generate error:", e);
+      Swal.close();
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: "Nie udało się wygenerować obrazu: " + e.message,
+      });
+    }
+  };
 
   return (
     <Box
@@ -319,6 +435,44 @@ export default function DodajPotrawe() {
           maxWidth: 400,
         }}
       >
+        {/* image uploader */}
+        <Box>
+          <input
+            id="dish-image"
+            type="file"
+            accept="image/*"
+            onChange={onFileChange}
+            style={{ display: "block", marginBottom: 8 }}
+          />
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
+            <Button variant="outlined" size="small" onClick={generateAiImage}>
+              Generuj AI
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                setImageFile(null);
+                setImagePreview(null);
+              }}
+            >
+              Usuń obraz
+            </Button>
+          </Box>
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="preview"
+              style={{
+                width: 80,
+                height: 80,
+                objectFit: "cover",
+                borderRadius: 6,
+              }}
+            />
+          )}
+        </Box>
+
         <TextField
           label="Nazwa Potrawy"
           variant="outlined"

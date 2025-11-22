@@ -33,6 +33,14 @@
   margin: 10px;
 }
 
+.table-meal-empty {
+  color: $color-text-main;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin: 10px;
+}
+
 .meal-tag {
   color: $color-text-on-dark !important;
 }

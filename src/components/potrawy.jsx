@@ -83,6 +83,7 @@ export default function Potrawy() {
     favorite: false,
     maxAcrossWeeks: "",
     allowedDays: DAYS,
+    avatar: null, // ADDED: init avatar to null
   });
 
   // dishes state: load from localStorage or fallback to defaultDishes
@@ -131,6 +132,18 @@ export default function Potrawy() {
     setOpenIndex(openIndex === index ? null : index);
   };
 
+  // helper to build image src
+  const imgSrc = (dish) => {
+    console.log(dish);
+    if (!dish) return null;
+    const a = dish.avatar || dish.image || "";
+    if (!a) return null;
+    if (a.startsWith("http")) return a;
+    console.log(`obraz: ${API}${a}`);
+    return `${API}${a}`;
+  };
+
+  // when entering edit mode, populate avatar if present
   const handleEdit = (index) => {
     const dish = dishes[index] || {};
     setEditIndex(index);
@@ -158,8 +171,33 @@ export default function Potrawy() {
       favorite: !!dish.favorite,
       maxAcrossWeeks: dish.maxAcrossWeeks ?? "",
       allowedDays: dish.allowedDays || DAYS,
+      avatar: dish.avatar || null, // ADDED: zawsze inicjalizuj avatar
     };
     setEditedDish(newSettings);
+  };
+
+  // allow upload directly in edit: upload and set editedDish.avatar
+  const uploadEditImage = async (file) => {
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`${API}/api/uploads/image`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const body = await res.json();
+      setEditedDish((prev) => ({ ...prev, avatar: body.path }));
+      return body.path;
+    } catch (e) {
+      console.error("uploadEditImage:", e);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: "Nie udało się przesłać obrazu.",
+      });
+      return null;
+    }
   };
 
   const handleSave = (index) => {
@@ -182,7 +220,7 @@ export default function Potrawy() {
 
     setDishes((prev) => {
       const copy = [...prev];
-      const d = copy[index] || {}; // dodaj tę linię
+      const d = copy[index] || {};
       copy[index] = {
         ...copy[index],
         name: editedDish.name,
@@ -211,6 +249,7 @@ export default function Potrawy() {
             : Number(editedDish.maxAcrossWeeks),
         allowedDays:
           editedDish.allowedDays.length > 0 ? editedDish.allowedDays : DAYS,
+        avatar: editedDish.avatar || null, // ADDED: zapisz avatar (może być null)
       };
       saveLocal(copy);
       return copy;
@@ -232,6 +271,7 @@ export default function Potrawy() {
       favorite: false,
       maxAcrossWeeks: "",
       allowedDays: DAYS,
+      avatar: null, // ADDED: init avatar to null
     });
   };
 
@@ -414,68 +454,6 @@ export default function Potrawy() {
       <Typography variant="h4" sx={{ mb: 2 }}>
         Lista Potraw
       </Typography>
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          gap: 2,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontSize: "1.1rem" }}>
-            Min. ocena:
-          </Typography>
-
-          <Rating
-            name="filter-rating"
-            size="small"
-            value={filterRating}
-            onChange={(_, val) => setFilterRating(val || 0)}
-          />
-        </Box>
-
-        <FormControlLabel
-          control={
-            <Checkbox
-              className="checkbox"
-              checked={onlyFavorites}
-              onChange={(e) => setOnlyFavorites(e.target.checked)}
-            />
-          }
-          label="Tylko ulubione"
-        />
-        <Button
-          variant="contained" // zmiana z outlined na contained
-          className="primary"
-          onClick={() => {
-            setFilterRating(0);
-            setOnlyFavorites(false);
-            setFilterTagsInput("");
-          }}
-        >
-          Wyczyść filtry
-        </Button>
-      </Box>
-
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          gap: 2,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          label="tagi"
-          size="small"
-          value={filterTagsInput}
-          onChange={(e) => setFilterTagsInput(e.target.value)}
-          sx={{ minWidth: 220 }}
-        />
-      </Box>
 
       <List>
         {dishes
@@ -522,6 +500,30 @@ export default function Potrawy() {
                   paddingRight: { xs: 2, sm: 16 }, // mniejszy padding na małych ekranach
                 }}
               >
+                {/* small thumbnail */}
+                {imgSrc(dish) ? (
+                  <img
+                    src={imgSrc(dish)}
+                    alt={dish.name}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      marginRight: 12,
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      bgcolor: "transparent",
+                      mr: 1,
+                    }}
+                  />
+                )}
+
                 <ListItemText
                   primary={dish.name}
                   secondary={
@@ -531,10 +533,7 @@ export default function Potrawy() {
                         : dish.tags}
                     </span>
                   }
-                  sx={{
-                    mb: { xs: 1, sm: 0 }, // margines pod tekstem tylko na małych ekranach
-                    width: "100%", // pełna szerokość na małych ekranach
-                  }}
+                  sx={{ mb: { xs: 1, sm: 0 }, width: "100%" }}
                 />
 
                 <Box
@@ -665,6 +664,32 @@ export default function Potrawy() {
                   <br />
                   {editIndex === index ? (
                     <Box sx={{ mt: 2 }}>
+                      {/* Image edit control */}
+                      <Box sx={{ mb: 2 }}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const f = e.target.files && e.target.files[0];
+                            if (!f) return;
+                            await uploadEditImage(f);
+                          }}
+                          style={{ display: "block", marginBottom: 8 }}
+                        />
+                        {editedDish.avatar && (
+                          <img
+                            src={imgSrc({ avatar: editedDish.avatar })}
+                            alt="preview"
+                            style={{
+                              width: 80,
+                              height: 80,
+                              objectFit: "cover",
+                              borderRadius: 6,
+                            }}
+                          />
+                        )}
+                      </Box>
+
                       <TextField
                         label="Nazwa potrawy"
                         variant="outlined"
