@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "kill-port": "powershell -Command \"Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\"",
-    "refresh": "npm run kill-port && concurrently \"npm run dev\" \"npm --prefix server run dev\"",
+    "kill-ports": "powershell -Command \"Get-NetTCPConnection -LocalPort 4000,5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\"",
+    "start": "npx concurrently \"npm run dev\" \"npm --prefix server run dev\" --names \"FRONT,BACK\" --raw",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import React from "react";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
-import UploadFileIcon from '@mui/icons-material/UploadFile';
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import "../styles/components/selectFile.scss";
 
 const SelectFile = ({
@@ -11,6 +11,7 @@ const SelectFile = ({
   onClear,
   filename,
   previewUrl,
+  disabled = false,
 }) => {
   const inputRef = React.useRef(null);
 
@@ -23,7 +24,13 @@ const SelectFile = ({
   };
 
   return (
-    <div className="container">
+    <div
+      className="container"
+      style={{
+        opacity: disabled ? 0.5 : 1,
+        pointerEvents: disabled ? "none" : "auto",
+      }}
+    >
       <div
         className="header"
         style={{
@@ -81,7 +88,7 @@ const SelectFile = ({
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <label
-          htmlFor={id}
+          htmlFor={disabled ? undefined : id}
           className="footer"
           style={{
             flex: 1,
@@ -91,7 +98,7 @@ const SelectFile = ({
             gap: 8,
           }}
         >
-          < UploadFileIcon size="small"/>
+          <UploadFileIcon size="small" />
 
           <p
             style={{
@@ -113,6 +120,7 @@ const SelectFile = ({
             e.stopPropagation();
             handleClear();
           }}
+          disabled={disabled}
         >
           <DeleteIcon fontSize="small" />
         </IconButton>
@@ -124,6 +132,7 @@ const SelectFile = ({
         type="file"
         accept={accept}
         onChange={(e) => onChange && onChange(e)}
+        disabled={disabled}
         style={{ display: "none" }}
       />
     </div>

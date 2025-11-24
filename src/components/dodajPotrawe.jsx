@@ -21,6 +21,7 @@ import Swal from "sweetalert2";
 import { validateAmount } from "../utils/limits";
 import DAYS from "../utils/days.js";
 import SelectFile from "./selectFile.jsx";
+import OptionTitle from "./optionTitle.jsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -66,6 +67,7 @@ export default function DodajPotrawe() {
   const [maxPerDay, setMaxPerDay] = useState(3); // maks na dzień (opcjonalnie)
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isImageRightsConfirmed, setIsImageRightsConfirmed] = useState(false); // Stan dla checkboxa
 
   useEffect(() => {
     const handler = () => {
@@ -437,34 +439,8 @@ export default function DodajPotrawe() {
           maxWidth: 400,
         }}
       >
-        {/* image uploader */}
-        <Box>
-          <SelectFile
-            id="dish-image"
-            accept="image/*"
-            onChange={onFileChange}
-            onClear={() => {
-              setImageFile(null);
-              setImagePreview(null);
-            }}
-            filename={imageFile?.originalFileName}
-            previewUrl={imagePreview}
-          />
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AutoAwesomeIcon />}
-              sx={{marginTop: 2}}
-              onClick={generateAiImage}
-            >
-              Generuj z AI
-            </Button>
-            {/* przycisk "Usuń obraz" usunięty — kosz w SelectFile go zastępuje */}
-          </Box>
-          {/* podwójny podgląd usunięty (preview jest teraz w SelectFile) */}
-        </Box>
 
+        <OptionTitle id="1" name="Informacje o potrawie" />
         <TextField
           label="Nazwa Potrawy"
           variant="outlined"
@@ -480,12 +456,86 @@ export default function DodajPotrawe() {
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
-
-        {/* Sekcja składników */}
-        <Box sx={{ width: "100%", mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Składniki:
+        <Paper sx={{ p: 2, mb: 2, width: "100%" }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            Przypisz do list
           </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            {availableLists.length === 0 && (
+              <Typography variant="body2">
+                Brak list. Możesz utworzyć nową.
+              </Typography>
+            )}
+            {availableLists.map((l) => (
+              <FormControlLabel
+                key={l.id}
+                control={
+                  <Checkbox
+                    className="checkbox"
+                    checked={selectedLists.includes(l.id)}
+                    onChange={() => toggleListSelection(l.id)}
+                  />
+                }
+                label={l.name}
+              />
+            ))}
+            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+              <TextField
+                size="small"
+                placeholder="Utwórz nową listę..."
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                fullWidth
+              />
+              <Button
+                variant="contained"
+                onClick={createAndSelectList}
+                className="primary"
+              >
+                Dodaj
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+        <Box>
+          <SelectFile
+            id="dish-image"
+            accept="image/*"
+            onChange={onFileChange}
+            onClear={() => {
+              setImageFile(null);
+              setImagePreview(null);
+            }}
+            filename={imageFile?.originalFileName}
+            previewUrl={imagePreview}
+            disabled={!isImageRightsConfirmed}
+          />
+
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AutoAwesomeIcon />}
+              sx={{ marginTop: 2 }}
+              onClick={generateAiImage}
+              disabled={!isImageRightsConfirmed} // Zablokuj przycisk, jeśli checkbox nie jest zaznaczony
+            >
+              Generuj z AI
+            </Button>
+          </Box>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isImageRightsConfirmed}
+                onChange={(e) => setIsImageRightsConfirmed(e.target.checked)}
+              />
+            }
+            label="Potwierdzam, że mam prawa do przesyłanego obrazu i ponoszę za niego odpowiedzialność."
+          />
+        </Box>
+
+        <OptionTitle id="2" name="Przepis" />
+        <Box sx={{ width: "100%", mb: 2 }}>
           {ingredients.map((ing, index) => {
             const error = validateAmount(ing.amount, ing.unit);
             return (
@@ -547,6 +597,7 @@ export default function DodajPotrawe() {
               </Box>
             );
           })}
+
           <Button
             startIcon={<AddIcon />}
             onClick={addIngredient}
@@ -566,48 +617,8 @@ export default function DodajPotrawe() {
           onChange={(e) => setOtherParams(e.target.value)}
         />
 
-        {/* Sekcja list */}
-        <Paper sx={{ p: 2, mb: 2, width: "100%" }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            Przypisz do list
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            {availableLists.length === 0 && (
-              <Typography variant="body2">
-                Brak list. Możesz utworzyć nową.
-              </Typography>
-            )}
-            {availableLists.map((l) => (
-              <FormControlLabel
-                key={l.id}
-                control={
-                  <Checkbox
-                    className="checkbox"
-                    checked={selectedLists.includes(l.id)}
-                    onChange={() => toggleListSelection(l.id)}
-                  />
-                }
-                label={l.name}
-              />
-            ))}
-            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Utwórz nową listę..."
-                value={newListName}
-                onChange={(e) => setNewListName(e.target.value)}
-                fullWidth
-              />
-              <Button
-                variant="contained"
-                onClick={createAndSelectList}
-                className="primary"
-              >
-                Dodaj
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
+        <OptionTitle id="3" name="Reguły występowania" />
+
         <TextField
           label="Maks wystąpień w dniu"
           variant="outlined"
@@ -709,6 +720,7 @@ export default function DodajPotrawe() {
             />
           ))}
         </FormGroup>
+        <OptionTitle id="4" name="Ocena i ulubione" />
         <Typography gutterBottom>Ocena początkowa:</Typography>
         <Rating value={rating} onChange={(e, val) => setRating(val || 0)} />
 
