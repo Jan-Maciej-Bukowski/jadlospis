@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "kill-ports": "powershell -Command \"Get-NetTCPConnection -LocalPort 4000,5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\"",
     "start": "npx concurrently \"npm run dev\" \"npm --prefix server run dev\" --names \"FRONT,BACK\" --raw",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "lint": "eslint . --ext .js,.jsx,.mjs,.cjs",
+    "lint:fix": "eslint . --ext .js,.jsx,.mjs,.cjs --fix"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
