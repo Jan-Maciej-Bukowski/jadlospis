@@ -239,12 +239,20 @@ export default function PublicPotrawy() {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { sm: 1, md: 1 } }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
         Publiczne potrawy
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 1, mb: 2, alignItems: "center" }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 1,
+          mb: 2,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <TextField
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -260,7 +268,14 @@ export default function PublicPotrawy() {
           Szukaj
         </Button>
 
-        <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            ml: 2,
+            flex: "1 1 180px",
+          }}
+        >
           <Switch
             checked={onlyFavorites}
             onChange={(e) => setOnlyFavorites(e.target.checked)}
@@ -270,10 +285,20 @@ export default function PublicPotrawy() {
         </Box>
       </Box>
 
-      <List>
-        {visibleItems.length === 0 && (
-          <Typography>Brak publicznych potraw</Typography>
-        )}
+      {visibleItems.length === 0 && (
+        <Typography>Brak publicznych potraw</Typography>
+      )}
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 2,
+          "@media (max-width: 520px)": {
+            alignItems: "center",
+              justifyContent: "center",
+          },
+        }}
+      >
         {visibleItems.map((it, idx) => (
           <Box key={it._id || idx} sx={{ mb: 2 }}>
             <PublicDishCard
@@ -286,7 +311,7 @@ export default function PublicPotrawy() {
             />
           </Box>
         ))}
-      </List>
+      </Box>
     </Box>
   );
 }
