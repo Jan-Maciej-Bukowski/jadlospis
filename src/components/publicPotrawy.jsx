@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Button, TextField, List } from "@mui/material";
+import { Box, Typography, Button, TextField } from "@mui/material";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
 import PublicDishCard from "./publicDishCard";
@@ -16,6 +16,7 @@ export default function PublicPotrawy() {
 
   const fetchLikes = async () => {
     const token = localStorage.getItem("token");
+    console.log("token:", token);
     if (!token) return setLikedIds([]);
     try {
       const res = await fetch(`${API_BASE}/api/user/likes`, {
@@ -24,6 +25,7 @@ export default function PublicPotrawy() {
       if (!res.ok) throw new Error("No likes");
       const body = await res.json();
       setLikedIds(body.likedIds || []);
+      console.log("upd")
     } catch (err) {
       console.warn("fetchLikes:", err);
       setLikedIds([]);
@@ -62,6 +64,11 @@ export default function PublicPotrawy() {
     fetchList();
     fetchLikes();
   }, []);
+
+  // NEW: gdy likedIds się zmienia (np. po odświeżeniu), prześlij do kart
+  useEffect(() => {
+    // karty automatycznie zaktualizują kolor na podstawie props `liked`
+  }, [likedIds]);
 
   const handleToggleLike = async (dish) => {
     const token = localStorage.getItem("token");
@@ -295,7 +302,7 @@ export default function PublicPotrawy() {
           gap: 2,
           "@media (max-width: 520px)": {
             alignItems: "center",
-              justifyContent: "center",
+            justifyContent: "center",
           },
         }}
       >
@@ -305,7 +312,7 @@ export default function PublicPotrawy() {
               dishData={it}
               onAddToDishes={importDish}
               onReport={handleReport}
-              liked={likedIds.includes(it._id)}
+              liked={likedIds.includes(it._id)} // tutaj — sprawdza czy id jest w likedIds
               likesCount={it.likesCount ?? 0}
               onToggleLike={handleToggleLike}
             />

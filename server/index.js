@@ -970,7 +970,27 @@ app.post("/api/ai/images", async (req, res) => {
   }
 });
 
-// GET public user info (no auth needed)
+// GET liked dish ids for current user (chronione) — MUSI BYĆ PRZED GET /api/user/:id
+app.get("/api/user/likes", auth, async (req, res) => {
+  try {
+    console.log("GET /api/user/likes - userId:", req.user?.id); // DEBUG
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const userId = req.user.id;
+    const docs = await PublicDish.find({ likes: userId }).select("_id").lean();
+    const ids = docs.map((d) => d._id.toString());
+    console.log("Found liked dishes:", ids); // DEBUG
+
+    res.json({ likedIds: ids });
+  } catch (err) {
+    console.error("GET /api/user/likes error:", err);
+    res.status(500).json({ error: "Server error", detail: err.message });
+  }
+});
+
+// GET public user info (no auth needed) — TO MUSI BYĆ PO /api/user/likes!
 app.get("/api/user/:id", async (req, res) => {
   try {
     const u = await User.findById(req.params.id).lean();
@@ -1018,13 +1038,37 @@ app.post("/api/public/dishes/:id/like", auth, async (req, res) => {
 // GET liked dish ids for current user (chronione)
 app.get("/api/user/likes", auth, async (req, res) => {
   try {
+    console.log("GET /api/user/likes - userId:", req.user?.id); // DEBUG
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
     const userId = req.user.id;
-    // zwróć tylko id potraw, które user lubi
     const docs = await PublicDish.find({ likes: userId }).select("_id").lean();
     const ids = docs.map((d) => d._id.toString());
+    console.log("Found liked dishes:", ids); // DEBUG
+
     res.json({ likedIds: ids });
   } catch (err) {
     console.error("GET /api/user/likes error:", err);
+    res.status(500).json({ error: "Server error", detail: err.message });
+  }
+});
+
+// GET public user info (no auth needed) — TO MUSI BYĆ PO /api/user/likes!
+app.get("/api/user/:id", async (req, res) => {
+  try {
+    const u = await User.findById(req.params.id).lean();
+    if (!u) return res.status(404).json({ error: "User not found" });
+    res.json({
+      user: {
+        id: u._id,
+        username: u.username,
+        avatar: u.avatar || null,
+      },
+    });
+  } catch (err) {
+    console.error("GET /api/user/:id error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
