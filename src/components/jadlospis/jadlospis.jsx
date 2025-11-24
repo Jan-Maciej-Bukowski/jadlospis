@@ -5,7 +5,6 @@ import Swal from "sweetalert2";
 import { Box, Button, Typography, TextField } from "@mui/material";
 import { generateMenu } from "../../js/generateMenu.js";
 import { settings } from "../../js/settings.js";
-import { useTheme } from "@mui/material/styles";
 import ListDishesConfig from "../ListDishesConfig.jsx";
 import DesktopJadlospis from "./desktop.jsx";
 import MobileJadlospis from "./mobile.jsx";
@@ -406,7 +405,7 @@ export default function Jadlospis() {
         e.currentTarget.classList.add("grabbing");
       }
     } catch (err) {
-      // ignore
+      console.log(err)
     }
   };
 
@@ -493,22 +492,6 @@ export default function Jadlospis() {
     document.body.appendChild(g);
     return g;
   };
-
-  // ensure any leftover ghost is removed on unmount / pagehide
-  useEffect(() => {
-    const cleanupGlobal = () => {
-      try {
-        if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
-      } catch (err) {}
-      //window.__touchDrag = null;
-      //document.body.style.touchAction = "";
-    };
-    //window.addEventListener("pagehide", cleanupGlobal);
-    return () => {
-      //window.removeEventListener("pagehide", cleanupGlobal);
-      //cleanupGlobal();
-    };
-  }, []);
 
   const startTouchDragCell = (e, src) => {
     const t = e.touches && e.touches[0];

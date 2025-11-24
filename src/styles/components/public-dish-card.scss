@@ -1,13 +1,7 @@
-@use "../_vars" as *;
-@use "../_mixins" as *;
+@use "../_vars" as vars;
+@use "../_mixins" as mixins;
 
-// .public-dish-card {
-//   background-color: white !important;
-//   color: var(--color-text-main);
-//   user-select: none;
-//   border: 20px solid $color-primary;
-//   border-radius: 12px;
-//   padding: 16px;
-//   margin: 10px;
-//   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-// }
+.public-dish-card {
+  background-color: vars.$color-bg-light !important;
+  max-width: 345px;
+}

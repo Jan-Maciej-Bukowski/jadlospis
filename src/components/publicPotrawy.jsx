@@ -1,14 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  List,
-} from "@mui/material";
+import { Box, Typography, Button, TextField, List } from "@mui/material";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
 import PublicDishCard from "./publicDishCard";
+import Switch from "@mui/material/Switch";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -16,8 +11,24 @@ export default function PublicPotrawy() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line unused-imports/no-unused-vars
-  const [openIndex, setOpenIndex] = useState(null);
+  const [likedIds, setLikedIds] = useState([]); // ids liked by current user
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+
+  const fetchLikes = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return setLikedIds([]);
+    try {
+      const res = await fetch(`${API_BASE}/api/user/likes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("No likes");
+      const body = await res.json();
+      setLikedIds(body.likedIds || []);
+    } catch (err) {
+      console.warn("fetchLikes:", err);
+      setLikedIds([]);
+    }
+  };
 
   const fetchList = async () => {
     setLoading(true);
@@ -27,7 +38,14 @@ export default function PublicPotrawy() {
       );
       if (!res.ok) throw new Error("Fetch failed");
       const body = await res.json();
-      setItems(body.items || []);
+      // attach likesCount from backend if present, otherwise 0
+      const enriched = (body.items || []).map((it) => ({
+        ...it,
+        likesCount: Array.isArray(it.likes)
+          ? it.likes.length
+          : it.likesCount || 0,
+      }));
+      setItems(enriched);
     } catch (err) {
       console.error("fetch public dishes:", err);
       Swal.fire({
@@ -42,9 +60,53 @@ export default function PublicPotrawy() {
 
   useEffect(() => {
     fetchList();
+    fetchLikes();
   }, []);
 
-  //const toggle = (i) => setOpenIndex((prev) => (prev === i ? null : i));
+  const handleToggleLike = async (dish) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      Swal.fire({
+        icon: "warning",
+        title: "Zaloguj się",
+        text: "Musisz być zalogowany, aby polubić potrawę",
+      });
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/public/dishes/${dish._id}/like`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) throw new Error("Like failed");
+      const body = await res.json();
+      // update likedIds
+      setLikedIds((prev) => {
+        if (body.liked) return [...prev, dish._id];
+        return prev.filter((id) => id !== dish._id);
+      });
+      // update local likesCount
+      setItems((prev) =>
+        prev.map((it) =>
+          it._id === dish._id ? { ...it, likesCount: body.likesCount } : it
+        )
+      );
+    } catch (err) {
+      console.error("toggle like:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Błąd",
+        text: "Nie udało się zaktualizować polubienia",
+      });
+    }
+  };
+
+  const visibleItems = onlyFavorites
+    ? items.filter((it) => likedIds.includes(it._id))
+    : items;
 
   const importDish = (pd) => {
     try {
@@ -181,7 +243,8 @@ export default function PublicPotrawy() {
       <Typography variant="h5" sx={{ mb: 2 }}>
         Publiczne potrawy
       </Typography>
-      <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+
+      <Box sx={{ display: "flex", gap: 1, mb: 2, alignItems: "center" }}>
         <TextField
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -196,16 +259,30 @@ export default function PublicPotrawy() {
         >
           Szukaj
         </Button>
+
+        <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
+          <Switch
+            checked={onlyFavorites}
+            onChange={(e) => setOnlyFavorites(e.target.checked)}
+            inputProps={{ "aria-label": "Tylko ulubione" }}
+          />
+          <Typography variant="body2">Tylko ulubione</Typography>
+        </Box>
       </Box>
 
       <List>
-        {items.length === 0 && <Typography>Brak publicznych potraw</Typography>}
-        {items.map((it, idx) => (
-          <Box key={it._id || idx}>
+        {visibleItems.length === 0 && (
+          <Typography>Brak publicznych potraw</Typography>
+        )}
+        {visibleItems.map((it, idx) => (
+          <Box key={it._id || idx} sx={{ mb: 2 }}>
             <PublicDishCard
               dishData={it}
               onAddToDishes={importDish}
               onReport={handleReport}
+              liked={likedIds.includes(it._id)}
+              likesCount={it.likesCount ?? 0}
+              onToggleLike={handleToggleLike}
             />
           </Box>
         ))}

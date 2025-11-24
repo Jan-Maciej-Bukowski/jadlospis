@@ -988,6 +988,47 @@ app.get("/api/user/:id", async (req, res) => {
   }
 });
 
+// Toggle like/unlike (chronione)
+app.post("/api/public/dishes/:id/like", auth, async (req, res) => {
+  try {
+    const dishId = req.params.id;
+    const userId = req.user.id;
+    const pd = await PublicDish.findById(dishId);
+    if (!pd) return res.status(404).json({ error: "Not found" });
+
+    const idx = pd.likes.findIndex((x) => x?.toString() === userId);
+    let liked = false;
+    if (idx === -1) {
+      // add
+      pd.likes.push(userId);
+      liked = true;
+    } else {
+      // remove
+      pd.likes.splice(idx, 1);
+      liked = false;
+    }
+    await pd.save();
+    return res.json({ liked, likesCount: pd.likes.length });
+  } catch (err) {
+    console.error("POST /api/public/dishes/:id/like error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET liked dish ids for current user (chronione)
+app.get("/api/user/likes", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // zwróć tylko id potraw, które user lubi
+    const docs = await PublicDish.find({ likes: userId }).select("_id").lean();
+    const ids = docs.map((d) => d._id.toString());
+    res.json({ likedIds: ids });
+  } catch (err) {
+    console.error("GET /api/user/likes error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

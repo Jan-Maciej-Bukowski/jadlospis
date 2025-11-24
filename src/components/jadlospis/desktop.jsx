@@ -13,6 +13,7 @@ const imgSrc = (dish) => {
   const a = dish.avatar || dish.image || "";
   if (!a) return null;
   if (a.startsWith("http")) return a;
+  //console.log("imgSrc:", `${API}${a}`);
   return `${API}${a}`;
 };
 
@@ -94,6 +95,7 @@ export default function DesktopJadlospis({
               dish?.name ?? dish ?? settings.noDishText ?? "Brak potraw";
             const favorite = !!dish?.favorite;
             const dishObj = dishesAll.find((d) => d.name === name);
+            console.log("dishObj:", dishObj);
 
             // treat slot as empty when it equals configured "noDishText" or there's no dish value
             const noDishText = settings?.noDishText ?? "Brak potraw";

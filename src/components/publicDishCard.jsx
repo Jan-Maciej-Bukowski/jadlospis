@@ -47,7 +47,14 @@ const ExpandMore = styled((props) => {
   ],
 }));
 
-function PublicDishCard({ dishData, onAddToDishes, onReport }) {
+function PublicDishCard({
+  dishData,
+  onAddToDishes,
+  onReport,
+  liked,
+  likesCount,
+  onToggleLike,
+}) {
   const [expanded, setExpanded] = React.useState(false);
   const [authorAvatar, setAuthorAvatar] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
@@ -64,7 +71,7 @@ function PublicDishCard({ dishData, onAddToDishes, onReport }) {
           setAuthorAvatar(data.user?.avatar || null);
         }
       } catch (err) {
-        console.warn("Failed to fetch author avatar ",err);
+        console.warn("Failed to fetch author avatar ", err);
       } finally {
         setLoading(false);
       }
@@ -96,7 +103,7 @@ function PublicDishCard({ dishData, onAddToDishes, onReport }) {
   const createdDate = new Date(createdAt).toLocaleDateString("pl-PL");
 
   return (
-    <Card sx={{ maxWidth: 345 }}>
+    <Card className="public-dish-card">
       <CardHeader
         avatar={
           authorAvatar && !loading ? (
@@ -134,9 +141,16 @@ function PublicDishCard({ dishData, onAddToDishes, onReport }) {
         )}
       </CardContent>
       <CardActions disableSpacing>
-        <IconButton aria-label="add to favorites">
-          <FavoriteIcon />
+        <IconButton
+          aria-label="like"
+          onClick={() => onToggleLike && onToggleLike(dishData)}
+        >
+          <FavoriteIcon sx={{ color: liked ? "red" : "rgba(0,0,0,0.54)" }} />
         </IconButton>
+        <Typography variant="body2" sx={{ mr: 1 }}>
+          {typeof likesCount === "number" ? likesCount : 0}
+        </Typography>
+
         <IconButton aria-label="share">
           <ShareIcon />
         </IconButton>
@@ -209,6 +223,9 @@ PublicDishCard.propTypes = {
   }),
   onAddToDishes: PropTypes.func,
   onReport: PropTypes.func,
+  liked: PropTypes.bool,
+  likesCount: PropTypes.number,
+  onToggleLike: PropTypes.func,
 };
 
 export default PublicDishCard;

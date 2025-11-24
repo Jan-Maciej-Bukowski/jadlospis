@@ -32,6 +32,11 @@ const PublicDishSchema = new mongoose.Schema({
       "Niedziela",
     ],
   },
+  // NEW: przechowujemy kto polubił (lista userId)
+  likes: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    default: [],
+  },
   author: {
     id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     username: { type: String },
