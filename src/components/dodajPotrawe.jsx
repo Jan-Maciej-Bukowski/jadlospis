@@ -15,7 +15,6 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { addDish } from "../js/potrawy";
 import Swal from "sweetalert2";
 import { validateAmount } from "../utils/limits";
@@ -351,63 +350,6 @@ export default function DodajPotrawe() {
     }
   };
 
-  // generate image via server -> AI -> saved to /uploads
-  const generateAiImage = async () => {
-    const { value: prompt } = await Swal.fire({
-      title: "Generuj obraz AI",
-      input: "text",
-      inputPlaceholder: "Krótki opis obrazu (np. 'zupa pomidorowa na talerzu')",
-      showCancelButton: true,
-      inputValidator: (v) => (!v || !v.trim() ? "Wpisz prompt" : null),
-    });
-    if (!prompt) return;
-
-    Swal.fire({
-      title: "Generowanie obrazu...",
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-    try {
-      const res = await fetch(`${API_BASE.replace(/\/+$/, "")}/api/ai/images`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          n: 1,
-          model: "img3",
-          size: "1024x1024",
-        }),
-      });
-      if (!res.ok) throw new Error("AI generation failed");
-      const body = await res.json();
-      console.log("AI response:", body); // debug
-
-      // FIXED: images zawiera obiekty { path, url }, nie stringi
-      const images = Array.isArray(body.images) ? body.images : [];
-      if (images.length === 0) throw new Error("No image returned");
-
-      const img = images[0];
-      // img powinno być { path: "/uploads/...", url: "http://..." }
-      if (!img || !img.path) throw new Error("Invalid image object");
-
-      setImageFile({
-        uploadedPath: img.path,
-        originalFileName: "ai-generated.jpg",
-      });
-      setImagePreview(img.url || img.path); // użyj full URL do podglądu
-      Swal.close();
-      Swal.fire({ icon: "success", title: "Wygenerowano obraz" });
-    } catch (e) {
-      console.error("AI generate error:", e);
-      Swal.close();
-      Swal.fire({
-        icon: "error",
-        title: "Błąd",
-        text: "Nie udało się wygenerować obrazu: " + e.message,
-      });
-    }
-  };
-
   return (
     <Box
       id="container"
@@ -439,7 +381,6 @@ export default function DodajPotrawe() {
           maxWidth: 400,
         }}
       >
-
         <OptionTitle id="1" name="Informacje o potrawie" />
         <TextField
           label="Nazwa Potrawy"
@@ -510,19 +451,6 @@ export default function DodajPotrawe() {
             previewUrl={imagePreview}
             disabled={!isImageRightsConfirmed}
           />
-
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AutoAwesomeIcon />}
-              sx={{ marginTop: 2 }}
-              onClick={generateAiImage}
-              disabled={!isImageRightsConfirmed} // Zablokuj przycisk, jeśli checkbox nie jest zaznaczony
-            >
-              Generuj z AI
-            </Button>
-          </Box>
           <FormControlLabel
             control={
               <Checkbox
@@ -549,7 +477,7 @@ export default function DodajPotrawe() {
                 }}
               >
                 <TextField
-                  label="Nazwa"
+                  label="Nazwa składnika"
                   size="small"
                   value={ing.name}
                   onChange={(e) =>
@@ -565,11 +493,17 @@ export default function DodajPotrawe() {
                   onChange={(e) =>
                     updateIngredient(index, "amount", e.target.value)
                   }
-                  sx={{ width: 100 }}
-                  inputProps={{ min: 0, step: 0.1 }}
+                  sx={{ width: 120 }}
                   error={!!error}
-                  //helperText={error}
+                  helperText={ing.amount <= 0 && "min 0.1"}
                   placeholder={!!error}
+                  slotProps={{
+                    htmlInput: {
+                      min: 0.1,
+                      step: 1,
+                    },
+                    // formHelperText: { sx: {} },
+                  }}
                 />
                 <TextField
                   select

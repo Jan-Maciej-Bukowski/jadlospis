@@ -884,7 +884,7 @@ app.post("/api/ai/images", async (req, res) => {
     const {
       prompt,
       n = 1,
-      model = "img3",
+      model = "sxdl",
       size = "1024x1024",
     } = req.body || {};
     if (!prompt) return res.status(400).json({ error: "prompt is required" });
