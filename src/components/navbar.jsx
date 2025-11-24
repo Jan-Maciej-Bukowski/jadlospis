@@ -39,8 +39,12 @@ import ListaZakupow from "./listaZakupow";
 import UstawieniaKonta from "./ustawieniaKonta";
 import Ustawienia from "./ustawienia";
 import Logowanie from "./logowanie";
-import Swal from "sweetalert2";
 import logoImg from "../assets/logo.png";
+
+const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
+  /\/+$/,
+  ""
+);
 
 export default function Navbar() {
   // podstawowe stany komponentu
@@ -48,7 +52,6 @@ export default function Navbar() {
   const [authOpen, setAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Jadłospis");
   const [authMode, setAuthMode] = useState("login");
-  const [customHexInput, setCustomHexInput] = useState("");
   const [isLogged, setIsLogged] = useState(() => {
     try {
       return !!localStorage.getItem("token");
@@ -141,7 +144,9 @@ export default function Navbar() {
         } catch (e) {
           console.warn("OAuth postprocessing failed", e);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("OAuth handling failed", e);
+      }
     })();
   }, []);
 
@@ -213,36 +218,6 @@ export default function Navbar() {
     setAuthMode("register");
     setActiveSection("Logowanie");
     closeAuthDrawer();
-  };
-  const deleteAccount = async () => {
-    const token = localStorage.getItem("token");
-    const answer = await Swal.fire({
-      title: "Usuń konto?",
-      text: "To działanie jest nieodwracalne.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Usuń",
-    });
-    if (!answer.isConfirmed) return;
-    if (token) {
-      try {
-        // próbuj wywołać endpoint usuwania konta (jeśli dodasz w backend)
-        await fetch(
-          (import.meta.env.VITE_API_URL || "http://localhost:4000") +
-            "/api/user",
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-      } catch (err) {
-        // ignore network errors — nadal czyścimy lokalne dane
-      }
-    }
-    localStorage.clear();
-    window.dispatchEvent(new CustomEvent("userLoggedOut"));
-    closeAuthDrawer();
-    window.location.reload();
   };
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -372,7 +347,9 @@ export default function Navbar() {
         } catch (e) {
           console.warn("OAuth postprocessing failed", e);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("OAuth handling failed", e);
+      }
     })();
   }, []);
 
@@ -562,7 +539,7 @@ export default function Navbar() {
       <Box sx={{ p: 3 }}>
         {activeSection === "Jadłospis" && <Jadlospis />}
         {activeSection === "Publiczne jadłospisy" && (
-          <PublicJadlospisy onLoad={(m) => setActiveSection("Jadłospis")} />
+          <PublicJadlospisy onLoad={() => setActiveSection("Jadłospis")} />
         )}
         {activeSection === "Jadłospisy" && <Jadlospisy />}
         {activeSection === "Potrawy" && <Potrawy />}

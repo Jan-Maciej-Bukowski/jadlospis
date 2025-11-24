@@ -196,3 +196,22 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
     </TableContainer>
   );
 }
+
+import PropTypes from "prop-types";
+
+ListDishesConfig.propTypes = {
+  dishes: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      allowedDays: PropTypes.arrayOf(PropTypes.string),
+      maxRepeats: PropTypes.number,
+      maxAcrossWeeks: PropTypes.number,
+    })
+  ).isRequired,
+  onDishChange: PropTypes.func.isRequired,
+};
+
+ListDishesConfig.propTypes = {
+  dishes: PropTypes.array.isRequired,
+  onDishChange: PropTypes.func.isRequired,
+};

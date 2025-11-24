@@ -24,7 +24,7 @@ export default [
       ...js.configs.recommended.rules,
       ...pluginReact.configs.recommended.rules,
       "no-unused-vars": "off",
-      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-empty": "off",
       "no-console": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
@@ -61,7 +61,7 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": "off",
-      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-empty": "off",
       "no-console": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [

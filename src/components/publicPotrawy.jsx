@@ -5,16 +5,10 @@ import {
   Button,
   TextField,
   List,
-  ListItem,
-  ListItemText,
-  Collapse,
-  IconButton,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
 import PublicDishCard from "./publicDishCard";
-import ReportIcon from "@mui/icons-material/Report";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -22,6 +16,7 @@ export default function PublicPotrawy() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line unused-imports/no-unused-vars
   const [openIndex, setOpenIndex] = useState(null);
 
   const fetchList = async () => {
@@ -49,7 +44,7 @@ export default function PublicPotrawy() {
     fetchList();
   }, []);
 
-  const toggle = (i) => setOpenIndex((prev) => (prev === i ? null : i));
+  //const toggle = (i) => setOpenIndex((prev) => (prev === i ? null : i));
 
   const importDish = (pd) => {
     try {

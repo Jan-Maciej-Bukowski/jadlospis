@@ -23,6 +23,7 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
 );
 
 const ExpandMore = styled((props) => {
+  // eslint-disable-next-line unused-imports/no-unused-vars
   const { expand, ...other } = props;
   return <IconButton {...other} />;
 })(({ theme }) => ({
@@ -62,8 +63,8 @@ function PublicDishCard({ dishData, onAddToDishes, onReport }) {
           const data = await response.json();
           setAuthorAvatar(data.user?.avatar || null);
         }
-      } catch (_err) {
-        console.warn("Failed to fetch author avatar");
+      } catch (err) {
+        console.warn("Failed to fetch author avatar ",err);
       } finally {
         setLoading(false);
       }
