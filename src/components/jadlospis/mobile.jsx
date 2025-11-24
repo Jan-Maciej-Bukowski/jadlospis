@@ -219,3 +219,15 @@ export default function MobileJadlospis({
     </Box>
   );
 }
+
+import PropTypes from "prop-types";
+
+MobileJadlospis.propTypes = {
+  week: PropTypes.array.isRequired,
+  wi: PropTypes.number,
+  dishesAll: PropTypes.array,
+  settings: PropTypes.object,
+  ui: PropTypes.object,
+  getVisualDay: PropTypes.func,
+  startTouchDragCell: PropTypes.func,
+};

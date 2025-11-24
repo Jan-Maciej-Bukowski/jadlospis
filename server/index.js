@@ -668,7 +668,6 @@ app.post("/api/public/dishes", auth, async (req, res) => {
       tags: Array.isArray(dish.tags) ? dish.tags : dish.tags ? [dish.tags] : [],
       params: dish.params || "",
       ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
-      probability: dish.probability ?? 100,
       maxRepeats: dish.maxRepeats ?? 1,
       allowedMeals: Array.isArray(dish.allowedMeals)
         ? dish.allowedMeals
@@ -677,8 +676,9 @@ app.post("/api/public/dishes", auth, async (req, res) => {
         : ["śniadanie", "obiad", "kolacja"],
       rating: dish.rating ?? 0,
       favorite: !!dish.favorite,
-      color: dish.color || "",
+      avatar: dish.avatar || "",
       maxAcrossWeeks: dish.maxAcrossWeeks ?? null,
+      allowedDays: Array.isArray(dish.allowedDays) ? dish.allowedDays : [],
       author: { id: req.user.id, username: req.user.username },
       public: true,
     });
@@ -686,7 +686,7 @@ app.post("/api/public/dishes", auth, async (req, res) => {
     res.status(201).json({ id: pd._id, createdAt: pd.createdAt });
   } catch (err) {
     console.error("POST /api/public/dishes error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error", detail: err.message });
   }
 });
 

@@ -2,6 +2,7 @@
 @use "../_mixins" as *;
 
 /* ListDishesConfig styles */
+
 .config-table {
   background-color: var(--color-bg-light);
   border-radius: 8px;
@@ -39,4 +40,56 @@
 
 .config-number-input input {
   font-size: 0.9rem;
+}
+
+.config-scroll-container {
+  // width: 100%;
+  // max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Scrollbar styling for better UX */
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    padding-bottom: 8px;
+  }
+}
+
+/* Ensure table doesn't shrink on mobile */
+.config-table-container {
+  min-width: 650px; // Minimum width to show all columns including checkboxes
+  
+  @media (min-width: 900px) {
+    min-width: auto; // Remove min-width on larger screens
+  }
+}
+
+/* Make checkboxes more touch-friendly on mobile */
+@media (max-width: 600px) {
+  .config-day-checkbox {
+    .MuiCheckbox-root {
+      padding: 6px;
+    }
+    
+    .MuiFormControlLabel-label {
+      font-size: 0.75rem;
+    }
+  }
 }

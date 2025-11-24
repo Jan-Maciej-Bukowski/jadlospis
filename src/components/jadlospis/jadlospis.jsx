@@ -62,7 +62,7 @@ export default function Jadlospis() {
   const [selectedListId, setSelectedListId] = useState("all");
   const [availableLists, setAvailableLists] = useState([]);
   const [temporaryDishesConfigOpen, setTemporaryDishesConfigOpen] =
-    useState(true);
+    useState(false);
 
   const ui = settings.ui || {};
   // wykrywanie wąskich ekranów (<768px)
@@ -267,9 +267,6 @@ export default function Jadlospis() {
     });
   };
 
-  function toggleTemporaryDishesConfig() {
-    setTemporaryDishesConfigOpen(!temporaryDishesConfigOpen);
-  }
 
   // SAVE/LOAD saved menus via localStorage and cross-component event
   useEffect(() => {
@@ -605,7 +602,7 @@ export default function Jadlospis() {
     document.addEventListener("visibilitychange", onVisibility);
   };
 
-  const transparentDragImage = (() => {
+  /*const transparentDragImage = (() => {
     const img = new Image();
     img.src =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XqzXQAAAAASUVORK5CYII=";
@@ -616,7 +613,7 @@ export default function Jadlospis() {
 
   function getSliderText(value) {
     return `tydzień ${value}`;
-  }
+  }*/
 
   // Na początku komponentu dodaj ref do przechowywania referencji do tygodni
   const weekRefs = useRef([]);
@@ -770,33 +767,34 @@ export default function Jadlospis() {
               Generuj jadłospis
             </Button>
           </Box>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              alignItems: "flex-start",
-              width: "100%",
-            }}
-          >
-            <Button
-              variant="contained"
-              className="primary"
-              onClick={() => toggleTemporaryDishesConfig()}
-              sx={{ flexShrink: 0 }}
+          {mergedDishesForList().length > 0 && (
+            <Box 
+              sx={{ 
+                width: "100%",
+                mt: 2,
+              }}
             >
-              dodatkowa konfiguracja
-            </Button>
-
-            {temporaryDishesConfigOpen && mergedDishesForList().length > 0 && (
-              <Box sx={{ width: "100%" }}>
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, color: "var(--color-text-main)" }}
+              >
+                Dodatkowa konfiguracja
+              </Typography>
+              <Box 
+                className="config-scroll-container"
+                sx={{ 
+                  width: "100%",
+                  overflowX: "auto",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
                 <ListDishesConfig
                   dishes={mergedDishesForList()}
                   onDishChange={handleDishConfigChange}
                 />
               </Box>
-            )}
-          </Box>
+            </Box>
+          )}
         </Box>
         <Typography
           variant="h4"

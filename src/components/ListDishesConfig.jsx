@@ -32,7 +32,8 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
         mt: { xs: 1, md: 2 }, 
         mb: { xs: 1, md: 2 },
         maxHeight: { xs: "400px", md: "none" },
-        overflowY: { xs: "auto", md: "visible" }
+        overflowY: { xs: "auto", md: "visible" },
+        className: "config-table-container"
       }}
       className="config-table"
       id="temporary-meals-config"
@@ -54,7 +55,7 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
               sx={{ 
                 fontSize: { xs: "0.75rem", md: "0.875rem" },
                 padding: { xs: "8px 4px", md: "12px 16px" },
-                display: { xs: "none", sm: "table-cell" }
+                minWidth: { xs: "280px", sm: "auto" }
               }}
             >
               Dozwolone dni
@@ -68,7 +69,7 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                 padding: { xs: "8px 4px", md: "12px 16px" }
               }}
             >
-              {isMobile ? "Max/tydz." : "Max. na tydzień"}
+              {isMobile ? "Max/tydz" : "Max. na tydzień"}
             </TableCell>
             <TableCell
               className="config-column-header"
@@ -100,7 +101,7 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                 className="config-days"
                 sx={{ 
                   padding: { xs: "8px 4px", md: "12px 16px" },
-                  display: { xs: "none", sm: "table-cell" }
+                  minWidth: { xs: "280px", sm: "auto" }
                 }}
               >
                 <FormGroup row className="config-days-group">
@@ -127,7 +128,12 @@ export default function ListDishesConfig({ dishes, onDishChange }) {
                         />
                       }
                       label={day.slice(0, 3)}
-                      sx={{ mr: { xs: 0.5, md: 1 } }}
+                      sx={{ 
+                        mr: { xs: 0.5, md: 1 },
+                        '& .MuiFormControlLabel-label': {
+                          fontSize: { xs: '0.75rem', md: '0.875rem' }
+                        }
+                      }}
                     />
                   ))}
                 </FormGroup>
