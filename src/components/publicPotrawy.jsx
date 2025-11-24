@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Paper,
   Typography,
   Button,
   TextField,
@@ -14,6 +13,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
+import PublicDishCard from "./publicDishCard";
 import ReportIcon from "@mui/icons-material/Report";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -78,7 +78,7 @@ export default function PublicPotrawy() {
         allowedMeals: pd.allowedMeals || ["śniadanie", "obiad", "kolacja"],
         rating: pd.rating ?? 0,
         favorite: !!pd.favorite,
-        color: pd.color || "",
+        avatar: pd.avatar || "",
         maxAcrossWeeks: pd.maxAcrossWeeks ?? null,
       };
       addDish(toAdd);
@@ -192,92 +192,29 @@ export default function PublicPotrawy() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Szukaj..."
           size="small"
-          
         />
-        <Button variant="contained" className="primary" onClick={fetchList} disabled={loading}>
+        <Button
+          variant="contained"
+          className="primary"
+          onClick={fetchList}
+          disabled={loading}
+        >
           Szukaj
         </Button>
       </Box>
-      <Paper sx={{ p: 2 }}>
-        <List>
-          {items.length === 0 && (
-            <Typography>Brak publicznych potraw</Typography>
-          )}
-          {items.map((it, idx) => (
-            <Box key={it._id || idx}>
-              <ListItem divider>
-                <ListItemText
-                  primary={it.name}
-                  secondary={it.tags?.join?.(", ") || ""}
-                />
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button size="small" onClick={() => importDish(it)}>
-                    Importuj
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      Swal.fire({
-                        title: it.name,
-                        html: `<pre style="text-align:left">${JSON.stringify(
-                          it,
-                          null,
-                          2
-                        )}</pre>`,
-                        width: 800,
-                      })
-                    }
-                  >
-                    Szczegóły
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<ReportIcon />}
-                    onClick={() => handleReport(it)}
-                  >
-                    Zgłoś
-                  </Button>
-                  <IconButton
-                    onClick={() => toggle(idx)}
-                    size="small"
-                    aria-expanded={openIndex === idx}
-                  >
-                    <ExpandMoreIcon
-                      sx={{
-                        transform:
-                          openIndex === idx ? "rotate(180deg)" : "rotate(0deg)",
-                      }}
-                    />
-                  </IconButton>
-                </Box>
-              </ListItem>
-              <Collapse in={openIndex === idx} timeout="auto" unmountOnExit>
-                <Box sx={{ pl: 3, pr: 2, pb: 2 }}>
-                  <Typography variant="subtitle2">Składniki:</Typography>
-                  <Typography variant="body2">
-                    {Array.isArray(it.ingredients) &&
-                    it.ingredients.length > 0 ? (
-                      <ul style={{ margin: "6px 0 0 20px" }}>
-                        {it.ingredients.map((ing, i) => (
-                          <li key={i}>{ing}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "Brak składników"
-                    )}
-                  </Typography>
-                  <Typography variant="subtitle2" sx={{ mt: 1 }}>
-                    Przepis / opis:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                    {it.params || "Brak opisu"}
-                  </Typography>
-                </Box>
-              </Collapse>
-            </Box>
-          ))}
-        </List>
-      </Paper>
+
+      <List>
+        {items.length === 0 && <Typography>Brak publicznych potraw</Typography>}
+        {items.map((it, idx) => (
+          <Box key={it._id || idx}>
+            <PublicDishCard
+              dishData={it}
+              onAddToDishes={importDish}
+              onReport={handleReport}
+            />
+          </Box>
+        ))}
+      </List>
     </Box>
   );
 }

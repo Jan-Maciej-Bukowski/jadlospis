@@ -27,10 +27,6 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import PublicIcon from "@mui/icons-material/Public";
 import GoogleIcon from "@mui/icons-material/Google";
-const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
-  /\/+$/,
-  ""
-);
 
 import Jadlospis from "./jadlospis/jadlospis";
 import Jadlospisy from "./jadlospisy";
