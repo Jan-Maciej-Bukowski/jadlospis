@@ -970,6 +970,24 @@ app.post("/api/ai/images", async (req, res) => {
   }
 });
 
+// GET public user info (no auth needed)
+app.get("/api/user/:id", async (req, res) => {
+  try {
+    const u = await User.findById(req.params.id).lean();
+    if (!u) return res.status(404).json({ error: "User not found" });
+    res.json({
+      user: {
+        id: u._id,
+        username: u.username,
+        avatar: u.avatar || null,
+      },
+    });
+  } catch (err) {
+    console.error("GET /api/user/:id error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
