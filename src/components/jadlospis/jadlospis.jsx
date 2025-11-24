@@ -2,12 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { ensureLocalDefault } from "../../utils/storageHelpers.js";
 import { useMediaQuery } from "@mui/material";
 import Swal from "sweetalert2";
-import {
-  Box,
-  Button,
-  Typography,
-  TextField,
-} from "@mui/material";
+import { Box, Button, Typography, TextField } from "@mui/material";
 import { generateMenu } from "../../js/generateMenu.js";
 import { settings } from "../../js/settings.js";
 import { useTheme } from "@mui/material/styles";
@@ -61,14 +56,12 @@ export default function Jadlospis() {
   const [weeksToGenerate, setWeeksToGenerate] = useState(1);
   const [selectedListId, setSelectedListId] = useState("all");
   const [availableLists, setAvailableLists] = useState([]);
-  const [temporaryDishesConfigOpen, setTemporaryDishesConfigOpen] =
-    useState(false);
+  const [isGenerated, setIsGenerated] = useState(false);
 
   const ui = settings.ui || {};
   // wykrywanie wąskich ekranów (<768px)
   const isNarrow = useMediaQuery("(max-width:768px)");
 
-  const tableSize = ui.compactTable ? "small" : "medium";
   // Zwiększony padding dla lepszego wyglądu
   const cellPadding = ui.compactTable ? "12px 16px" : "16px 20px";
 
@@ -253,6 +246,7 @@ export default function Jadlospis() {
     setMenu(generated);
     localStorage.setItem("lastMenu", JSON.stringify(generated));
 
+    setIsGenerated(true);
     // Pokaż informację o wygenerowanym jadłospisie
     Swal.fire({
       title: "Jadłospis gotowy!",
@@ -266,7 +260,6 @@ export default function Jadlospis() {
       confirmButtonColor: emptySlots > totalSlots * 0.3 ? "#ff9800" : "#4CAF50",
     });
   };
-
 
   // SAVE/LOAD saved menus via localStorage and cross-component event
   useEffect(() => {
@@ -602,48 +595,7 @@ export default function Jadlospis() {
     document.addEventListener("visibilitychange", onVisibility);
   };
 
-  /*const transparentDragImage = (() => {
-    const img = new Image();
-    img.src =
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XqzXQAAAAASUVORK5CYII=";
-    return img;
-  })();
-
-  const sliderWeeks = [];
-
-  function getSliderText(value) {
-    return `tydzień ${value}`;
-  }*/
-
-  // Na początku komponentu dodaj ref do przechowywania referencji do tygodni
   const weekRefs = useRef([]);
-  const theme = useTheme();
-  const [currentWeek, setCurrentWeek] = useState(1);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-
-  // Dodaj funkcję do śledzenia scrollowania
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!weekRefs.current || !menu?.length || isAutoScrolling) return;
-
-      const viewportMiddle = window.innerHeight / 2;
-      let closest = { week: 1, distance: Infinity };
-
-      weekRefs.current.forEach((ref, index) => {
-        if (!ref) return;
-        const rect = ref.getBoundingClientRect();
-        const distance = Math.abs(rect.top - 0); //viewportMiddle); gura, a nie środek ekranu!
-        if (distance < closest.distance) {
-          closest = { week: index + 1, distance };
-        }
-      });
-
-      setCurrentWeek(closest.week);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [menu?.length, isAutoScrolling]);
 
   // Usuń style blokujące scrollowanie na telefonie
   useEffect(() => {
@@ -758,18 +710,10 @@ export default function Jadlospis() {
                 },
               }}
             />
-
-            <Button
-              variant="contained"
-              className="primary"
-              onClick={handleGenerateMenu}
-            >
-              Generuj jadłospis
-            </Button>
           </Box>
           {mergedDishesForList().length > 0 && (
-            <Box 
-              sx={{ 
+            <Box
+              sx={{
                 width: "100%",
                 mt: 2,
               }}
@@ -780,9 +724,9 @@ export default function Jadlospis() {
               >
                 Dodatkowa konfiguracja
               </Typography>
-              <Box 
+              <Box
                 className="config-scroll-container"
-                sx={{ 
+                sx={{
                   width: "100%",
                   overflowX: "auto",
                   WebkitOverflowScrolling: "touch",
@@ -796,15 +740,24 @@ export default function Jadlospis() {
             </Box>
           )}
         </Box>
+
+        <Button
+          variant="contained"
+          className="primary"
+          onClick={handleGenerateMenu}
+        >
+          Generuj jadłospis
+        </Button>
+
         <Typography
           variant="h4"
           sx={{
             mb: 3,
-            height: {
+            /*height: {
               xs: 60, // 0 - 600
               sm: 70, // 600 - 900
               md: 75, // 900 - 1200
-            },
+            },*/
           }} // usunięto color: "var(--color-text-main)"
           className="section-title"
         >
@@ -895,7 +848,7 @@ export default function Jadlospis() {
             </>
           ))}
         <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <Button
+          {isGenerated && <Button
             variant="contained"
             className="primary"
             onClick={handleSaveCurrentMenu}
@@ -904,7 +857,7 @@ export default function Jadlospis() {
             }}
           >
             Zapisz jadłospdis
-          </Button>
+          </Button>}
         </Box>
       </Box>
     </Box>
