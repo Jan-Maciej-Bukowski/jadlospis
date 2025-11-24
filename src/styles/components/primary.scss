@@ -1,3 +1,10 @@
+@use "../_vars" as *;
+@use "../_mixins" as *;
+
 .primary {
+  @include button-style($color-primary);
+}
+
+.button--primary {
   @include button-style($color-primary);
 }

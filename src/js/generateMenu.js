@@ -1,6 +1,5 @@
 export function generateMenu(dishes, settings, daysOfWeek, weeks = 1) {
   const W = Math.max(1, Number(weeks) || 1);
-  const { excludedTags = {}, specialDishes = {} } = settings || {};
   const placeholder = settings?.noDishText || "Brak potraw";
 
   // Build slot list: each slot = { week, dayIndex, dayName, meal, assigned }

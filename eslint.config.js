@@ -1,17 +1,20 @@
 import js from "@eslint/js";
 import globals from "globals";
 import pluginReact from "eslint-plugin-react";
+import pluginUnusedImports from "eslint-plugin-unused-imports";
 
 export default [
-  // Frontend (React) - stosuje się tylko do plików w src/
+  // Frontend (tylko src/)
   {
-    files: ["src/**/*.{js,mjs,cjs,jsx}", "**/*.jsx"],
-    plugins: { react: pluginReact },
+    files: ["src/**/*.{js,mjs,cjs,jsx}"],
+    plugins: { react: pluginReact, "unused-imports": pluginUnusedImports },
     languageOptions: {
-      globals: globals.browser,
-      ecmaVersion: "latest",
-      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
       parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
         ecmaFeatures: {
           jsx: true,
         },
@@ -20,22 +23,57 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       ...pluginReact.configs.recommended.rules,
+      "no-unused-vars": "off",
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-console": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          varsIgnorePattern: "(^_|^e$|^err$)",
+          args: "after-used",
+          argsIgnorePattern: "(^_|^e$|^err$)",
+        },
+      ],
+      "prefer-const": "error",
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
     },
   },
 
-  // Backend (Node) - konfiguracja dla plików w katalogu server/
+  // Backend (server/)
   {
     files: ["server/**/*.{js,mjs,cjs}"],
+    plugins: { "unused-imports": pluginUnusedImports },
     languageOptions: {
       globals: {
         ...globals.node,
       },
-      ecmaVersion: "latest",
-      sourceType: "module",
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
     },
     rules: {
       ...js.configs.recommended.rules,
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-unused-vars": "off",
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-console": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          varsIgnorePattern: "(^_|^e$|^err$)",
+          args: "after-used",
+          argsIgnorePattern: "(^_|^e$|^err$)",
+        },
+      ],
+      "prefer-const": "error",
     },
   },
 ];

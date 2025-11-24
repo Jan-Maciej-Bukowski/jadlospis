@@ -1,21 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ensureLocalDefault } from "../../utils/storageHelpers.js";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import { Rating, Chip, useMediaQuery } from "@mui/material";
+import { useMediaQuery } from "@mui/material";
 import Swal from "sweetalert2";
 import {
   Box,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
   TextField,
-  Slider,
-  Collapse,
-  Divider,
 } from "@mui/material";
 import { generateMenu } from "../../js/generateMenu.js";
 import { settings } from "../../js/settings.js";

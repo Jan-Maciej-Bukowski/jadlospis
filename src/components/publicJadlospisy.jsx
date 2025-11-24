@@ -24,7 +24,7 @@ import ReportIcon from "@mui/icons-material/Report";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function PublicJadlospisy({ onLoad }) {
+export default function PublicJadlospisy() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
@@ -227,6 +227,7 @@ export default function PublicJadlospisy({ onLoad }) {
                 addDish(imp);
                 changed = true;
               } catch (e) {
+                console.err(e);
                 const fallback = allNow;
                 fallback.push(imp);
                 localStorage.setItem("dishes", JSON.stringify(fallback));

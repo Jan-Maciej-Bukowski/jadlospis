@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import Swal from "sweetalert2";
 import {
   Box,
   Typography,
   Button,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Switch,
   FormControlLabel,
   Divider,
@@ -43,7 +37,7 @@ export default function Ustawienia() {
   const [editedSpecialDishes, setEditedSpecialDishes] = useState({});
 
   // persist current settings (merge editedTags/editedSpecialDishes) to settings + localStorage
-  const persistAll = (showToast = false) => {
+  const persistAll = () => {
     // merge editedTags into excludedTags
     const updatedTags = { ...excludedTags };
     Object.keys(editedTags).forEach((day) => {
@@ -82,25 +76,6 @@ export default function Ustawienia() {
     setEditedSpecialDishes({});
   };
 
-  const handleEditTagChange = (day, meal, value) => {
-    setEditedTags((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [meal]: value,
-      },
-    }));
-  };
-
-  const handleEditSpecialDishChange = (day, meal, value) => {
-    setEditedSpecialDishes((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [meal]: value,
-      },
-    }));
-  };
 
   const toggleUi = (key) => {
     setUiSettings((prev) => ({ ...prev, [key]: !prev[key] }));

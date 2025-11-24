@@ -183,7 +183,7 @@ export function addDish(dish) {
   if (exists) {
     // create unique name
     let i = 2;
-    let base = norm.name;
+    const base = norm.name;
     while (
       existing.find(
         (e) =>

@@ -216,6 +216,7 @@ export default function UstawieniaKonta() {
 
       Swal.fire({ icon: "success", title: "Wyczyszczono", text: "Dane aplikacji usunięte." });
     } catch (err) {
+      console.err(err);
       Swal.fire({ icon: "error", title: "Błąd", text: "Nie udało się wyczyścić danych." });
     }
   };

@@ -10,7 +10,6 @@ import {
   Typography,
   TextField,
   Button,
-  Slider,
   FormGroup,
   FormControlLabel,
   Checkbox,
@@ -20,8 +19,6 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
 import defaultDishes from "../js/potrawy";
 import Swal from "sweetalert2";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -55,20 +52,10 @@ export default function Potrawy() {
 
   const [openIndex, setOpenIndex] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
-  const [version, setVersion] = useState(0); // wymusza rerender po zmianach bez edycji
   const [filterRating, setFilterRating] = useState(0);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [filterTagsInput, setFilterTagsInput] = useState(""); // nowe pole: tagi oddzielone przecinkami
-
-  // bulk edit by tag
-  const [tagToEdit, setTagToEdit] = useState("");
-  const [bulkEdited, setBulkEdited] = useState({
-    maxRepeats: "",
-    maxAcrossWeeks: "",
-    allowedMeals: { śniadanie: true, obiad: true, kolacja: true },
-    favorite: null,
-    rating: null,
-  });
+  const [filterTagsInput, setFilterTagsInput] = useState("");
+  const [version, setVersion] = useState(0); // do wymuszania rerendera po zapisie
 
   // stan dla edytowanej potrawy (używany przez handleEdit / edycję)
   const [editedDish, setEditedDish] = useState({
@@ -90,9 +77,6 @@ export default function Potrawy() {
   const [dishes, setDishes] = useState(() =>
     safeParse(localStorage.getItem("dishes"), defaultDishes || [])
   );
-
-  // nowy stan dla dozwolonych dni
-  const [allowedDays, setAllowedDays] = useState(DAYS);
 
   useEffect(() => {
     // listen for external updates (other tabs / sync)
@@ -366,55 +350,6 @@ export default function Potrawy() {
           text: `"${name}" został usunięty.`,
         });
       }
-    });
-  };
-
-  // bulk edit logic (kept same, but using saveLocal when applying)
-  const applyBulkForTag = () => {
-    const tag = (tagToEdit || "").trim().toLowerCase();
-    if (!tag) {
-      Swal.fire({
-        icon: "warning",
-        title: "Podaj tag",
-        confirmButtonText: "OK",
-      });
-      return;
-    }
-    setDishes((prev) => {
-      let changed = 0;
-      const copy = prev.map((dish) => {
-        if (!Array.isArray(dish.tags)) return dish;
-        if (!dish.tags.some((t) => ("" + t).toLowerCase() === tag)) return dish;
-        const nd = { ...dish };
-        if (bulkEdited.maxRepeats !== "")
-          nd.maxRepeats = Number(bulkEdited.maxRepeats);
-        if (bulkEdited.maxAcrossWeeks !== "")
-          nd.maxAcrossWeeks = Number(bulkEdited.maxAcrossWeeks);
-        if (bulkEdited.favorite !== null) nd.favorite = !!bulkEdited.favorite;
-        if (bulkEdited.rating != null) nd.rating = Number(bulkEdited.rating);
-        nd.allowedMeals = Object.keys(bulkEdited.allowedMeals).filter(
-          (m) => bulkEdited.allowedMeals[m]
-        );
-        changed++;
-        return nd;
-      });
-      if (changed > 0) {
-        saveLocal(copy);
-        Swal.fire({
-          icon: "success",
-          title: "Zaktualizowano",
-          text: `Zaktualizowano ${changed} potraw(y) z tagiem "${tagToEdit}"`,
-          confirmButtonText: "OK",
-        });
-      } else {
-        Swal.fire({
-          icon: "info",
-          title: "Brak rezultatów",
-          text: "Nie znaleziono potraw z podanym tagiem.",
-          confirmButtonText: "OK",
-        });
-      }
-      return copy;
     });
   };
 
@@ -1011,7 +946,7 @@ export default function Potrawy() {
                             }
                             const body = await res.json().catch(() => ({}));
                             // remember published by name (and id if returned)
-                            const key = body._id || dish.name;
+                            //const key = body._id || dish.name;
                             published.push(dish.name);
                             localStorage.setItem(
                               "publishedDishes",

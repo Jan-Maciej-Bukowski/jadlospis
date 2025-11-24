@@ -1,7 +1,6 @@
 import React from "react";
 import { Box, Chip, Rating } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import clsx from "clsx";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,

@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -137,6 +138,15 @@ const SelectFile = ({
       />
     </div>
   );
+};
+SelectFile.propTypes = {
+  id: PropTypes.string,
+  accept: PropTypes.string,
+  onChange: PropTypes.func,
+  onClear: PropTypes.func,
+  filename: PropTypes.string,
+  previewUrl: PropTypes.string,
+  disabled: PropTypes.bool,
 };
 
 export default SelectFile;

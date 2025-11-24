@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ensureLocalDefault } from "../utils/storageHelpers";
-import { safeParse } from "../utils/safeParse"; // create helper or inline parse below
+// create helper or inline parse below
 import {
   Box,
   Button,

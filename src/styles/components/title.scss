@@ -1,3 +1,6 @@
+@use "../_vars" as *;
+@use "../_mixins" as *;
+
 .section-title {
   color: $color-text-main;
   width: 100vw;

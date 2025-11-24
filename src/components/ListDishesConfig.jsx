@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Box,
   Paper,
   Table,
   TableBody,
@@ -8,17 +7,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
   FormGroup,
   FormControlLabel,
   Checkbox,
   TextField,
-  Tooltip,
-  IconButton,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
 import DAYS from "../utils/days.js";
 
 export default function ListDishesConfig({ dishes, onDishChange }) {

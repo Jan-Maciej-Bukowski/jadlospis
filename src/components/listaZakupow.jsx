@@ -9,7 +9,6 @@ import {
   ListItemIcon,
   ListItemText,
   Checkbox,
-  IconButton,
   Chip,
   Divider,
 } from "@mui/material";

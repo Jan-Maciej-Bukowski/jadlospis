@@ -52,6 +52,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             "google-user";
 
           // helper: rozpoznaj lokalny upload vs URL Google
+          // eslint-disable-next-line unused-imports/no-unused-vars
           const isLocalAvatar = (a) =>
             typeof a === "string" && a.startsWith("/uploads/");
           const isGoogleAvatar = (a) =>
@@ -466,6 +467,7 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use("/uploads", express.static(uploadsDir));
 
 // multer config: images only, max 2MB
+// eslint-disable-next-line unused-imports/no-unused-vars
 const storage = multer.diskStorage({
   destination: uploadsDir,
   filename: (req, file, cb) => {
@@ -525,6 +527,7 @@ app.post("/api/user/avatar", auth, (req, res) => {
         }
       } catch (e) {
         /* ignore cleanup errors */
+        console.warn("Could not remove previous avatar:", e);
       }
 
       user.avatar = storedPath;

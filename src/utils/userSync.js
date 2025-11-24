@@ -125,7 +125,7 @@ export function initUserSync() {
   ];
   const handlers = localEvents.map((ev) => {
     const h = () => {
-      if (process.env.NODE_ENV === "development") {
+      if (import.meta.env?.DEV) {
         console.log("userSync: event", ev, "-> schedule push");
       }
       schedulePush();
@@ -222,7 +222,9 @@ export function initUserSync() {
           body: JSON.stringify({ data, merge: true }),
           keepalive: true,
         });
-      } catch {}
+      } catch {
+        // give up
+      }
     }
   });
 

@@ -1,3 +1,6 @@
+@use "../_vars" as *;
+@use "../_mixins" as *;
+
 /* ListDishesConfig styles */
 .config-table {
   background-color: var(--color-bg-light);

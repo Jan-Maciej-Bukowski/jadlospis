@@ -1,3 +1,6 @@
+@use "../_vars" as *;
+@use "../_mixins" as *;
+
 .checkbox {
   color: $color-primary !important;
 }

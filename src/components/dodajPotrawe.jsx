@@ -4,7 +4,6 @@ import {
   TextField,
   Button,
   Typography,
-  Slider,
   FormGroup,
   FormControlLabel,
   Checkbox,
@@ -681,38 +680,3 @@ export default function DodajPotrawe() {
     </Box>
   );
 }
-
-// W komponencie Jadlospis, zmień funkcję startTouchDragCell:
-
-const startTouchDragCell = (e, src) => {
-  const t = e.touches && e.touches[0];
-  if (!t) return;
-
-  // Zachowaj poprzedni stan touchAction
-  const prevTouchAction = document.body.style.touchAction;
-
-  e.stopPropagation();
-
-  window.__touchDrag = {
-    payload: src,
-    ghost: createGhost(typeof src === "string" ? src : src.meal || "potrawa"),
-    prevTouchAction, // zapisz poprzedni stan
-  };
-
-  // ...rest of the function...
-
-  const cleanup = () => {
-    try {
-      if (window.__touchDrag?.ghost) window.__touchDrag.ghost.remove();
-    } catch (err) {}
-    window.__touchDrag = null;
-    // Przywróć poprzedni stan touchAction
-    document.body.style.touchAction = window.__touchDrag?.prevTouchAction || "";
-    window.removeEventListener("touchmove", onMove, { passive: false });
-    window.removeEventListener("touchend", onEnd);
-    window.removeEventListener("touchcancel", onEnd);
-    document.removeEventListener("visibilitychange", onVisibility);
-  };
-
-  // ...rest of the function...
-};

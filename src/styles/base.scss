@@ -1,11 +1,11 @@
+@use "_vars" as *;
+@use "_mixins" as *;
+@use "components/primary" as *;
+@use "components/checkbox" as *;
+@use "components/table" as *;
+@use "components/config" as *;
+@use "components/title" as *;
 @import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap");
-@import "_vars";
-@import "_mixins";
-@import "components/primary";
-@import "components/checkbox";
-@import "components/table";
-@import "components/config";
-@import "components/title";
 
 body {
   margin: 0;
@@ -45,7 +45,6 @@ body.dragging {
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   color: var(--color-bg-dark);
 }
-
 
 .text-primary {
   color: var(--color-primary) !important;

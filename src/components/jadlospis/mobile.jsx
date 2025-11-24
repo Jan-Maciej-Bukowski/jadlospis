@@ -1,16 +1,7 @@
 import React from "react";
 import {
   Box,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
-  TextField,
-  Slider,
-  Collapse,
   Chip,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
