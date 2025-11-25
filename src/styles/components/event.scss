@@ -1,0 +1,11 @@
+@use "../_vars" as vars;
+@use "../_mixins" as mixins;
+
+.event {
+
+}
+
+.empty-event {
+  display: none !important;
+  background-color: transparent !important;
+}

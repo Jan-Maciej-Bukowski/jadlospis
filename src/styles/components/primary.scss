@@ -1,10 +1,10 @@
-@use "../_vars" as *;
-@use "../_mixins" as *;
+@use "../_vars" as vars;
+@use "../_mixins" as mixins;
 
 .primary {
-  @include button-style($color-primary);
+  @include mixins.button-style(vars.$color-primary);
 }
 
 .button--primary {
-  @include button-style($color-primary);
+  @include mixins.button-style(vars.$color-primary);
 }

@@ -1,0 +1,119 @@
+@use "../vars" as *;
+
+.calendar-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+
+  .rbc-calendar {
+    font-family: inherit;
+  }
+
+  .rbc-header {
+    padding: 12px 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 2px solid var(--color-text-main);
+    background-color: var(--color-bg-light);
+    color: var(--color-text-main);
+  }
+
+  .rbc-today {
+    background-color: rgba(4, 191, 138, 0.08);
+  }
+
+  .rbc-off-range-bg {
+    background-color: #fafafa;
+  }
+
+  .rbc-event {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 0.85rem;
+    white-space: normal;
+    word-break: break-word;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  .rbc-event-content {
+    white-space: pre-wrap;
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .rbc-month-view {
+    border: 1px solid #e0e0e0;
+    border-radius: 0 0 8px 8px;
+  }
+
+  .rbc-day-bg {
+    transition: background-color 0.2s ease;
+  }
+
+  .rbc-date-cell {
+    padding: 6px 8px;
+    font-weight: 500;
+
+    &.rbc-now {
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+  }
+
+  .rbc-month-row {
+    border-color: #e0e0e0;
+  }
+
+  .rbc-day-slot .rbc-time-slot {
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .rbc-time-header-content {
+    border-left: 1px solid #e0e0e0;
+  }
+
+  .rbc-time-content {
+    border-top: 2px solid #e0e0e0;
+  }
+
+  .rbc-current-time-indicator {
+    background-color: var(--color-primary);
+    height: 2px;
+  }
+
+  .rbc-agenda-view {
+    table {
+      border: 1px solid #e0e0e0;
+    }
+
+    .rbc-agenda-date-cell,
+    .rbc-agenda-time-cell {
+      padding: 8px 12px;
+      font-weight: 500;
+    }
+
+    .rbc-agenda-event-cell {
+      padding: 8px 12px;
+    }
+  }
+
+  .rbc-show-more {
+    background-color: transparent;
+    color: var(--color-primary);
+    font-weight: 600;
+    padding: 4px;
+    margin: 2px 0;
+
+    &:hover {
+      background-color: rgba(4, 191, 138, 0.1);
+      text-decoration: underline;
+    }
+  }
+}

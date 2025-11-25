@@ -6,15 +6,20 @@ import { Box, Button, Typography, TextField } from "@mui/material";
 import { generateMenu } from "../../js/generateMenu.js";
 import { settings } from "../../js/settings.js";
 import ListDishesConfig from "../ListDishesConfig.jsx";
-import DesktopJadlospis from "./desktop.jsx";
-import MobileJadlospis from "./mobile.jsx";
 import DAYS from "../../utils/days.js";
+import RangeCalendar from "./rangeCalendar.jsx";
+import GeneratedCalendar from "./generatedCalendar.jsx";
+import { Calendar, momentLocalizer } from "react-big-calendar";
+import moment from "moment";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // ensure storage keys (safe: does not use hooks)
 ensureLocalDefault("dishes", []);
 ensureLocalDefault("dishLists", []);
 ensureLocalDefault("savedMenus", []);
 ensureLocalDefault("lastMenu", null);
+
+const localizer = momentLocalizer(moment);
 
 export default function Jadlospis() {
   // read available dishes from localStorage (live)
@@ -187,9 +192,36 @@ export default function Jadlospis() {
     }));
   };
 
-  // use mergedDishesForList() when generating menu
+  // NOWE: zamiast weeksToGenerate, mamy zakres dat
+  const [dateRangeStart, setDateRangeStart] = useState(null);
+  const [dateRangeEnd, setDateRangeEnd] = useState(null);
+
+  const handleDateRangeSelect = (start, end) => {
+    setDateRangeStart(start);
+    setDateRangeEnd(end);
+  };
+
+  // Oblicz liczbę tygodni na podstawie wybranego zakresu
+  const calculateWeeksFromRange = () => {
+    if (!dateRangeStart || !dateRangeEnd) return 1;
+    const diffTime = Math.abs(dateRangeEnd - dateRangeStart);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(1, Math.ceil(diffDays / 7));
+  };
+
+  // Funkcja do generowania jadłospisu na podstawie zakresu dat
   const handleGenerateMenu = async () => {
-    const source = mergedDishesForList(); // Użyj merged dishes zamiast mapowania
+    if (!dateRangeStart || !dateRangeEnd) {
+      Swal.fire({
+        icon: "warning",
+        title: "Wybierz zakres dat",
+        text: "Musisz wybrać zakres dat przed wygenerowaniem jadłospisu.",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
+    const source = mergedDishesForList();
 
     if (!Array.isArray(source) || source.length === 0) {
       Swal.fire({
@@ -201,7 +233,6 @@ export default function Jadlospis() {
       return;
     }
 
-    // Sprawdź dostępność potraw
     const warnings = checkDishesAvailability(source);
     if (warnings.length > 0) {
       const result = await Swal.fire({
@@ -221,16 +252,22 @@ export default function Jadlospis() {
       if (!result.isConfirmed) return;
     }
 
-    const generated = generateMenu(
-      source,
-      settings,
-      daysOfWeek,
-      weeksToGenerate
+    const weeksCount = calculateWeeksFromRange();
+    const generated = generateMenu(source, settings, daysOfWeek, weeksCount);
+
+    // Filtruj wygenerowany jadłospis do wybranego zakresu dat
+    const filteredMenu = filterMenuByDateRange(
+      generated,
+      dateRangeStart,
+      dateRangeEnd
     );
 
-    // Sprawdź ile jest pustych miejsc w wygenerowanym jadłospisie
+    setMenu(filteredMenu);
+    localStorage.setItem("lastMenu", JSON.stringify(filteredMenu));
+    setIsGenerated(true);
+
     const placeholder = settings.noDishText || "Brak potraw";
-    const emptySlots = generated.flat().reduce((count, day) => {
+    const emptySlots = filteredMenu.flat().reduce((count, day) => {
       return (
         count +
         (day.śniadanie?.name === placeholder ? 1 : 0) +
@@ -239,25 +276,62 @@ export default function Jadlospis() {
       );
     }, 0);
 
-    const totalSlots = generated.flat().length * 3;
+    const totalSlots = filteredMenu.flat().length * 3;
     const emptyPercentage = Math.round((emptySlots / totalSlots) * 100);
 
-    setMenu(generated);
-    localStorage.setItem("lastMenu", JSON.stringify(generated));
-
-    setIsGenerated(true);
-    // Pokaż informację o wygenerowanym jadłospisie
     Swal.fire({
       title: "Jadłospis gotowy!",
       html:
         emptySlots > 0
-          ? `Jadłospis został wygenerowany.<br><br>` +
+          ? `Jadłospis został wygenerowany dla zakresu: ${dateRangeStart.toLocaleDateString(
+              "pl-PL"
+            )} - ${dateRangeEnd.toLocaleDateString("pl-PL")}<br><br>` +
             `<small>Uwaga: ${emptyPercentage}% miejsc jest pustych (${emptySlots} z ${totalSlots}).</small>`
-          : "Twój nowy jadłospis został wygenerowany pomyślnie.",
+          : `Twój nowy jadłospis został wygenerowany pomyślnie dla zakresu: ${dateRangeStart.toLocaleDateString(
+              "pl-PL"
+            )} - ${dateRangeEnd.toLocaleDateString("pl-PL")}`,
       icon: emptySlots > totalSlots * 0.3 ? "warning" : "success",
       confirmButtonText: "OK",
       confirmButtonColor: emptySlots > totalSlots * 0.3 ? "#ff9800" : "#4CAF50",
     });
+  };
+
+  // Filtruje jadłospis do wybranego zakresu dat
+  const filterMenuByDateRange = (menu, start, end) => {
+    if (!start || !end || !Array.isArray(menu)) return menu;
+
+    const isMultiWeek = Array.isArray(menu[0]);
+    const allDays = isMultiWeek ? menu.flat() : menu;
+
+    let currentDate = new Date(start);
+    currentDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
+
+    const filtered = [];
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      // Konwertuj JS dayOfWeek (0=niedziela, 1=poniedziałek) na polski (poniedziałek=0)
+      const polishDayIndex = (dayOfWeek + 6) % 7;
+      const dayEntry = allDays[polishDayIndex % 7];
+
+      if (dayEntry) {
+        filtered.push(dayEntry);
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Jeśli było multi-week, pogrupuj na powrót na tygodnie
+    if (isMultiWeek) {
+      const weeks = [];
+      for (let i = 0; i < filtered.length; i += 7) {
+        weeks.push(filtered.slice(i, i + 7));
+      }
+      return weeks.length > 0 ? weeks : [filtered];
+    }
+
+    return filtered;
   };
 
   // SAVE/LOAD saved menus via localStorage and cross-component event
@@ -405,7 +479,7 @@ export default function Jadlospis() {
         e.currentTarget.classList.add("grabbing");
       }
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
   };
 
@@ -620,8 +694,7 @@ export default function Jadlospis() {
   }, [selectedListId]);
 
   return (
-    <Box sx={{ p: 3, display: "flex" }}>
-      {/* Główna zawartość */}
+    <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
       <Box sx={{ flex: 1 }}>
         <Typography
           variant="h5"
@@ -630,7 +703,6 @@ export default function Jadlospis() {
           Konfiguracja
         </Typography>
 
-        {/* Przyciski i kontrolki */}
         <Box
           sx={{
             display: "flex",
@@ -648,7 +720,7 @@ export default function Jadlospis() {
             value={selectedListId}
             onChange={(e) => {
               setSelectedListId(e.target.value);
-              setTempConfigs({}); // Reset temp configs when source changes
+              setTempConfigs({});
             }}
             size="small"
           >
@@ -660,47 +732,17 @@ export default function Jadlospis() {
             ))}
           </TextField>
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              alignItems: "flex-start",
-              flexDirection: "column",
-            }}
-          >
-            <TextField
-              label="Ile tygodni?"
-              type="number"
-              size="small"
-              value={weeksToGenerate}
-              onChange={(e) => {
-                const val = e.target.value;
-                // Pozwól na chwilowe czyszczenie pola
-                if (val === "") {
-                  setWeeksToGenerate("");
-                } else {
-                  setWeeksToGenerate(Number(val));
-                }
-              }}
-              onBlur={() => {
-                // Przy wyjściu z pola — popraw wartość, jeśli jest pusta lub < 1
-                setWeeksToGenerate((prev) => Math.max(1, Number(prev) || 1));
-              }}
-              sx={{ width: 120 }}
-              slotProps={{
-                htmlInput: {
-                  min: 1,
-                },
-              }}
+          {/* Kalendarz do wyboru zakresu dat */}
+          <Box sx={{ width: "100%", mt: 2 }}>
+            <RangeCalendar
+              onDateRangeSelect={handleDateRangeSelect}
+              selectedStart={dateRangeStart}
+              selectedEnd={dateRangeEnd}
             />
           </Box>
+
           {mergedDishesForList().length > 0 && (
-            <Box
-              sx={{
-                width: "100%",
-                mt: 2,
-              }}
-            >
+            <Box sx={{ width: "100%", mt: 2 }}>
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: "var(--color-text-main)" }}
@@ -728,120 +770,34 @@ export default function Jadlospis() {
           variant="contained"
           className="primary"
           onClick={handleGenerateMenu}
+          disabled={!dateRangeStart || !dateRangeEnd}
         >
           Generuj jadłospis
         </Button>
 
-        {isGenerated && <Typography
-          variant="h4"
-          sx={{
-            mb: 3,
-            /*height: {
-              xs: 60, // 0 - 600
-              sm: 70, // 600 - 900
-              md: 75, // 900 - 1200
-            },*/
-          }} // usunięto color: "var(--color-text-main)"
-          className="section-title"
-        >
-          Jadłospis
-        </Typography>}
-        {menu &&
-          Array.isArray(menu) &&
-          menu.length > 0 &&
-          (Array.isArray(menu[0]) ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-                marginTop: "100px",
-              }}
+        {isGenerated && (
+          <>
+            <Typography
+              variant="h4"
+              sx={{ mb: 3, mt: 3 }}
+              className="section-title"
             >
-              {menu.map((week, wi) => (
-                <Box
-                  key={wi}
-                  ref={(el) => (weekRefs.current[wi] = el)}
-                  sx={{ scrollMargin: "20px" }}
-                >
-                  <Box className="table-week" sx={{ mb: 1 }}>
-                    <Typography variant="h6">Tydzień {wi + 1}</Typography>
-                  </Box>
+              Jadłospis
+            </Typography>
 
-                  {isNarrow ? (
-                    <MobileJadlospis
-                      week={week}
-                      wi={wi}
-                      dishesAll={dishesAll}
-                      settings={settings}
-                      ui={ui}
-                      getVisualDay={getVisualDay}
-                      startTouchDragCell={startTouchDragCell}
-                    />
-                  ) : (
-                    <DesktopJadlospis
-                      week={week}
-                      wi={wi}
-                      dishesAll={dishesAll}
-                      settings={settings}
-                      ui={ui}
-                      isNarrow={isNarrow}
-                      cellPadding={cellPadding}
-                      getVisualDay={getVisualDay}
-                      handleDragOver={handleDragOver}
-                      handleDrop={handleDrop}
-                      startTouchDragCell={startTouchDragCell}
-                      handleDragStart={handleDragStart}
-                      handleDragEnd={handleDragEnd}
-                    />
-                  )}
-                </Box>
-              ))}
+            <GeneratedCalendar menu={menu} dateRangeStart={dateRangeStart} />
+
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+              <Button
+                variant="contained"
+                className="primary"
+                onClick={handleSaveCurrentMenu}
+              >
+                Zapisz jadłospis
+              </Button>
             </Box>
-          ) : (
-            // single-week -> render as a single week using same components
-            <>
-              {isNarrow ? (
-                <MobileJadlospis
-                  week={menu}
-                  wi={0}
-                  dishesAll={dishesAll}
-                  settings={settings}
-                  ui={ui}
-                  getVisualDay={getVisualDay}
-                  startTouchDragCell={startTouchDragCell}
-                />
-              ) : (
-                <DesktopJadlospis
-                  week={menu}
-                  wi={0}
-                  dishesAll={dishesAll}
-                  settings={settings}
-                  ui={ui}
-                  isNarrow={isNarrow}
-                  cellPadding={cellPadding}
-                  getVisualDay={getVisualDay}
-                  handleDragOver={handleDragOver}
-                  handleDrop={handleDrop}
-                  startTouchDragCell={startTouchDragCell}
-                  handleDragStart={handleDragStart}
-                  handleDragEnd={handleDragEnd}
-                />
-              )}
-            </>
-          ))}
-        <Box sx={{ display: "flex", justifyContent: "center" }}>
-          {isGenerated && <Button
-            variant="contained"
-            className="primary"
-            onClick={handleSaveCurrentMenu}
-            sx={{
-              marginTop: 2,
-            }}
-          >
-            Zapisz jadłospdis
-          </Button>}
-        </Box>
+          </>
+        )}
       </Box>
     </Box>
   );

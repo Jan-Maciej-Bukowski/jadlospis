@@ -6,6 +6,9 @@
 @use "components/config" as *;
 @use "components/title" as *;
 @use "components/public-dish-card" as *;
+@use "components/event" as *;
+@use "components/calendar" as *;
+
 @import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap");
 
 body {
