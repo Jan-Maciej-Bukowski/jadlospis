@@ -109,6 +109,17 @@ const normalizeDish = (dish) => {
     dish.allowedDays = DAYS;
     normalized = true;
   }
+
+  // Dodaj normalizację allowedTimes
+  if (!Array.isArray(dish.allowedTimes)) {
+    // default times if not present
+    dish.allowedTimes = [
+      { start: "07:00", end: "09:00" },
+      { start: "12:00", end: "14:00" },
+      { start: "18:00", end: "20:00" },
+    ];
+    normalized = true;
+  }
 };
 
 dishes.forEach(normalizeDish);

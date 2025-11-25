@@ -16,15 +16,11 @@ import {
   ViewAgenda,
 } from "@mui/icons-material";
 import PropTypes from "prop-types";
-import { Navigate } from "react-big-calendar"; // <- używamy bezpośrednich stałych
+import { Navigate } from "react-big-calendar";
 
 function CustomCalendarToolbar(props) {
-  // debug: odkomentuj w razie potrzeby
-  // console.debug("Calendar toolbar props:", props);
-
   const { label, onNavigate, onView, view, views } = props;
 
-  // ensure views is an array (rbc may provide object or array)
   const availableViews = Array.isArray(views)
     ? views
     : views && typeof views === "object"
@@ -61,14 +57,21 @@ function CustomCalendarToolbar(props) {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <IconButton
-          onClick={() => onNavigate && onNavigate(Navigate.PREV)}
+          onClick={() => onNavigate(Navigate.PREVIOUS)}
           size="small"
+          sx={{
+            color: "white",
+            backgroundColor: "var(--color-surface-dark)",
+            "&:hover": {
+              backgroundColor: "var(--color-primary)",
+            },
+          }}
         >
           <ChevronLeft />
         </IconButton>
 
         <Button
-          onClick={() => onNavigate && onNavigate(Navigate.TODAY)}
+          onClick={() => onNavigate(Navigate.TODAY)}
           variant="contained"
           size="small"
           startIcon={<Today />}
@@ -86,8 +89,15 @@ function CustomCalendarToolbar(props) {
         </Button>
 
         <IconButton
-          onClick={() => onNavigate && onNavigate(Navigate.NEXT)}
+          onClick={() => onNavigate(Navigate.NEXT)}
           size="small"
+          sx={{
+            color: "white",
+            backgroundColor: "var(--color-surface-dark)",
+            "&:hover": {
+              backgroundColor: "var(--color-primary)",
+            },
+          }}
         >
           <ChevronRight />
         </IconButton>
@@ -104,7 +114,9 @@ function CustomCalendarToolbar(props) {
         {availableViews.map((viewName) => (
           <Button
             key={viewName}
-            onClick={() => onView && onView(viewName)}
+            onClick={() => {
+              if (onView) onView(viewName);
+            }}
             startIcon={viewIcons[viewName] || null}
             sx={{
               backgroundColor:

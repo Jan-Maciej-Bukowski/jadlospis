@@ -7,6 +7,7 @@ import "moment/locale/pl";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import PropTypes from "prop-types";
 import CustomCalendarToolbar from "./CustomCalendarToolbar";
+import { settings }from "../../js/settings.js";
 
 moment.locale("pl");
 const localizer = momentLocalizer(moment);
@@ -22,7 +23,6 @@ function GeneratedCalendar({ menu, dateRangeStart }) {
   // Funkcja do konwersji jadłospisu na eventy dla kalendarza
   const menuToCalendarEvents = (menuData, startDate) => {
     if (!menuData || !Array.isArray(menuData)) return [];
-
     const isMultiWeek = Array.isArray(menuData[0]);
     const allDays = isMultiWeek ? menuData.flat() : menuData;
 
@@ -31,20 +31,39 @@ function GeneratedCalendar({ menu, dateRangeStart }) {
     currentDate.setHours(0, 0, 0, 0);
 
     allDays.forEach((dayEntry, index) => {
-      if (!dayEntry) return;
+      if (!dayEntry) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        return;
+      }
+      const times = Array.isArray(dayEntry.times) ? dayEntry.times : [];
+      times.forEach((t, ti) => {
+        const assigned = t.assigned || {};
+        const name = assigned.name || "";
+        const startParts = (t.startTime || t.start || "00:00").split(":");
+        const endParts = (t.endTime || t.end || "00:00").split(":");
+        const s = new Date(currentDate);
+        s.setHours(
+          Number(startParts[0] || 0),
+          Number(startParts[1] || 0),
+          0,
+          0
+        );
+        const e = new Date(currentDate);
+        e.setHours(Number(endParts[0] || 0), Number(endParts[1] || 0), 0, 0);
 
-      const meals = ["śniadanie", "obiad", "kolacja"];
-
-      meals.forEach((meal) => {
-        const dish = dayEntry[meal];
-        const dishName = dish?.name || dish || null;
+        // hide placeholders (no dish)
+        if (!name || name === (settings?.noDishText || "Brak potraw")) return;
 
         events.push({
-          id: `day-${index}-${meal}`,
-          title: dishName ? `${meal}: ${dishName}` : "",
-          start: new Date(currentDate),
-          end: new Date(currentDate),
-          resource: { dayEntry, meal, dishName },
+          id: `day-${index}-${ti}`,
+          title: `${name}`,
+          start: s,
+          end: e,
+          resource: {
+            assigned,
+            startTime: t.startTime || t.start,
+            endTime: t.endTime || t.end,
+          },
         });
       });
 
@@ -56,18 +75,15 @@ function GeneratedCalendar({ menu, dateRangeStart }) {
 
   // NEW: stylizuj eventy na podstawie ich stanu
   const eventStyleGetter = (event) => {
-    if (!event.resource?.dishName) {
+    if (!event.resource?.assigned || !event.resource.assigned.name) {
       return { style: { display: "none", height: 0, padding: 0, margin: 0 } };
     }
-    // Normal event
     return {
       style: {
         backgroundColor: "#04bf8a",
         border: "1px solid #026873",
         padding: "4px 6px",
         fontSize: "0.85rem",
-        whiteSpace: "normal",
-        wordBreak: "break-word",
       },
     };
   };

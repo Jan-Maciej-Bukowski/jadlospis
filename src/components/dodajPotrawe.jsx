@@ -43,11 +43,9 @@ export default function DodajPotrawe() {
     { name: "", amount: "", unit: "g" },
   ]); // składniki: jedna linia = jeden składnik
   const [maxRepeats, setMaxRepeats] = useState(21);
-  const [allowedMeals, setAllowedMeals] = useState({
-    śniadanie: true,
-    obiad: true,
-    kolacja: true,
-  });
+  const [allowedTimes, setAllowedTimes] = useState([
+    { start: "07:00", end: "09:00" },
+  ]);
   const [allowedDays, setAllowedDays] = useState([...DAYS]);
   // lists management
   const [availableLists, setAvailableLists] = useState(() => {
@@ -86,9 +84,8 @@ export default function DodajPotrawe() {
     };
   }, []);
 
-  const handleMealChange = (meal) => {
-    setAllowedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
-  };
+  // NOTE: replaced "allowedMeals" system with allowedTimes (time ranges)
+  // (no handleMealChange needed)
 
   const toggleListSelection = (id) => {
     setSelectedLists((prev) =>
@@ -161,13 +158,17 @@ export default function DodajPotrawe() {
     return true;
   };
 
-  // walidacja: przynajmniej jedna dozwolona pora dnia
-  const validateAllowedMeals = () => {
-    if (!Object.values(allowedMeals).some(Boolean)) {
+  // walidacja: przynajmniej jeden zakres czasowy
+  const validateAllowedTimes = () => {
+    if (
+      !Array.isArray(allowedTimes) ||
+      allowedTimes.length === 0 ||
+      !allowedTimes.some((t) => t && t.start && t.end)
+    ) {
       Swal.fire({
         icon: "warning",
-        title: "Wybierz porę dnia",
-        text: "Musisz zaznaczyć przynajmniej jedną dozwoloną porę dnia.",
+        title: "Wybierz przynajmniej jeden zakres czasu",
+        text: "Musisz dodać przynajmniej jeden zakres czasów (start i koniec).",
       });
       return false;
     }
@@ -243,7 +244,7 @@ export default function DodajPotrawe() {
   function newDish() {
     if (
       !validateName() ||
-      !validateAllowedMeals() ||
+      !validateAllowedTimes() ||
       !validateIngredients() ||
       !validateMaxRepeats() ||
       !validateMaxPerDay() ||
@@ -259,9 +260,7 @@ export default function DodajPotrawe() {
       ingredients: ingredients.filter((ing) => ing.name && ing.amount), // tylko wypełnione
       maxRepeats: maxRepeats,
       maxPerDay: maxPerDay === "" ? null : Number(maxPerDay),
-      allowedMeals: Object.keys(allowedMeals).filter(
-        (meal) => allowedMeals[meal]
-      ),
+      allowedTimes: allowedTimes.filter((t) => t && t.start && t.end),
       rating: rating,
       favorite: favorite,
       maxAcrossWeeks: maxAcrossWeeks ? Number(maxAcrossWeeks) : null,
@@ -287,7 +286,7 @@ export default function DodajPotrawe() {
     setOtherParams("");
     setIngredients([{ name: "", amount: "", unit: "g" }]);
     setMaxRepeats(21);
-    setAllowedMeals({ śniadanie: true, obiad: true, kolacja: true });
+    setAllowedTimes([{ start: "07:00", end: "09:00" }]);
     setRating(0);
     setFavorite(false);
     setMaxAcrossWeeks("");
@@ -347,6 +346,18 @@ export default function DodajPotrawe() {
       setImageFile(null);
       setImagePreview(null);
     }
+  };
+
+  const addTimeRange = () => {
+    setAllowedTimes((s) => [...s, { start: "12:00", end: "13:00" }]);
+  };
+  const removeTimeRange = (i) => {
+    setAllowedTimes((s) => s.filter((_, idx) => idx !== i));
+  };
+  const updateTimeRange = (i, field, value) => {
+    setAllowedTimes((s) =>
+      s.map((t, idx) => (idx !== i ? t : { ...t, [field]: value }))
+    );
   };
 
   return (
@@ -597,39 +608,45 @@ export default function DodajPotrawe() {
           placeholder="np. 3"
           //sx={{ width: 260, mb: 1 }}
         />
-        <Typography gutterBottom>Dozwolone pory dnia:</Typography>
-        <FormGroup>
-          <FormControlLabel
-            control={
-              <Checkbox
-                className="checkbox"
-                checked={allowedMeals.śniadanie}
-                onChange={() => handleMealChange("śniadanie")}
-              />
-            }
-            label="Śniadanie"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                className="checkbox"
-                checked={allowedMeals.obiad}
-                onChange={() => handleMealChange("obiad")}
-              />
-            }
-            label="Obiad"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                className="checkbox"
-                checked={allowedMeals.kolacja}
-                onChange={() => handleMealChange("kolacja")}
-              />
-            }
-            label="Kolacja"
-          />
-        </FormGroup>
+        <Typography gutterBottom>Dozwolone czasy (start - end):</Typography>
+        {allowedTimes.map((t, i) => (
+          <Box
+            key={i}
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
+            <TextField
+              label="Start"
+              type="time"
+              value={t.start}
+              onChange={(e) => updateTimeRange(i, "start", e.target.value)}
+              size="small"
+              sx={{ width: 140 }}
+            />
+            <TextField
+              label="Koniec"
+              type="time"
+              value={t.end}
+              onChange={(e) => updateTimeRange(i, "end", e.target.value)}
+              size="small"
+              sx={{ width: 140 }}
+            />
+            <Button
+              onClick={() => removeTimeRange(i)}
+              color="error"
+              size="small"
+            >
+              Usuń
+            </Button>
+          </Box>
+        ))}
+        <Button onClick={addTimeRange} startIcon={<AddIcon />} size="small">
+          Dodaj zakres
+        </Button>
         <Typography gutterBottom>Dozwolone dni:</Typography>
         <FormGroup row>
           {DAYS.map((day) => (

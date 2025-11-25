@@ -14,13 +14,13 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import UploadIcon from "@mui/icons-material/Upload";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import PublicIcon from "@mui/icons-material/Public";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import PublicIcon from "@mui/icons-material/Public";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Swal from "sweetalert2";
 import dishesAll, { addDish } from "../js/potrawy";
 import html2canvas from "html2canvas";
+import GeneratedCalendar from "./jadlospis/generatedCalendar";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
   /\/+$/,
@@ -28,19 +28,16 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(
 );
 
 const exportToImage = async (menu, name) => {
-  // Stwórz tymczasowy element z jdłospisem
   const temp = document.createElement("div");
   temp.style.padding = "20px";
   temp.style.background = "white";
   temp.style.position = "absolute";
   temp.style.left = "-9999px";
 
-  // Dodaj tytuł
   const title = document.createElement("h2");
   title.textContent = name;
   temp.appendChild(title);
 
-  // Dodaj jadłospis
   const content = document.createElement("div");
   const days = Array.isArray(menu[0]) ? menu.flat() : menu;
   days.forEach((day, i) => {
@@ -90,12 +87,16 @@ const exportToText = (menu, name) => {
 
 export default function Jadlospisy() {
   const [saved, setSaved] = useState([]);
+  const [previewMenu, setPreviewMenu] = useState(null);
+  const [previewStartDate, setPreviewStartDate] = useState(null);
+  const [previewView, setPreviewView] = useState(null);
   const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const fileRef = useRef(null);
+
+  // Load saved menus from localStorage
   useEffect(() => {
     ensureLocalDefault("savedMenus", []);
-    // keep saved from localStorage
     const raw = localStorage.getItem("savedMenus");
     try {
       setSaved(raw ? JSON.parse(raw) : []);
@@ -103,6 +104,44 @@ export default function Jadlospisy() {
       setSaved([]);
     }
   }, []);
+
+  // Load last viewed menu from localStorage (runs on every mount)
+  useEffect(() => {
+    const lastViewed = localStorage.getItem("lastViewedMenu");
+    if (lastViewed) {
+      try {
+        const parsed = JSON.parse(lastViewed);
+        // parsed zawiera: { menu, startDate, view, id, name }
+        // ale menu jest już w parsed.menu
+        setPreviewMenu(parsed.menu || null);
+        console.log("setPreviewMenu (parsed): ", parsed.menu);
+        setPreviewStartDate(
+          parsed.startDate ? new Date(parsed.startDate) : new Date()
+        );
+        setPreviewView(parsed.view || "month");
+      } catch (err) {
+        console.warn("Błąd przy wczytywaniu lastViewedMenu:", err);
+      }
+    }
+  }, []);
+
+  // Save current preview state to localStorage (whenever it changes)
+  useEffect(() => {
+    if (previewMenu) {
+      // previewMenu jest obiektem saved menu item { id, name, menu, createdAt }
+      // zapisz tylko menu array + metadane do odtworzenia
+      localStorage.setItem(
+        "lastViewedMenu",
+        JSON.stringify({
+          menu: previewMenu.menu || previewMenu, // jeśli previewMenu to sam array menu, lub previewMenu.menu
+          startDate: previewStartDate?.toISOString(),
+          view: previewView,
+          id: previewMenu.id,
+          name: previewMenu.name,
+        })
+      );
+    }
+  }, [previewMenu, previewStartDate, previewView]);
 
   const refresh = () => {
     const raw = localStorage.getItem("savedMenus");
@@ -146,7 +185,6 @@ export default function Jadlospisy() {
   };
 
   const handleExportOne = (item) => {
-    // export only this saved menu (include minimal dishes used)
     const toExport = item.menu || [];
     const used = new Set();
     const placeholder = "Brak potraw";
@@ -160,7 +198,6 @@ export default function Jadlospisy() {
         used.add(name);
       })
     );
-    // dishesAll to funkcja -> wywołaj, aby dostać aktualną tablicę potraw
     const allForExport = dishesAll();
     const dishes = Array.from(used).map((n) => {
       const d = allForExport.find((x) => x.name === n);
@@ -198,7 +235,6 @@ export default function Jadlospisy() {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
-        // expect { menu, name? }
         if (!parsed || !parsed.menu || !Array.isArray(parsed.menu)) {
           throw new Error("Nieprawidłowy format");
         }
@@ -211,7 +247,6 @@ export default function Jadlospisy() {
           { id, name, menu: parsed.menu, createdAt: new Date().toISOString() },
         ];
 
-        // --- nowość: utwórz listę potraw (dish list) z potraw z importowanego jadłospisu ---
         try {
           const placeholder = "Brak potraw";
           const flatDays = Array.isArray(parsed.menu[0])
@@ -236,7 +271,6 @@ export default function Jadlospisy() {
             const listName = `Z ${name}`;
             existing.push({ id: listId, name: listName, dishes: dishesArray });
             localStorage.setItem("dishLists", JSON.stringify(existing));
-            // powiadom inne komponenty (Listy) że lista potraw się zmieniła
             try {
               window.dispatchEvent(
                 new CustomEvent("dishListsUpdated", { detail: existing })
@@ -245,9 +279,7 @@ export default function Jadlospisy() {
               console.warn("Nie udało się wysłać eventu dishListsUpdated", err);
             }
 
-            // DODATKOWO: dodaj/importuj potrawy do globalnej listy potraw (dishes)
             try {
-              // jeśli plik zawiera szczegółowe obiekty potraw w parsed.dishes -> użyj ich
               const importedDishes = Array.isArray(parsed.dishes)
                 ? parsed.dishes
                 : [];
@@ -260,13 +292,7 @@ export default function Jadlospisy() {
                   if (!exists) {
                     const data = {
                       name: imp.name,
-                      tags:
-                        imp.tags ||
-                        (Array.isArray(imp.tags)
-                          ? imp.tags
-                          : typeof imp.tags === "string"
-                          ? imp.tags.split(",").map((t) => t.trim())
-                          : []),
+                      tags: imp.tags || [],
                       params: imp.params || "",
                       probability: imp.probability ?? 100,
                       maxRepeats: imp.maxRepeats ?? 1,
@@ -283,7 +309,6 @@ export default function Jadlospisy() {
                     };
                     addDish(data);
                   } else {
-                    // merge some metadata if present
                     if (imp.rating != null) exists.rating = imp.rating;
                     if (imp.favorite != null) exists.favorite = !!imp.favorite;
                     if (imp.color) exists.color = imp.color;
@@ -297,7 +322,6 @@ export default function Jadlospisy() {
                   }
                 });
               } else {
-                // brak szczegółów -> dodaj minimalne potrawy po samych nazwach
                 dishesArray.forEach((dn) => {
                   const allNow = dishesAll();
                   if (!allNow.find((d) => d.name === dn)) {
@@ -306,8 +330,6 @@ export default function Jadlospisy() {
                 });
               }
 
-              // zapisz i powiadom komponenty, że lista potraw się zmieniła
-              // ensure storage reflects current master list and notify listeners
               try {
                 const current = dishesAll();
                 localStorage.setItem("dishes", JSON.stringify(current));
@@ -323,12 +345,10 @@ export default function Jadlospisy() {
             } catch (err) {
               console.warn("Błąd podczas dodawania potraw z importu:", err);
             }
-            // nie próbujemy aktualizować komponentu Listy — odświeży się przy remoncie/ponownym wejściu
           }
         } catch (err) {
           console.warn("Nie udało się utworzyć listy potraw z importu:", err);
         }
-        // --- koniec tworzenia listy potraw ---
 
         saveAll(next);
         Swal.fire({
@@ -349,25 +369,12 @@ export default function Jadlospisy() {
     reader.readAsText(file);
   };
 
-  const handleLoadIntoPlanner = (item) => {
-    // zapis jako "pending" — jeśli komponent Jadłospis jest odmontowany,
-    // zostanie wczytany przy następnym jego mountcie; dodatkowo dispatchujemy event
-    // dla przypadku, gdy jest zamontowany teraz.
-    try {
-      localStorage.setItem("pendingMenu", JSON.stringify(item.menu));
-    } catch (err) {
-      console.warn("Nie udało się zapisać pendingMenu", err);
-    }
-    window.dispatchEvent(
-      new CustomEvent("loadSavedMenu", { detail: item.menu })
-    );
-    Swal.fire({
-      icon: "success",
-      title: "Załadowano",
-      text: "Jeśli nie widzisz zmian, przejdź do sekcji Jadłospis — jadłospis będzie gotowy.",
-      showConfirmButton: false,
-      timer: 900,
-    });
+  // open menu from list
+  const handleSelectMenu = (item) => {
+    setPreviewMenu(item); // item = { id, name, menu, createdAt }
+    console.log("setPreviewMenu: ", item);
+    setPreviewStartDate(new Date());
+    setPreviewView("month");
   };
 
   const handlePublish = async (item) => {
@@ -381,7 +388,6 @@ export default function Jadlospisy() {
       return;
     }
     try {
-      // Guard: avoid publishing same menu multiple times (by exact menu JSON)
       const menuSignature = JSON.stringify(item.menu || []);
       const publishedMenusRaw = localStorage.getItem("publishedMenus") || "[]";
       const publishedMenus = JSON.parse(publishedMenusRaw || "[]");
@@ -407,15 +413,10 @@ export default function Jadlospisy() {
           used.add(name);
         })
       );
-      // dishesAll to funkcja -> wywołaj, aby dostać aktualną tablicę potraw
       const allForExport = dishesAll();
       const dishes = Array.from(used).map((n) => {
         const d = allForExport.find((x) => x.name === n);
-        return (
-          d || {
-            name: n,
-          }
-        );
+        return d || { name: n };
       });
 
       const res = await fetch(`${API}/api/public/menus`, {
@@ -434,7 +435,6 @@ export default function Jadlospisy() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || res.statusText || "Publish failed");
       }
-      // remember published signature
       publishedMenus.push(menuSignature);
       localStorage.setItem("publishedMenus", JSON.stringify(publishedMenus));
 
@@ -499,7 +499,7 @@ export default function Jadlospisy() {
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
-        Zapisane jadłospisy
+        Jadłospisy
       </Typography>
 
       <Box
@@ -515,7 +515,6 @@ export default function Jadlospisy() {
           variant="contained"
           className="primary"
           onClick={() => {
-            // quick export all saved menus
             const blob = new Blob([JSON.stringify(saved, null, 2)], {
               type: "application/json",
             });
@@ -566,49 +565,40 @@ export default function Jadlospisy() {
             <ListItem
               key={s.id}
               sx={{
-                flexDirection: {
-                  xs: "column", // na małych ekranach układ pionowy
-                  sm: "row", // na większych poziomy
-                },
-                alignItems: {
-                  xs: "flex-start", // wyrównaj do lewej na małych ekranach
-                  sm: "center", // wycentruj na większych
-                },
-                gap: { xs: 1 }, // odstęp między elementami w układzie pionowym
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "center" },
+                gap: { xs: 1 },
+                cursor: "pointer",
+                "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
               }}
-              secondaryAction={undefined} // usuń secondaryAction, przenosimy akcje do własnego kontenera
+              onClick={() => handleSelectMenu(s)}
             >
               <ListItemText
                 primary={s.name}
                 secondary={new Date(s.createdAt).toLocaleString()}
                 sx={{
-                  mb: { xs: 1, sm: 0 }, // margines pod tekstem tylko na małych ekranach
-                  width: "100%", // pełna szerokość na małych ekranach
+                  mb: { xs: 1, sm: 0 },
+                  width: "100%",
                 }}
               />
 
-              {/* Kontener na ikony */}
               <Box
                 sx={{
                   display: "flex",
                   gap: 1,
                   alignItems: "center",
-                  width: { xs: "100%", sm: "auto" }, // pełna szerokość na małych ekranach
-                  justifyContent: { xs: "flex-start", sm: "flex-start" }, // wyrównanie ikon
-                  ml: { xs: 0, sm: "auto" }, // auto margin tylko na większych ekranach
+                  width: { xs: "100%", sm: "auto" },
+                  justifyContent: { xs: "flex-start", sm: "flex-start" },
+                  ml: { xs: 0, sm: "auto" },
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                {/* Group 1: Load & Export actions */}
                 <Box sx={{ display: "flex", mr: 0 }}>
                   <IconButton
-                    onClick={() => handleLoadIntoPlanner(s)}
-                    title="Załaduj do planera"
-                    size="small"
-                  >
-                    <UploadIcon color="primary" />
-                  </IconButton>
-                  <IconButton
-                    onClick={(e) => handleExportClick(e, s)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportClick(e, s);
+                    }}
                     title="Eksportuj jadłospis (JSON/TXT/PNG)"
                     size="small"
                   >
@@ -616,17 +606,22 @@ export default function Jadlospisy() {
                   </IconButton>
                 </Box>
 
-                {/* Group 2: Edit actions */}
                 <Box sx={{ display: "flex", mr: 0 }}>
                   <IconButton
-                    onClick={() => handleRename(s)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRename(s);
+                    }}
                     title="Zmień nazwę jadłospisu"
                     size="small"
                   >
                     <EditIcon />
                   </IconButton>
                   <IconButton
-                    onClick={() => handlePublish(s)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePublish(s);
+                    }}
                     title="Opublikuj jadłospis dla innych użytkowników"
                     size="small"
                   >
@@ -634,10 +629,12 @@ export default function Jadlospisy() {
                   </IconButton>
                 </Box>
 
-                {/* Group 3: Delete action */}
                 <Box>
                   <IconButton
-                    onClick={() => handleDelete(s.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(s.id);
+                    }}
                     title="Usuń jadłospis"
                     size="small"
                     sx={{
@@ -655,6 +652,35 @@ export default function Jadlospisy() {
           ))}
         </List>
       </Paper>
+
+      {/* Podgląd załadowanego jadłospisu w kalendarzu */}
+      {previewMenu && (
+        <Paper sx={{ p: 2, mt: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Jadłospis: {previewMenu.name || "bez nazwy"}
+          </Typography>
+
+          <GeneratedCalendar
+            menu={previewMenu.menu} // <- tutaj: previewMenu.menu (nie previewMenu)
+            dateRangeStart={previewStartDate}
+          />
+
+          <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setPreviewMenu(null);
+                setPreviewStartDate(null);
+                setPreviewView(null);
+                localStorage.removeItem("lastViewedMenu");
+              }}
+            >
+              Zamknij podgląd
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
       <Menu
         anchorEl={exportMenuAnchor}
         open={Boolean(exportMenuAnchor)}

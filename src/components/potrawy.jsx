@@ -71,6 +71,7 @@ export default function Potrawy() {
     maxAcrossWeeks: "",
     allowedDays: DAYS,
     avatar: null, // ADDED: init avatar to null
+    allowedTimes: [{ start: "07:00", end: "09:00" }],
   });
 
   // dishes state: load from localStorage or fallback to defaultDishes
@@ -156,6 +157,10 @@ export default function Potrawy() {
       maxAcrossWeeks: dish.maxAcrossWeeks ?? "",
       allowedDays: dish.allowedDays || DAYS,
       avatar: dish.avatar || null, // ADDED: zawsze inicjalizuj avatar
+      allowedTimes:
+        Array.isArray(dish.allowedTimes) && dish.allowedTimes.length > 0
+          ? dish.allowedTimes
+          : [{ start: "07:00", end: "09:00" }],
     };
     setEditedDish(newSettings);
   };
@@ -234,6 +239,10 @@ export default function Potrawy() {
         allowedDays:
           editedDish.allowedDays.length > 0 ? editedDish.allowedDays : DAYS,
         avatar: editedDish.avatar || null, // ADDED: zapisz avatar (może być null)
+        allowedTimes:
+          editedDish.allowedTimes.length > 0
+            ? editedDish.allowedTimes
+            : [{ start: "07:00", end: "09:00" }],
       };
       saveLocal(copy);
       return copy;
@@ -256,6 +265,7 @@ export default function Potrawy() {
       maxAcrossWeeks: "",
       allowedDays: DAYS,
       avatar: null, // ADDED: init avatar to null
+      allowedTimes: [{ start: "07:00", end: "09:00" }],
     });
   };
 
@@ -853,6 +863,86 @@ export default function Potrawy() {
                           />
                         ))}
                       </FormGroup>
+
+                      {/* NOWA SEKCJA: Dozwolone czasy */}
+                      <Typography gutterBottom sx={{ mt: 2 }}>
+                        Dozwolone czasy (start - end):
+                      </Typography>
+                      {editedDish.allowedTimes.map((t, i) => (
+                        <Box
+                          key={i}
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            mb: 1,
+                            alignItems: "center",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="time"
+                            value={t.start}
+                            onChange={(e) =>
+                              setEditedDish((prev) => {
+                                const next = { ...prev };
+                                next.allowedTimes = next.allowedTimes.map(
+                                  (x, idx) =>
+                                    idx === i
+                                      ? { ...x, start: e.target.value }
+                                      : x
+                                );
+                                return next;
+                              })
+                            }
+                            sx={{ width: 140 }}
+                          />
+                          <TextField
+                            size="small"
+                            type="time"
+                            value={t.end}
+                            onChange={(e) =>
+                              setEditedDish((prev) => {
+                                const next = { ...prev };
+                                next.allowedTimes = next.allowedTimes.map(
+                                  (x, idx) =>
+                                    idx === i
+                                      ? { ...x, end: e.target.value }
+                                      : x
+                                );
+                                return next;
+                              })
+                            }
+                            sx={{ width: 140 }}
+                          />
+                          <IconButton
+                            color="error"
+                            onClick={() =>
+                              setEditedDish((prev) => ({
+                                ...prev,
+                                allowedTimes: prev.allowedTimes.filter(
+                                  (_, idx) => idx !== i
+                                ),
+                              }))
+                            }
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ))}
+                      <Button
+                        startIcon={<AddIcon />}
+                        onClick={() =>
+                          setEditedDish((prev) => ({
+                            ...prev,
+                            allowedTimes: [
+                              ...(prev.allowedTimes || []),
+                              { start: "12:00", end: "13:00" },
+                            ],
+                          }))
+                        }
+                      >
+                        Dodaj zakres
+                      </Button>
 
                       <Button
                         variant="contained"
