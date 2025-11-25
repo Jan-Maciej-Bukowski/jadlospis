@@ -117,7 +117,7 @@ function PublicDishCard({
         action={
           <IconButton
             aria-label="settings"
-            onClick={() => onReport && onReport(dishData._id)}
+            onClick={() => onReport && onReport(dishData._id, name)}
           >
             <MoreVertIcon />
           </IconButton>

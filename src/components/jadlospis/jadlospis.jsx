@@ -732,7 +732,7 @@ export default function Jadlospis() {
           Generuj jadłospis
         </Button>
 
-        <Typography
+        {isGenerated && <Typography
           variant="h4"
           sx={{
             mb: 3,
@@ -745,7 +745,7 @@ export default function Jadlospis() {
           className="section-title"
         >
           Jadłospis
-        </Typography>
+        </Typography>}
         {menu &&
           Array.isArray(menu) &&
           menu.length > 0 &&

@@ -25,7 +25,7 @@ export default function PublicPotrawy() {
       if (!res.ok) throw new Error("No likes");
       const body = await res.json();
       setLikedIds(body.likedIds || []);
-      console.log("upd")
+      console.log("upd");
     } catch (err) {
       console.warn("fetchLikes:", err);
       setLikedIds([]);
@@ -167,10 +167,13 @@ export default function PublicPotrawy() {
     }
   };
 
-  const handleReport = async (item) => {
+  const handleReport = async (itemID, name = "BŁĄD") => {
+    //itemID = id w bazie
     try {
+      console.log("Reporting item:", itemID); // DEBUG
+
       const { value: reason, isConfirmed } = await Swal.fire({
-        title: `Zgłoś potrawę "${item.name}"`,
+        title: `Zgłoś potrawę "${name}"`,
         input: "select",
         inputOptions: {
           spam: "Spam",
@@ -214,21 +217,33 @@ export default function PublicPotrawy() {
         return;
       }
 
+      const payload = {
+        type: "dish",
+        id: itemID,
+        reason,
+        details: details || "",
+      };
+
+      console.log("payload zgłoszenia:", payload);
+
+      console.log("Sending report payload:", payload); // DEBUG
+
       const res = await fetch(`${API_BASE}/api/report`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          type: "dish",
-          id: item._id,
-          reason,
-          details,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Report failed");
+      console.log("Report response status:", res.status); // DEBUG
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("Report error response:", errBody); // DEBUG
+        throw new Error("Report failed");
+      }
 
       Swal.fire({
         icon: "success",

@@ -831,8 +831,11 @@ const transporter = nodemailer.createTransport({
 // zgłoszenie potrawy/jadłospisu (chronione)
 app.post("/api/report", auth, async (req, res) => {
   try {
-    const { type, id, reason, details } = req.body;
+    const { type, id, reason, details } = req.body || {};
+    console.log("POST /api/report body:", req.body); // DEBUG
+
     if (!type || !id || !reason) {
+      console.warn("Missing required fields:", { type, id, reason });
       return res.status(400).json({ error: "Brak wymaganych danych" });
     }
 
