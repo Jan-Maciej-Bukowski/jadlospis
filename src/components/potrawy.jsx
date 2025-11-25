@@ -119,7 +119,7 @@ export default function Potrawy() {
 
   // helper to build image src
   const imgSrc = (dish) => {
-    console.log(dish);
+    
     if (!dish) return null;
     const a = dish.avatar || dish.image || "";
     if (!a) return null;

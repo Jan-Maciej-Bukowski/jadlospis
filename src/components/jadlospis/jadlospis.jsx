@@ -393,7 +393,14 @@ export default function Jadlospis() {
     if (!name) return;
     const saved = JSON.parse(localStorage.getItem("savedMenus") || "[]");
     const id = Date.now().toString();
-    const newEntry = { id, name, menu, createdAt: new Date().toISOString() };
+    const newEntry = {
+      id,
+      name,
+      menu,
+      createdAt: new Date().toISOString(),
+      dateRangeStart: dateRangeStart?.toISOString(), // <- DODAJ
+      dateRangeEnd: dateRangeEnd?.toISOString(), // <- DODAJ
+    };
     saved.push(newEntry);
     localStorage.setItem("savedMenus", JSON.stringify(saved));
     Swal.fire({

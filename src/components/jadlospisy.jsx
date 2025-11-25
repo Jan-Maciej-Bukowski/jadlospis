@@ -42,13 +42,30 @@ const exportToImage = async (menu, name) => {
   const days = Array.isArray(menu[0]) ? menu.flat() : menu;
   days.forEach((day, i) => {
     const dayDiv = document.createElement("div");
-    dayDiv.style.marginBottom = "10px";
-    dayDiv.innerHTML = `
-      <strong>Dzień ${i + 1}</strong><br>
-      Śniadanie: ${day.śniadanie?.name || day.śniadanie || "Brak"}<br>
-      Obiad: ${day.obiad?.name || day.obiad || "Brak"}<br>
-      Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}
-    `;
+    dayDiv.style.marginBottom = "15px";
+    dayDiv.style.paddingBottom = "10px";
+    dayDiv.style.borderBottom = "1px solid #ccc";
+
+    let dayHTML = `<strong>Dzień ${i + 1} (${day.day || ""})</strong><br>`;
+
+    // nowy format z times
+    if (Array.isArray(day.times)) {
+      day.times.forEach((t) => {
+        const name = t.assigned?.name || t.assigned || "Brak";
+        const start = t.startTime || t.start || "00:00";
+        const end = t.endTime || t.end || "00:00";
+        dayHTML += `${start} - ${end}: ${name}<br>`;
+      });
+    } else {
+      // fallback: stary format
+      dayHTML += `Śniadanie: ${
+        day.śniadanie?.name || day.śniadanie || "Brak"
+      }<br>`;
+      dayHTML += `Obiad: ${day.obiad?.name || day.obiad || "Brak"}<br>`;
+      dayHTML += `Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}<br>`;
+    }
+
+    dayDiv.innerHTML = dayHTML;
     content.appendChild(dayDiv);
   });
   temp.appendChild(content);
@@ -70,10 +87,24 @@ const exportToText = (menu, name) => {
   const days = Array.isArray(menu[0]) ? menu.flat() : menu;
 
   days.forEach((day, i) => {
-    text += `Dzień ${i + 1}\n`;
-    text += `Śniadanie: ${day.śniadanie?.name || day.śniadanie || "Brak"}\n`;
-    text += `Obiad: ${day.obiad?.name || day.obiad || "Brak"}\n`;
-    text += `Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}\n\n`;
+    text += `Dzień ${i + 1} (${day.day || ""})\n`;
+
+    // nowy format z times
+    if (Array.isArray(day.times)) {
+      day.times.forEach((t) => {
+        const dishName = t.assigned?.name || t.assigned || "Brak";
+        const start = t.startTime || t.start || "00:00";
+        const end = t.endTime || t.end || "00:00";
+        text += `${start} - ${end}: ${dishName}\n`;
+      });
+    } else {
+      // fallback: stary format
+      text += `Śniadanie: ${day.śniadanie?.name || day.śniadanie || "Brak"}\n`;
+      text += `Obiad: ${day.obiad?.name || day.obiad || "Brak"}\n`;
+      text += `Kolacja: ${day.kolacja?.name || day.kolacja || "Brak"}\n`;
+    }
+
+    text += "\n";
   });
 
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -111,10 +142,8 @@ export default function Jadlospisy() {
     if (lastViewed) {
       try {
         const parsed = JSON.parse(lastViewed);
-        // parsed zawiera: { menu, startDate, view, id, name }
-        // ale menu jest już w parsed.menu
-        setPreviewMenu(parsed.menu || null);
-        console.log("setPreviewMenu (parsed): ", parsed.menu);
+        // parsed zawiera: { id, name, menu, createdAt, startDate, view }
+        setPreviewMenu(parsed); // zapisz cały obiekt, nie tylko menu
         setPreviewStartDate(
           parsed.startDate ? new Date(parsed.startDate) : new Date()
         );
@@ -128,16 +157,16 @@ export default function Jadlospisy() {
   // Save current preview state to localStorage (whenever it changes)
   useEffect(() => {
     if (previewMenu) {
-      // previewMenu jest obiektem saved menu item { id, name, menu, createdAt }
-      // zapisz tylko menu array + metadane do odtworzenia
+      // previewMenu jest pełnym obiektem { id, name, menu, createdAt }
       localStorage.setItem(
         "lastViewedMenu",
         JSON.stringify({
-          menu: previewMenu.menu || previewMenu, // jeśli previewMenu to sam array menu, lub previewMenu.menu
-          startDate: previewStartDate?.toISOString(),
-          view: previewView,
           id: previewMenu.id,
           name: previewMenu.name,
+          menu: previewMenu.menu,
+          createdAt: previewMenu.createdAt,
+          startDate: previewStartDate?.toISOString(),
+          view: previewView,
         })
       );
     }
@@ -158,6 +187,7 @@ export default function Jadlospisy() {
   };
 
   const handleDelete = (id) => {
+    setPreviewMenu(null);
     Swal.fire({
       title: "Usuń zapisany jadłospis?",
       icon: "warning",
@@ -371,9 +401,12 @@ export default function Jadlospisy() {
 
   // open menu from list
   const handleSelectMenu = (item) => {
-    setPreviewMenu(item); // item = { id, name, menu, createdAt }
-    console.log("setPreviewMenu: ", item);
-    setPreviewStartDate(new Date());
+    setPreviewMenu(item); // item = { id, name, menu, createdAt, dateRangeStart, dateRangeEnd }
+    // jeśli menu ma zapisaną datę rozpoczęcia, użyj jej; inaczej dzisiaj
+    const startDate = item.dateRangeStart
+      ? new Date(item.dateRangeStart)
+      : new Date();
+    setPreviewStartDate(startDate);
     setPreviewView("month");
   };
 
@@ -661,7 +694,7 @@ export default function Jadlospisy() {
           </Typography>
 
           <GeneratedCalendar
-            menu={previewMenu.menu} // <- tutaj: previewMenu.menu (nie previewMenu)
+            menu={previewMenu.menu}
             dateRangeStart={previewStartDate}
           />
 
