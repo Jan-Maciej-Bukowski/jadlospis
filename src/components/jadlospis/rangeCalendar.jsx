@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Calendar, momentLocalizer } from "react-big-calendar";
+import React, { useState, useEffect } from "react";
+import { Calendar, momentLocalizer, Views } from "react-big-calendar";
 import moment from "moment";
 import "moment/locale/pl";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -13,6 +13,14 @@ const localizer = momentLocalizer(moment);
 function RangeCalendar({ onDateRangeSelect, selectedStart, selectedEnd }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [tempStart, setTempStart] = useState(null);
+
+  // new: control view/date so navigation and view buttons work reliably
+  const [view, setView] = useState(Views.MONTH);
+  const [date, setDate] = useState(selectedStart || new Date());
+
+  useEffect(() => {
+    if (selectedStart) setDate(selectedStart);
+  }, [selectedStart]);
 
   const handleSelectSlot = (slotInfo) => {
     if (!selectionMode) return;
@@ -117,7 +125,15 @@ function RangeCalendar({ onDateRangeSelect, selectedStart, selectedEnd }) {
         Wybierz zakres dat dla jadłospisu
       </Typography>
 
-      <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          gap: 2,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         <Button
           variant={selectionMode ? "contained" : "outlined"}
           color={selectionMode ? "primary" : "inherit"}
@@ -204,8 +220,12 @@ function RangeCalendar({ onDateRangeSelect, selectedStart, selectedEnd }) {
           startAccessor="start"
           endAccessor="end"
           style={{ height: "100%" }}
-          defaultView="month"
           views={["month", "week", "day", "agenda"]}
+          view={view}
+          date={date}
+          onView={(v) => setView(v)}
+          onNavigate={(newDate) => setDate(new Date(newDate))}
+          defaultView={Views.MONTH}
           defaultDate={new Date()}
           onSelectSlot={handleSelectSlot}
           selectable={selectionMode}

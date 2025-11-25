@@ -1,5 +1,11 @@
 import React from "react";
-import { Box, Button, IconButton, Typography, ButtonGroup } from "@mui/material";
+import {
+  Box,
+  Button,
+  IconButton,
+  Typography,
+  ButtonGroup,
+} from "@mui/material";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,10 +15,22 @@ import {
   ViewDay,
   ViewAgenda,
 } from "@mui/icons-material";
-import moment from "moment";
 import PropTypes from "prop-types";
+import { Navigate } from "react-big-calendar"; // <- używamy bezpośrednich stałych
 
-function CustomCalendarToolbar({ label, onNavigate, onView, view, views }) {
+function CustomCalendarToolbar(props) {
+  // debug: odkomentuj w razie potrzeby
+  // console.debug("Calendar toolbar props:", props);
+
+  const { label, onNavigate, onView, view, views } = props;
+
+  // ensure views is an array (rbc may provide object or array)
+  const availableViews = Array.isArray(views)
+    ? views
+    : views && typeof views === "object"
+    ? Object.keys(views)
+    : ["month", "week", "day", "agenda"];
+
   const viewLabels = {
     month: "Miesiąc",
     week: "Tydzień",
@@ -41,32 +59,18 @@ function CustomCalendarToolbar({ label, onNavigate, onView, view, views }) {
         borderBottom: "3px solid var(--color-primary)",
       }}
     >
-      {/* Navigation Section */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          justifyContent: { xs: "space-between", sm: "flex-start" },
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <IconButton
-          onClick={() => onNavigate("PREV")}
-          sx={{
-            color: "white",
-            backgroundColor: "var(--color-surface-dark)",
-            "&:hover": {
-              backgroundColor: "var(--color-primary)",
-            },
-          }}
+          onClick={() => onNavigate && onNavigate(Navigate.PREV)}
           size="small"
         >
           <ChevronLeft />
         </IconButton>
 
         <Button
-          onClick={() => onNavigate("TODAY")}
+          onClick={() => onNavigate && onNavigate(Navigate.TODAY)}
           variant="contained"
+          size="small"
           startIcon={<Today />}
           sx={{
             backgroundColor: "var(--color-primary)",
@@ -77,73 +81,42 @@ function CustomCalendarToolbar({ label, onNavigate, onView, view, views }) {
               backgroundColor: "var(--color-primary-dark)",
             },
           }}
-          size="small"
         >
           Dziś
         </Button>
 
         <IconButton
-          onClick={() => onNavigate("NEXT")}
-          sx={{
-            color: "white",
-            backgroundColor: "var(--color-surface-dark)",
-            "&:hover": {
-              backgroundColor: "var(--color-primary)",
-            },
-          }}
+          onClick={() => onNavigate && onNavigate(Navigate.NEXT)}
           size="small"
         >
           <ChevronRight />
         </IconButton>
       </Box>
 
-      {/* Current Date Label */}
       <Typography
         variant="h6"
-        sx={{
-          color: "white",
-          fontWeight: 700,
-          textAlign: "center",
-          fontSize: { xs: "1rem", sm: "1.25rem" },
-        }}
+        sx={{ color: "white", fontWeight: 700, textAlign: "center" }}
       >
         {label}
       </Typography>
 
-      {/* View Selector */}
-      <ButtonGroup
-        variant="contained"
-        size="small"
-        sx={{
-          "& .MuiButton-root": {
-            textTransform: "none",
-            fontWeight: 500,
-            minWidth: { xs: "auto", sm: "80px" },
-            px: { xs: 1, sm: 2 },
-          },
-        }}
-      >
-        {views.map((viewName) => (
+      <ButtonGroup variant="contained" size="small">
+        {availableViews.map((viewName) => (
           <Button
             key={viewName}
-            onClick={() => onView(viewName)}
-            startIcon={viewIcons[viewName]}
+            onClick={() => onView && onView(viewName)}
+            startIcon={viewIcons[viewName] || null}
             sx={{
               backgroundColor:
                 view === viewName
                   ? "var(--color-primary)"
                   : "var(--color-surface-dark)",
               color: "white",
-              "&:hover": {
-                backgroundColor:
-                  view === viewName
-                    ? "var(--color-primary-dark)"
-                    : "var(--color-primary)",
-              },
+              textTransform: "none",
             }}
           >
             <Box sx={{ display: { xs: "none", sm: "block" } }}>
-              {viewLabels[viewName]}
+              {viewLabels[viewName] || viewName}
             </Box>
           </Button>
         ))}
@@ -157,7 +130,7 @@ CustomCalendarToolbar.propTypes = {
   onNavigate: PropTypes.func.isRequired,
   onView: PropTypes.func.isRequired,
   view: PropTypes.string.isRequired,
-  views: PropTypes.array.isRequired,
+  views: PropTypes.oneOfType([PropTypes.array, PropTypes.object]).isRequired,
 };
 
 export default CustomCalendarToolbar;
